@@ -1,3 +1,6 @@
+// 手账里用户自己拍的照片存在 IndexedDB，删条目时要把照片一起带走，否则相册只增不减
+import { deletePhoto } from './photoStore.js'
+
 const KEY_CART = 'soft-life-cart-v1'
 const KEY_HOUSE = 'soft-life-house-v1'
 const KEY_ARCHIVES = 'soft-life-archives-v1'
@@ -259,7 +262,13 @@ export function saveWishes(ids) {
 }
 
 // ===== 食物手账：每天吃了什么 / 想吃什么 + 便签 =====
-// 结构：{ days: { '2026-09-15': { items: [{ name }], note: '', mood: '' } } }
+// 结构：{ days: { '2026-09-15': { items: [entry], note: '', mood: '' } } }
+//
+// entry 有两种来源（2026-09-16 起）：
+//   · 点完一单自动记下的  → { id: 商品id, name }            ← 图来自商品图
+//   · 用户自己拍照贴上的  → { photoId, thumb, name, place } ← 图来自用户自己的照片
+// 后者才是用户要的那一种：照片存在 IndexedDB（见 photoStore.js），
+// 这里只留 photoId 和一张很小的 thumb（日历格要同步渲染，不能去 await IDB）。
 const KEY_JOURNAL = 'soft-life-journal-v1'
 
 export function journalKey(d = new Date()) {
@@ -291,28 +300,63 @@ export function logJournalOrder(entries = []) {
   const j = loadJournal()
   const k = journalKey()
   const day = j.days[k] || { items: [], note: '', mood: '' }
-  day.items = [...(day.items || []), ...entries.filter((e) => e && e.name).map((e) => ({ id: e.id || null, name: e.name }))]
+  const at = Date.now()
+  day.items = [
+    ...(day.items || []),
+    ...entries.filter((e) => e && e.name).map((e) => ({ id: e.id || null, name: e.name, at })),
+  ]
   j.days[k] = day
   saveJournal(j)
 }
 
-// 手动加一笔「今天想吃的」
-export function addJournalItem(dateKey, name) {
-  if (!name || !dateKey) return
+/**
+ * 手动加一笔。
+ * extra 可带 { photoId, thumb, name(覆盖), place, at } —— 用户拍照贴上来时走这条路。
+ * 返回落盘的条目，UI 可以立刻拿去展开详情，不必再读一遍。
+ */
+export function addJournalItem(dateKey, name, extra = {}) {
+  if (!dateKey || !name) return null
   const j = loadJournal()
   const day = j.days[dateKey] || { items: [], note: '', mood: '' }
-  day.items = [...(day.items || []), { id: null, name }]
+  const entry = { id: extra.id || null, name }
+  if (extra.photoId) {
+    entry.photoId = extra.photoId
+    if (extra.thumb) entry.thumb = extra.thumb
+  }
+  if (extra.place) entry.place = extra.place
+  entry.at = extra.at || Date.now()
+  day.items = [...(day.items || []), entry]
+  j.days[dateKey] = day
+  saveJournal(j)
+  return entry
+}
+
+/** 改某一笔的字段（详情页里改名字 / 店名） */
+export function updateJournalItem(dateKey, index, patch = {}) {
+  if (!dateKey) return
+  const j = loadJournal()
+  const day = j.days[dateKey]
+  if (!day || !day.items || index < 0 || index >= day.items.length) return
+  const next = { ...day.items[index] }
+  if (typeof patch.name === 'string' && patch.name.trim()) next.name = patch.name.trim()
+  if (typeof patch.place === 'string') next.place = patch.place.trim()
+  day.items = day.items.map((it, i) => (i === index ? next : it))
   j.days[dateKey] = day
   saveJournal(j)
 }
 
-// 删掉某天的一笔记录（按索引）
+/** 删掉某天的一笔记录（按索引）。被删的那笔如果带着自拍，照片也一并从相册里清掉。 */
 export function removeJournalItem(dateKey, index) {
   const j = loadJournal()
   const day = j.days[dateKey]
-  if (!day || !day.items || index < 0 || index >= day.items.length) return
+  if (!day || !day.items || index < 0 || index >= day.items.length) return null
+  const [gone] = day.items.filter((_, i) => i === index)
   day.items = day.items.filter((_, i) => i !== index)
+  j.days[dateKey] = day
   saveJournal(j)
+  // 照片不属于任何别的地方了 —— 不删就会永远留在相册里
+  if (gone?.photoId) deletePhoto(gone.photoId)
+  return gone || null
 }
 
 // 保存某天的便签 / 心情

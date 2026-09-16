@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Camera, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
 import { getItem } from '../data.js'
-import { addJournalItem, journalKey, loadJournal, removeJournalItem, setJournalNote } from '../storage.js'
+import {
+  addJournalItem, journalKey, loadJournal, removeJournalItem, setJournalNote, updateJournalItem,
+} from '../storage.js'
+import { getPhotoUrl, newPhotoId, preparePhoto, putPhoto } from '../photoStore.js'
 
 /**
  * JournalView —— 食物手账
@@ -12,11 +15,17 @@ import { addJournalItem, journalKey, loadJournal, removeJournalItem, setJournalN
  * 参考来源：用户发的 8 张「咖啡记录 + 集章」App 截图（`参考图/手账App界面/`）。抄过来的是它的
  * **设计语言**：中性米灰底、近黑墨色、等宽打字机数字、大圆角卡片、**贴纸**当视觉隐喻。
  *
+ * ⚠️ 2026-09-16 用户纠正的核心一条（本文件存在的理由）：
+ *   「我的意思是**自己拍照上传**后，展开来看就是这种 —— 而不是你在后端这样」
+ *   也就是 —— 手账里贴的那张图必须是**用户自己的照片**，不是项目里预先画好的商品图。
+ *   所以有了：拍照/相册上传 → 压缩进 IndexedDB（photoStore.js）→ 贴纸形态 → 点开是展开详情。
+ *   商品图只在「点完一单自动记下的那一笔」上作为兜底出现。
+ *
  * 语气红线（与惜食柜、公益档案一致）：
  *   · 不记卡路里、不算账、不做「连续打卡 N 天」这种催更
  *   · 参考 App 里满屏的统计（总杯数 / 咖啡因 mg / 每周柱状图）**一律不搬**
  *   · 它是「这些天你点过、想过、最后没有真的吃掉的东西」的落脚处，不是记账本
- *   · 必须诚实：数据只在这台设备上
+ *   · 必须诚实：照片和数据只在这台设备上
  */
 
 const EMPTY_DAY = { items: [], note: '', mood: '' }
@@ -34,6 +43,8 @@ const MOODS = [
 
 // 集章的里程碑：第 N 份。参考 App 的「Reached 10 Cups」，换成小铺的说法。
 const STAMP_STEPS = [1, 5, 10, 25, 50]
+
+const DEFAULT_PHOTO_NAME = '今天拍的一张'
 
 /* ------------------------------ 日期工具 ------------------------------ */
 
@@ -68,8 +79,40 @@ const monthCells = (y, m) => {
   return cells
 }
 
-/* --------------------------- 自己手写的那一笔 --------------------------- */
-// 手写条目不是商品，没有商品图可用 —— 但这里不退回 emoji（项目红线）。
+const timeOf = (at) => {
+  if (!at) return ''
+  const d = new Date(at)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+/* --------------------------- 贴纸 --------------------------- */
+/**
+ * 手账里那张「图」只有一个出口 —— 和商品的 ItemArt 同理，别再各写各的。
+ * 优先级：用户自己拍的照片 > 商品图 > 手写小记的线描符号（**不退回 emoji**）。
+ */
+function Sticker({ entry, size = 'sm' }) {
+  const cls = `jh-sticker jh-sticker-${size}`
+  if (entry?.thumb) {
+    // 自己拍的照片裁满（cover），商品图留白（contain）—— 见 styles.css 的 .jh-sticker.is-photo
+    return (
+      <span className={`${cls} is-photo`}>
+        <img src={entry.thumb} alt={entry.name || '自己拍的一张'} loading="lazy" />
+      </span>
+    )
+  }
+  const art = entry?.id ? getItem(entry.id)?.image : null
+  if (art) {
+    return (
+      <span className={cls}>
+        <img src={art} alt={entry.name || ''} loading="lazy" />
+      </span>
+    )
+  }
+  return <span className={`${cls} is-note`}><NoteMark /></span>
+}
+
+// 手写条目不是商品，没有图可用 —— 但这里不退回 emoji（项目红线）。
 // 用一枚线描「小记」代替：它表示「这是你自己写下的一行字」，不是一道菜。
 function NoteMark() {
   return (
@@ -90,6 +133,10 @@ export default function JournalView() {
   const [focus, setFocus] = useState(todayKey)
   const [draft, setDraft] = useState('')
   const [noteDraft, setNoteDraft] = useState(null) // null = 还没动过，直接显示存着的那份
+  const [busy, setBusy] = useState(false)
+  const [hint, setHint] = useState('')
+  const [opened, setOpened] = useState(null) // { key, index } —— 展开的那一张
+  const fileRef = useRef(null)
 
   const days = journal.days || {}
   const refresh = () => setJournal(loadJournal())
@@ -125,6 +172,8 @@ export default function JournalView() {
   })
   const favorite = Object.entries(nameCount).sort((a, b) => b[1] - a[1])[0] || null
 
+  const openedEntry = opened ? itemsOf(opened.key)[opened.index] || null : null
+
   /* ------------------------------ 操作 ------------------------------ */
 
   const step = (dir) => {
@@ -155,6 +204,9 @@ export default function JournalView() {
     setNoteDraft(null)
   }
 
+  const openEntry = (k, index) => setOpened({ key: k, index })
+  const closeEntry = () => setOpened(null)
+
   const addDraft = (e) => {
     e.preventDefault()
     const name = draft.trim()
@@ -162,6 +214,38 @@ export default function JournalView() {
     addJournalItem(todayKey, name)
     setDraft('')
     refresh()
+  }
+
+  /**
+   * 用户自己拍的那张 —— 整个功能的主干。
+   * 选图 → 压到长边 1600 存 IndexedDB → 缩略图随条目进 localStorage → 直接展开看。
+   * 缩略图是为了让日历格和列表**同步**就能渲染出来（不能为一个格子去 await 一次 IDB）。
+   */
+  const onPickPhoto = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = '' // 允许连着挑同一张
+    if (!file) return
+    setBusy(true)
+    setHint('正在把这张照片存进手账…')
+    try {
+      const { blob, thumb } = await preparePhoto(file)
+      const photoId = newPhotoId()
+      const ok = await putPhoto(photoId, blob)
+      if (!ok) throw new Error('这张照片没能存下来，可能相册被浏览器限制了')
+      const entry = addJournalItem(todayKey, DEFAULT_PHOTO_NAME, { photoId, thumb })
+      refresh()
+      setFocus(todayKey)
+      setView('day')
+      setNoteDraft(null)
+      // 直接展开，让用户接着补名字和店名（参考 App 的拍摄 → Detail 流程）
+      const idx = (loadJournal().days[todayKey]?.items || []).length - 1
+      if (entry) setOpened({ key: todayKey, index: idx })
+      setHint('')
+    } catch (err) {
+      setHint(err?.message || '这张照片读不出来，换一张试试')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const commitNote = () => {
@@ -176,8 +260,9 @@ export default function JournalView() {
     refresh()
   }
 
-  const drop = (index) => {
-    removeJournalItem(focus, index)
+  const drop = (key, index) => {
+    removeJournalItem(key, index)
+    if (opened && opened.key === key) setOpened(null)
     refresh()
   }
 
@@ -196,13 +281,9 @@ export default function JournalView() {
 
   /* ------------------------------ 渲染 ------------------------------ */
 
-  const stickersOf = (k) => itemsOf(k)
-    .map((it) => (it.id ? getItem(it.id)?.image : null))
-    .filter(Boolean)
-
   const cellNode = (k, idx, big) => {
     const list = itemsOf(k)
-    const stickers = stickersOf(k)
+    const first = list[0] || null
     const isTodayCell = k === todayKey
     const isFocus = k === focus
     return (
@@ -215,12 +296,11 @@ export default function JournalView() {
         aria-label={`${parseKey(k).m} 月 ${parseKey(k).d} 日${list.length ? `，记了 ${list.length} 笔` : ''}`}
       >
         <span className="jh-dnum">{parseKey(k).d}</span>
-        {stickers.length > 0 && (
+        {first && (
           <span className="jh-thumbs">
-            <img src={stickers[0]} alt="" loading="lazy" />
+            <Sticker entry={first} size={big ? 'md' : 'sm'} />
           </span>
         )}
-        {!stickers.length && list.length > 0 && <span className="jh-thumbs"><NoteMark /></span>}
         {list.length > 0 && <span className="jh-badge">{list.length}</span>}
       </button>
     )
@@ -238,6 +318,8 @@ export default function JournalView() {
           <button type="button" onClick={() => step(1)} aria-label="往后"><ChevronRight size={17} strokeWidth={1.7} /></button>
         </div>
       </header>
+
+      {hint && <p className="jh-hint">{hint}</p>}
 
       {/* 换视图 / 换日期都换 key —— 动画自然重放，不需要额外的状态机 */}
       <div className={`jh-stage jh-stage-${view}`} key={`${view}-${focus}`}>
@@ -266,28 +348,44 @@ export default function JournalView() {
 
             {itemsOf(focus).length > 0 ? (
               <ul className="jh-lines">
-                {itemsOf(focus).map((it, i) => {
-                  const item = it.id ? getItem(it.id) : null
-                  const art = item?.image
-                  return (
-                    <li key={`${it.name}-${i}`} className="jh-line">
+                {itemsOf(focus).map((it, i) => (
+                  // 点整张 → 展开看大的（参考 App 是点贴纸进 Detail；那一行的「删」也搬进详情页了）
+                  <li key={`${it.name}-${i}`}>
+                    <button
+                      type="button"
+                      className="jh-line"
+                      onClick={() => openEntry(focus, i)}
+                      aria-label={`展开「${it.name}」`}
+                    >
                       <span className="jh-line-art">
-                        {art ? <img src={art} alt="" loading="lazy" /> : <NoteMark />}
+                        <Sticker entry={it} size="xs" />
                       </span>
-                      <span className="jh-line-name">{it.name}</span>
-                      {isToday && (
-                        <button type="button" className="jh-line-del" onClick={() => drop(i)} aria-label={`删掉「${it.name}」这一笔`}>
-                          <Trash2 size={14} strokeWidth={1.6} />
-                        </button>
-                      )}
-                    </li>
-                  )
-                })}
+                      <span className="jh-line-text">
+                        <span className="jh-line-name">{it.name}</span>
+                        {(it.place || timeOf(it.at)) && (
+                          <span className="jh-line-sub">
+                            {[it.place, timeOf(it.at)].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                ))}
               </ul>
             ) : (
               <p className="jh-day-empty">
-                {isToday ? '今天还是空的。点完一单外卖，这里会自动多一行 —— 也可以自己写一笔。' : '这一天没有留下什么。'}
+                {isToday ? '今天还是空的。贴一张自己拍的照片，或者点完一单等它自己掉进来。' : '这一天没有留下什么。'}
               </p>
+            )}
+
+            {isToday && (
+              <button type="button" className="jh-shoot" onClick={() => fileRef.current?.click()} disabled={busy}>
+                <Camera size={19} strokeWidth={1.6} aria-hidden="true" />
+                <span>
+                  <b>{busy ? '正在存下这一张…' : '贴一张自己拍的照片'}</b>
+                  <em>拍照或从相册选一张</em>
+                </span>
+              </button>
             )}
 
             {isToday && (
@@ -385,7 +483,7 @@ export default function JournalView() {
       </section>
 
       <p className="jh-foot">
-        这本手账只存在你这台设备上 —— 换一台手机，它就看不到了。
+        这本手账只存在你这台设备上 —— 照片和字都在浏览器里，换一台手机就看不到了。
         它是一本手写的账，不是一份真实的记录。
       </p>
 
@@ -394,10 +492,188 @@ export default function JournalView() {
         <button type="button" className={view === 'month' ? 'is-on' : ''} onClick={() => switchView('month')}>月</button>
         <button type="button" className={view === 'week' ? 'is-on' : ''} onClick={() => switchView('week')}>周</button>
         <button type="button" className={view === 'day' ? 'is-on' : ''} onClick={() => switchView('day')}>今天</button>
-        <button type="button" className="jh-dock-add" onClick={backToToday} aria-label="记一笔">
+        <button
+          type="button"
+          className="jh-dock-add"
+          onClick={() => fileRef.current?.click()}
+          aria-label="贴一张自己拍的照片"
+          title="贴一张自己拍的照片"
+        >
           <Plus size={19} strokeWidth={1.9} />
         </button>
       </nav>
+
+      {/* 相册/相机入口。不加 capture —— 那会直接开相机，用户就没有「从相册选」这条路了 */}
+      <input
+        ref={fileRef}
+        className="file-input"
+        type="file"
+        accept="image/*"
+        onChange={onPickPhoto}
+      />
+
+      {openedEntry && (
+        <EntryDetail
+          entry={openedEntry}
+          dateKey={opened.key}
+          index={opened.index}
+          canEdit={opened.key === todayKey}
+          onClose={closeEntry}
+          onChanged={refresh}
+          onDelete={() => drop(opened.key, opened.index)}
+        />
+      )}
     </div>
   )
 }
+
+/* ========================= 展开那一张（照参考 App 的 Detail 做） ========================= */
+/**
+ * 参考图 `...418Z-d31a062b.png` 的「Brew Detail」：
+ *   顶部 × / ✓，中间一张贴纸，下面几行卡片（日期时间 / 地点 / 店名 / 名字），底部 Delete。
+ * 搬过来 —— 只是把「地点」去掉（这本手账不记位置，也不做地图），换成店名 + 自己写的一行。
+ */
+function EntryDetail({ entry, dateKey, index, canEdit, onClose, onChanged, onDelete }) {
+  const [bigUrl, setBigUrl] = useState(null)
+  const [name, setName] = useState(entry.name || '')
+  const [place, setPlace] = useState(entry.place || '')
+  const [confirming, setConfirming] = useState(false)
+  const parts = parseKey(dateKey)
+
+  // 大图在 IndexedDB 里 —— 这是整个手账唯一一次异步取图
+  useEffect(() => {
+    let alive = true
+    setBigUrl(null)
+    if (!entry.photoId) return undefined
+    getPhotoUrl(entry.photoId).then((url) => {
+      if (!alive) {
+        if (url) setTimeout(() => URL.revokeObjectURL(url), 1000)
+        return
+      }
+      setBigUrl(url)
+    })
+    return () => { alive = false }
+  }, [entry.photoId])
+
+  // Esc 关掉
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const commit = () => {
+    if (!canEdit) return
+    updateJournalItem(dateKey, index, { name, place })
+    onChanged()
+  }
+
+  const art = entry.thumb || (entry.id ? getItem(entry.id)?.image : null)
+
+  return (
+    <div className="jh-detail" role="dialog" aria-modal="true" aria-label={`${entry.name} 的详情`}>
+      <div className="jh-detail-bg" onClick={onClose} aria-hidden="true" />
+
+      <div className="jh-detail-panel">
+        <header className="jh-detail-top">
+          <button type="button" onClick={onClose} aria-label="关掉"><X size={19} strokeWidth={1.7} /></button>
+          <span>这一张</span>
+          <button
+            type="button"
+            className="jh-detail-ok"
+            onClick={() => { commit(); onClose() }}
+            aria-label="存下"
+          >
+            <CheckIcon />
+          </button>
+        </header>
+
+        <div className="jh-detail-body">
+          {/* 中间那张贴纸。自己拍的照片是 cover（裁满），商品图是 contain（不裁） */}
+          <div className={`jh-detail-photo${entry.photoId ? ' is-photo' : ''}`}>
+            {bigUrl
+              ? <img src={bigUrl} alt={entry.name || '自己拍的一张'} />
+              : art
+                ? <img src={art} alt={entry.name || ''} />
+                : <span className="jh-detail-note"><NoteMark /></span>}
+          </div>
+
+          <div className="jh-detail-rows">
+            <div className="jh-detail-row">
+              <CalIcon />
+              <span>{parts.y} 年 {parts.m} 月 {parts.d} 日{timeOf(entry.at) ? ` · ${timeOf(entry.at)}` : ''}</span>
+            </div>
+
+            {canEdit ? (
+              <>
+                <label className="jh-detail-row is-input">
+                  <CupIcon />
+                  <input
+                    value={name}
+                    maxLength={30}
+                    placeholder="这一份叫什么"
+                    aria-label="这一份叫什么"
+                    onChange={(e) => setName(e.target.value)}
+                    onBlur={commit}
+                  />
+                </label>
+                <label className="jh-detail-row is-input">
+                  <ShopIcon />
+                  <input
+                    value={place}
+                    maxLength={24}
+                    placeholder="在哪家（可以不写）"
+                    aria-label="在哪家买的"
+                    onChange={(e) => setPlace(e.target.value)}
+                    onBlur={commit}
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <div className="jh-detail-row"><CupIcon /><span>{entry.name}</span></div>
+                {entry.place && <div className="jh-detail-row"><ShopIcon /><span>{entry.place}</span></div>}
+              </>
+            )}
+          </div>
+
+          <p className="jh-detail-foot">
+            {entry.photoId
+              ? '这张照片只存在你这台设备的相册里，没有传到任何地方。'
+              : '这一笔是点单时自动记下的，用的是铺子里的图。'}
+          </p>
+
+          {canEdit && (
+            <button
+              type="button"
+              className={`jh-detail-del${confirming ? ' is-armed' : ''}`}
+              onClick={() => {
+                if (!confirming) { setConfirming(true); return }
+                onDelete()
+              }}
+              onBlur={() => setConfirming(false)}
+            >
+              {confirming ? '真的删掉这一笔？再点一下' : '删掉这一笔'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* 详情页的几枚线描图标 —— 与项目其余部分一致：不用 emoji */
+const lineProps = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }
+
+const CheckIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7" {...lineProps} /></svg>
+)
+const CalIcon = () => (
+  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5" {...lineProps} /><path d="M3.5 10h17M8 3.5v4M16 3.5v4" {...lineProps} /></svg>
+)
+const CupIcon = () => (
+  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 8h12l-1.4 11.5H7.4z" {...lineProps} /><path d="M8.5 8V6.2a3.5 3.5 0 0 1 7 0V8" {...lineProps} /></svg>
+)
+const ShopIcon = () => (
+  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M4 9.5 6 4.5h12l2 5" {...lineProps} /><path d="M5 9.5v10h14v-10" {...lineProps} /><path d="M9.5 19.5v-5h5v5" {...lineProps} /></svg>
+)
