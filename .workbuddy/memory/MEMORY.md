@@ -79,15 +79,28 @@
 **红线：零可交互元素、零 canvas、无计分**。props：`progress` / `secondsLeft` / `totalSeconds`。
 
 **食物手账**（`components/JournalView.jsx`，挂在 `ArchiveScreen` 第二个视图）：
-- 数据 `soft-life-journal-v1` = `{ days: { 'YYYY-MM-DD': { items: [{id,name}], note, mood } } }`；API：`journalKey()` / `loadJournal()` / `saveJournal()` / `logJournalOrder(entries)` / `addJournalItem` / `removeJournalItem` / `setJournalNote`
-- **入口不新增**：并进首页「把这一餐存下来」磁贴，顶部「存下这一餐 / 食物手账」两视图切换（结局页「翻翻手账」直接落到手账格）。手账视图把「API 设置」换成**同宽占位**否则标题偏
-- **2026-09-16 按用户给的参考 App 重做**：从「今天那一页 + 历史流水」改成 **月 / 周 / 今天 三视图**
-  （底部悬浮胶囊 dock 切换），日历格子里贴**菜品贴纸 + 右下橙角标**；新增**集章**（第 1/5/10/25/50 份，
-  描金波浪圆章 + 落款日期）与**回顾卡**（这个月 N 份想过 / N 家铺子 / 最常想起的那道，**换月跟着换**）。
-  点标题回今天；过去的日子只读。
+- ⚠️ **手账里那张图必须是「用户自己拍的照片」，不是后端预先画好的商品图**（2026-09-16 用户原话：
+  「我的意思是自己拍照上传后，展开来看就是这种 而不是你在后端这样」）。入口 = 相机/相册，
+  不是「从商品目录里选一道菜」。**这条同时意味着：参考 App 那种抠底贴纸不用给 30+ 张商品图做抠图** ——
+  用户自己的照片裁成方形 + 一圈白描边就已经是那个观感。
+- 数据 `soft-life-journal-v1` = `{ days: { 'YYYY-MM-DD': { items: [entry], note, mood } } }`；
+  entry 两条路：点单自动记 `{id,name,at}`（用商品图）· 自己拍照 `{photoId,thumb,name,place,at}`。
+  API：`journalKey/loadJournal/saveJournal/logJournalOrder/addJournalItem/updateJournalItem/removeJournalItem/setJournalNote`
+- **照片存储分工（`src/photoStore.js`）**：原图压到长边 1600 的 WebP 进 **IndexedDB**；
+  localStorage 只留长边 180 的 `thumb`。理由：localStorage 只 ~5MB，而 storage.js 写入全是 `catch {}` ——
+  **写满会静默失败**；thumb 留 localStorage 是因为日历格要同步渲染，不能为一个格子 await IDB。
+  **删条目必须同时删照片**（`removeJournalItem` 里做），否则相册只增不减。
+- **入口不新增**：并进首页「把这一餐存下来」磁贴，顶部两视图切换（结局页「翻翻手账」落到手账格）。
+  手账视图把「API 设置」换成**同宽占位**否则标题偏
+- **2026-09-16 按参考 App 重做**：月 / 周 / 今天 **三视图**（底部胶囊 dock，橙色 `+` = 拍照上传）；
+  日历格贴**贴纸 + 右下橙角标**；**集章**（第 1/5/10/25/50 份）+ **回顾卡**（这个月 N 份 / N 家铺子 / 最常想起，**换月跟着换**）。
+  点标题回今天；过去的日子只读。上传 input **不加 `capture`**（加了就直接开相机，用户就没有「从相册选」这条路）
+- **手账里所有图的唯一出口 = `.jh-sticker`**：自己拍的 `cover`、商品图 `contain`、手写条目线描 `NoteMark`（**不用 emoji**）。
+  老的 `.jh-thumbs img` / `.jh-line-art img` 规则已删 —— 新增任何手账里的图都从这里出去
+- **展开详情页**（照参考图 418Z 的 Detail）：点任意一张 → 大贴纸 + 日期时间/名字/店名三行卡片 + 底部二次确认删除；
+  锚在今天的可编辑，过去只读。**列表行上不放删除**（已搬进展开页）
 - 新配色**收在 `.jh { --jh-* }` 作用域内**，其他页零影响 —— 要铺全场就把这几个值搬进 `:root`
-- 今天那页可编辑（加一笔 / 删一笔 / 写便签 / 选心情，便签 `onBlur` 自动存）；**心情是纯文字 pill**（不用 emoji）
-- **有真实商品 id 的条目贴商品图**（做成白描边「方形照片贴纸」）；手写条目用线描「小记」符号 `NoteMark`，**不用 emoji**
+- 今天那页可编辑（加一笔 / 写便签 / 选心情，便签 `onBlur` 自动存）；**心情是纯文字 pill**（不用 emoji）
 - **记账时机在结局页**：`main.jsx` 的 `recordJournal(cart)` → `logJournalOrder`，`EndingScreen` 挂载时记一次（`journaledRef` 防重复）。**与宠物成长 / 公益捐赠 / 惜食柜同一节拍：送达才算数**
 - **语气红线**：不记卡路里、不算账、不做「连续打卡 N 天」。自查脚本要能识别否定句（「不记卡路里，也不打卡」不算命中）
 
@@ -101,6 +114,10 @@
 - ⚠️ **「build 绿」不等于「接线对」**：esbuild 不查作用域，`onXxx={someCallback}` 里引用**从未定义**的函数照样构建成功，只在进到那个页面时才炸（出过两次）。**加/改回调 prop 后一定 grep 一遍定义**，并**真机走到那个页面**验一次
 - ⚠️ **网络中断可能只丢「半个文件」**：曾出现 JSX 落了盘、import 和 state 没落盘 → 标识符全 undefined。**别因为「文件里有新代码」就判定改动完整**，要逐个标识符核对
 - ⚠️ **假警报比漏报更贵**（一天连吃三个）：`naturalWidth 0`（其实是懒加载没触发）、便签没存（其实是 `onBlur` 没触发）、文件没改（其实是 BSD `grep` 的 `\|` 失配）。**纪律：断言失败先怀疑探针，用第二种独立手段复核，最后才改产品代码**
+- ⚠️ **截图或量几何之前，必须先等动画播完**（2026-09-16 又连吃四个，产品代码一行没改）：
+  `getBoundingClientRect` 返回的是**变换之后**的矩形 —— 入场动画 `translateY(20px) scale(.985)` 播到一半量出来是 `top=5`，我据此判成「展开层没铺满视口」，把整条祖先链（transform / filter / contain / will-change / backdrop-filter）查了个遍全是空的，才发现只是动画没完；月历格子是逐个弹进来的（`--i` 排到 30 ≈ 330ms），等不到就截出一张**空日历**；列表行同理，截出来是一列半透明幽灵。
+  **规矩：截图前 `waitFor(every(getComputedStyle(x).opacity === '1'))` 再停 300ms。**
+- ⚠️ **「等图」的阈值要区分缩略图和大图**：手账展开页先用 180px 缩略图顶一下再去 IndexedDB 取大图，`waitFor(naturalWidth > 0)` 会在缩略图上就通过（等于什么都没验）。要 `> 400` 或判 `src.startsWith('blob:')`
 - 搜中文多关键词**一律用 `Grep` 工具**（bash `grep` 的 `\|` 在 macOS BSD grep 下常静默失配）
 - **`SoftPet.jsx` 的 Edit 会静默失败，而且 `Grep` 对它失灵**：改完必须用 python 复核关键字符串
 - CSS：`.flip-frame` 必须 `position:relative`；**数字字形 `lining-nums` 汇总规则必须留在文件最末**（压缩器会把 `font:` 简写挪后、从而重置它）；**大段新增务必 grep 一次**避免重复写入
