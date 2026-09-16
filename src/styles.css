@@ -4522,6 +4522,28 @@ footer {
   0%, 100% { transform: translateY(0) scale(1, 1); }
   50% { transform: translateY(-2.5px) scale(1.012, 1.02); }
 }
+/* ---- 表情层（2026-09-17） ----
+   底图是 assets/pets/noeye/*-t.webp（tools/petFace.py 生成的「无眼底图」），
+   .pet-face 往上面画新的眼睛/腮红/小记号。见 components/PetFace.jsx。
+   ⚠️ 无眼底图**常驻 DOM、只是 opacity:0**：临时插进来会有一帧解码空窗，
+      看起来像闪一下。所以这里不写 transition —— 交叉淡入会同时出现两对眼睛。 */
+.pet-photo .pet-noeye { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.pet-photo .pet-noeye.is-on { opacity: 1; }
+.pet-face {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; overflow: visible;
+  transform-origin: 50% 42%;
+  animation: petFaceIn .22s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+@keyframes petFaceIn {
+  from { opacity: 0; transform: scale(.93); }
+  to { opacity: 1; transform: scale(1); }
+}
+.pf-mark { animation: pfMarkIn .36s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes pfMarkIn {
+  from { opacity: 0; transform: scale(.4); }
+  to { opacity: 1; transform: scale(1); }
+}
 .pet-hit { display: block; transform-origin: 50% 100%; will-change: transform; }
 .pet-pat-hint {
   margin: -14px auto 22px;
@@ -4603,8 +4625,14 @@ footer {
 }
 @media (prefers-reduced-motion: reduce) {
   /* 呼吸与溜达猫的颠步关掉（大幅、持续的动）；指尖小图特意**不关** ——
-     它 1.25 秒就没了、又是唯一的即时反馈，关了会变成「点了完全没反应」。 */
+     它 1.25 秒就没了、又是唯一的即时反馈，关了会变成「点了完全没反应」。
+     表情层的弹入也保留（只去掉缩放，留淡入）—— 它同样是「点了有反应」的证据。 */
   .pet-idle, .home-cat-body { animation: none !important; }
+  .pet-face, .pf-mark { animation-name: petFaceFade !important; }
+}
+@keyframes petFaceFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 /* 透明底版（*-t.webp）：去掉相纸框，猫咪是「活的」 */
 .pet-photo.is-cut {

@@ -104,6 +104,30 @@ export const ZONE_LINES = {
   paw: ['爪子缩了一下。', '尾巴慢慢竖起来了。'],
 }
 
+// 点不同部位 → 脸上换不同表情（见 components/PetFace.jsx）
+const ZONE_EXPR = {
+  ear: 'squint',      // 眯眼
+  head: 'bliss',      // 闭眼享受
+  cheekL: 'smile',    // 闭眼笑 + 脸红
+  cheekR: 'smile',
+  tummy: 'purr',      // 弯月眼 + 呼噜
+  paw: 'startle',     // 圆睁 + 汗滴
+}
+
+/**
+ * 这一下该是什么表情。
+ * 连击到后面不再分部位 —— 摸第三下开始眼睛变爱心、第五下变星星，
+ * 这才是「越摸越嗨」的样子（只放大形变的话，看上去只是抖得更厉害）。
+ */
+export function expressionFor(zone, heat = 0) {
+  if (heat >= 4) return 'star'
+  if (heat >= 2) return 'heart'
+  return ZONE_EXPR[zone] || 'bliss'
+}
+
+/** 表情停留多久：形变最长 620ms，加一点余韵，之后回到本来那张脸 */
+export const FACE_HOLD = 1150
+
 export function prefersReducedMotion() {
   try {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches

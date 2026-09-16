@@ -3,7 +3,7 @@ import { ArrowLeft, PawPrint, RefreshCw } from 'lucide-react'
 import { LEVEL_MEALS, PET_COLORWAYS, PET_NAME, PET_SPECIES, dateSeed, hashSeed, levelForMeals, petStages, petLinesByStage, stickerPool } from '../data.js'
 import SoftPet, { moodFromEmoji } from '../components/SoftPet.jsx'
 import PetPops, { spawnPops } from '../components/PetPops.jsx'
-import { HEAT_WINDOW, ZONE_LINES, playPatReaction, zoneFromPoint } from '../petTouch.js'
+import { FACE_HOLD, HEAT_WINDOW, ZONE_LINES, expressionFor, playPatReaction, zoneFromPoint } from '../petTouch.js'
 
 // 拍拍里程碑：摸够次数后专门说一句（3/8/15/25 是有讲究的，别改）
 const PAT_MILESTONES = { 3: '呼噜呼噜——它开始踩奶了。', 8: '翻出肚皮了，这是最高信任。', 15: '眯上眼睛了……别停。', 25: '（睡着了，尾巴还在轻轻晃）' }
@@ -46,11 +46,13 @@ export default function PetScreen({ pet, onColorway, onBack }) {
   const [pops, setPops] = useState([])
   const [patBubble, setPatBubble] = useState(null)
   const [patZone, setPatZone] = useState('tummy')
+  const [faceExpr, setFaceExpr] = useState(null)      // 脸上的表情（见 components/PetFace.jsx）
   const hitRef = useRef(null)
   const heatRef = useRef(0)
   const lastPatRef = useRef(0)
   const heatTimer = useRef(null)
   const bubbleTimer = useRef(null)
+  const faceTimer = useRef(null)
 
   const patCat = (e) => {
     const btn = e.currentTarget
@@ -75,6 +77,10 @@ export default function PetScreen({ pet, onColorway, onBack }) {
     const n = patTick + 1
     setPatTick(n)
     setPatZone(zone)
+    // 表情：点哪儿换哪种脸，连击到后面变爱心眼 / 星星眼
+    setFaceExpr(expressionFor(zone, heat))
+    clearTimeout(faceTimer.current)
+    faceTimer.current = setTimeout(() => setFaceExpr(null), FACE_HOLD)
     const batch = spawnPops(px, py, heat >= 3 ? 6 : 4)
     setPops((ps) => [...ps.slice(-8), ...batch])
     setTimeout(() => setPops((ps) => ps.filter((p) => !batch.some((b) => b.id === p.id))), 1400)
@@ -104,12 +110,21 @@ export default function PetScreen({ pet, onColorway, onBack }) {
             onClick={patCat}
             data-zone={patZone}
             data-pats={patTick}
+            data-face={faceExpr || ''}
             aria-label={`拍拍${PET_NAME}——耳朵、肚子、爪子反应不一样`}
             title={`拍拍${PET_NAME}`}
           >
             <span className="pet-idle">
               <span className="pet-hit" ref={hitRef}>
-                <SoftPet stage={level} mood={patBubble ? 'love' : mood} colorway={colorway} size={150} />
+                <SoftPet
+                  stage={level}
+                  mood={mood}
+                  colorway={colorway}
+                  size={150}
+                  faces
+                  face={faceExpr}
+                  faceTick={patTick}
+                />
               </span>
             </span>
             <PetPops pops={pops} />
@@ -119,7 +134,7 @@ export default function PetScreen({ pet, onColorway, onBack }) {
         <p className="eyebrow">SOFT LIFE COMPANION</p>
         <h1>{PET_NAME} · {stage.name}</h1>
         <p className="pet-stage-desc">{stage.desc}</p>
-        <p className="pet-pat-hint">摸摸它 —— 点耳朵、肚子、爪子，它的反应不一样</p>
+        <p className="pet-pat-hint">摸摸它 —— 点耳朵、肚子、爪子，表情和动作都不一样</p>
 
         {/* 毛色选择器：只有一种毛色时不渲染（现在是「奶白三花」一种） */}
         {PET_COLORWAYS.length > 1 && (

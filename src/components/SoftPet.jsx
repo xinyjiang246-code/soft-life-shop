@@ -1,4 +1,5 @@
 import { PET_COLORWAYS } from '../data.js'
+import PetFace from './PetFace.jsx'
 
 /**
  * SoftPet —— 慢活小铺的虚拟伙伴「软软」
@@ -65,7 +66,7 @@ export const STAGE_LOOK = [
   { scale: 1.05, ear: 'floppy', earLen: 1.0, bud: false, collar: true, bow: 'big', flower: true, twinBow: true, sparkle: true, ruby: true },
 ]
 
-export function SoftPet({ stage = 0, mood = 'happy', colorway = 'cream', size = 120, className = '' }) {
+export function SoftPet({ stage = 0, mood = 'happy', colorway = 'cream', size = 120, className = '', faces = false, face = null, faceTick = 0 }) {
   const p = PALETTES[colorway] || PALETTES.cream
   const look = STAGE_LOOK[Math.max(0, Math.min(STAGE_LOOK.length - 1, stage))]
   const eyeColor = look.ruby ? p.ruby : p.eye
@@ -76,16 +77,32 @@ export function SoftPet({ stage = 0, mood = 'happy', colorway = 'cream', size = 
   const artStyle = getPetArtStyle()
   const art = petArtUrl(artStyle, colorway, stage)
   if (art) {
+    // 画表情时：底图换成「无眼底图」，再在上面画新五官（见 components/PetFace.jsx）
+    // ⚠️ 只有 faces=true 的实例才挂无眼底图 —— 首页那只溜达猫（58px，眼睛才 4px）
+    //    永远用不上表情，挂上去等于白拉一张图、还会截走点击（实测命中到 .pet-noeye）。
+    const noEye = faces ? petNoEyeUrl(artStyle, colorway, stage) : null
+    const showFace = Boolean(face && noEye)
     // 透明底版（*-t.webp）去掉相框，猫咪是「活的」；带底版保留相纸卡
     return (
       <div
         className={`pet-photo pet-photo-${colorway} ${art.cut ? 'is-cut' : ''} ${className}`}
         style={{ width: size, height: Math.round((size * 248) / 220) }}
         role="img"
-        aria-label={`虚拟伙伴软软，${mood}`}
+        aria-label={`虚拟伙伴软软，${showFace ? '正在被摸' : mood}`}
       >
         <img src={art.url} alt="" draggable={false} />
-        <MoodSticker mood={mood} />
+        {/* 无眼底图常驻 DOM（只是透明）—— 临时插进来会有一帧解码空窗，看着像闪一下 */}
+        {noEye && (
+          <img
+            className={`pet-noeye${showFace ? ' is-on' : ''}`}
+            src={noEye}
+            alt=""
+            draggable={false}
+            aria-hidden="true"
+          />
+        )}
+        {showFace && <PetFace key={`${face}-${faceTick}`} stage={stage} expr={face} />}
+        {!showFace && <MoodSticker mood={mood} />}
       </div>
     )
   }
@@ -460,9 +477,26 @@ function petArtUrl(style, colorway, stage) {
   return null
 }
 
+// 「无眼底图」（tools/petFace.py 产出，放在 assets/pets/noeye/ 子目录）。
+// 只在画表情时用：表情画在它上面，就不必去盖原图的眼睛。
+// ⚠️ 子目录是刻意的 —— PET_ART 的 glob 是 assets/pets/*.webp（不递归），
+//    放同一层会被当成又一个画风素材，污染 petArtUrl 的遍历。
+const PET_NOEYE = import.meta.glob('../assets/pets/noeye/*.webp', { eager: true, query: '?url', import: 'default' })
+
+export function petNoEyeUrl(style, colorway, stage) {
+  const styles = [style, style === 'a' ? 'b' : 'a']
+  const colorways = [colorway, 'cream']
+  for (const st of styles) {
+    for (const cw of colorways) {
+      const hit = PET_NOEYE[`../assets/pets/noeye/${st}-${cw}-stage${stage}-t.webp`]
+      if (hit) return hit
+    }
+  }
+  return null
+}
+
 // 邻居猫：不参与成长，只有一张图（petForge 用 --out-name neighbor 产出）。
 const NEIGHBOR_ART = import.meta.glob('../assets/pets/neighbor*.webp', { eager: true, query: '?url', import: 'default' })
-
 export function neighborArtUrl() {
   // ⚠️ 必须用 key 去取 value：glob 的 key 是**源路径**（../assets/pets/…），
   //    直接塞进 <img src> 会解析成 /assets/pets/neighbor-t.webp → 404。
