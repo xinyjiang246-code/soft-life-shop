@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { getItem } from '../data.js'
 import {
-  addJournalItem, journalKey, loadJournal, removeJournalItem, setJournalNote, updateJournalItem,
+  addJournalItem, journalKey, loadJournal, removeJournalItem, setJournalNote,
 } from '../storage.js'
-import { getPhotoUrl, newPhotoId, preparePhoto, putPhoto } from '../photoStore.js'
+import { newPhotoId, preparePhoto, putPhoto } from '../photoStore.js'
+import { DEFAULT_PHOTO_NAME, MOODS, timeOf } from '../journalMeta.js'
+import EntryDetail from './EntryDetail.jsx'
 
 /**
  * JournalView —— 食物手账
@@ -31,20 +33,8 @@ import { getPhotoUrl, newPhotoId, preparePhoto, putPhoto } from '../photoStore.j
 const EMPTY_DAY = { items: [], note: '', mood: '' }
 const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六']
 
-// 心情只用文字标签，不用 emoji（项目红线：商品与界面都不退回 emoji）
-const MOODS = [
-  { id: 'bright', label: '挺好' },
-  { id: 'good', label: '还不错' },
-  { id: 'quiet', label: '想静静' },
-  { id: 'sweet', label: '想吃点甜的' },
-  { id: 'tired', label: '有点累' },
-  { id: 'empty', label: '空落落' },
-]
-
 // 集章的里程碑：第 N 份。参考 App 的「Reached 10 Cups」，换成小铺的说法。
 const STAMP_STEPS = [1, 5, 10, 25, 50]
-
-const DEFAULT_PHOTO_NAME = '今天拍的一张'
 
 /* ------------------------------ 日期工具 ------------------------------ */
 
@@ -77,13 +67,6 @@ const monthCells = (y, m) => {
   for (let d = 1; d <= days; d += 1) cells.push(keyOf(y, m, d))
   while (cells.length % 7) cells.push(null)
   return cells
-}
-
-const timeOf = (at) => {
-  if (!at) return ''
-  const d = new Date(at)
-  if (Number.isNaN(d.getTime())) return ''
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
 /* --------------------------- 贴纸 --------------------------- */
@@ -514,10 +497,14 @@ export default function JournalView() {
 
       {openedEntry && (
         <EntryDetail
+          // key 让「换一张」时**重新挂载** —— 备注卡里的输入框初值只算一次，
+          // 不换 key 的话翻到下一张还留着上一张的字。
+          key={`${opened.key}:${opened.index}`}
           entry={openedEntry}
           dateKey={opened.key}
           index={opened.index}
           canEdit={opened.key === todayKey}
+          dayMood={dayOf(opened.key).mood}
           onClose={closeEntry}
           onChanged={refresh}
           onDelete={() => drop(opened.key, opened.index)}
@@ -527,153 +514,5 @@ export default function JournalView() {
   )
 }
 
-/* ========================= 展开那一张（照参考 App 的 Detail 做） ========================= */
-/**
- * 参考图 `...418Z-d31a062b.png` 的「Brew Detail」：
- *   顶部 × / ✓，中间一张贴纸，下面几行卡片（日期时间 / 地点 / 店名 / 名字），底部 Delete。
- * 搬过来 —— 只是把「地点」去掉（这本手账不记位置，也不做地图），换成店名 + 自己写的一行。
- */
-function EntryDetail({ entry, dateKey, index, canEdit, onClose, onChanged, onDelete }) {
-  const [bigUrl, setBigUrl] = useState(null)
-  const [name, setName] = useState(entry.name || '')
-  const [place, setPlace] = useState(entry.place || '')
-  const [confirming, setConfirming] = useState(false)
-  const parts = parseKey(dateKey)
-
-  // 大图在 IndexedDB 里 —— 这是整个手账唯一一次异步取图
-  useEffect(() => {
-    let alive = true
-    setBigUrl(null)
-    if (!entry.photoId) return undefined
-    getPhotoUrl(entry.photoId).then((url) => {
-      if (!alive) {
-        if (url) setTimeout(() => URL.revokeObjectURL(url), 1000)
-        return
-      }
-      setBigUrl(url)
-    })
-    return () => { alive = false }
-  }, [entry.photoId])
-
-  // Esc 关掉
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  const commit = () => {
-    if (!canEdit) return
-    updateJournalItem(dateKey, index, { name, place })
-    onChanged()
-  }
-
-  const art = entry.thumb || (entry.id ? getItem(entry.id)?.image : null)
-
-  return (
-    <div className="jh-detail" role="dialog" aria-modal="true" aria-label={`${entry.name} 的详情`}>
-      <div className="jh-detail-bg" onClick={onClose} aria-hidden="true" />
-
-      <div className="jh-detail-panel">
-        <header className="jh-detail-top">
-          <button type="button" onClick={onClose} aria-label="关掉"><X size={19} strokeWidth={1.7} /></button>
-          <span>这一张</span>
-          <button
-            type="button"
-            className="jh-detail-ok"
-            onClick={() => { commit(); onClose() }}
-            aria-label="存下"
-          >
-            <CheckIcon />
-          </button>
-        </header>
-
-        <div className="jh-detail-body">
-          {/* 中间那张贴纸。自己拍的照片是 cover（裁满），商品图是 contain（不裁） */}
-          <div className={`jh-detail-photo${entry.photoId ? ' is-photo' : ''}`}>
-            {bigUrl
-              ? <img src={bigUrl} alt={entry.name || '自己拍的一张'} />
-              : art
-                ? <img src={art} alt={entry.name || ''} />
-                : <span className="jh-detail-note"><NoteMark /></span>}
-          </div>
-
-          <div className="jh-detail-rows">
-            <div className="jh-detail-row">
-              <CalIcon />
-              <span>{parts.y} 年 {parts.m} 月 {parts.d} 日{timeOf(entry.at) ? ` · ${timeOf(entry.at)}` : ''}</span>
-            </div>
-
-            {canEdit ? (
-              <>
-                <label className="jh-detail-row is-input">
-                  <CupIcon />
-                  <input
-                    value={name}
-                    maxLength={30}
-                    placeholder="这一份叫什么"
-                    aria-label="这一份叫什么"
-                    onChange={(e) => setName(e.target.value)}
-                    onBlur={commit}
-                  />
-                </label>
-                <label className="jh-detail-row is-input">
-                  <ShopIcon />
-                  <input
-                    value={place}
-                    maxLength={24}
-                    placeholder="在哪家（可以不写）"
-                    aria-label="在哪家买的"
-                    onChange={(e) => setPlace(e.target.value)}
-                    onBlur={commit}
-                  />
-                </label>
-              </>
-            ) : (
-              <>
-                <div className="jh-detail-row"><CupIcon /><span>{entry.name}</span></div>
-                {entry.place && <div className="jh-detail-row"><ShopIcon /><span>{entry.place}</span></div>}
-              </>
-            )}
-          </div>
-
-          <p className="jh-detail-foot">
-            {entry.photoId
-              ? '这张照片只存在你这台设备的相册里，没有传到任何地方。'
-              : '这一笔是点单时自动记下的，用的是铺子里的图。'}
-          </p>
-
-          {canEdit && (
-            <button
-              type="button"
-              className={`jh-detail-del${confirming ? ' is-armed' : ''}`}
-              onClick={() => {
-                if (!confirming) { setConfirming(true); return }
-                onDelete()
-              }}
-              onBlur={() => setConfirming(false)}
-            >
-              {confirming ? '真的删掉这一笔？再点一下' : '删掉这一笔'}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* 详情页的几枚线描图标 —— 与项目其余部分一致：不用 emoji */
-const lineProps = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }
-
-const CheckIcon = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7" {...lineProps} /></svg>
-)
-const CalIcon = () => (
-  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5" {...lineProps} /><path d="M3.5 10h17M8 3.5v4M16 3.5v4" {...lineProps} /></svg>
-)
-const CupIcon = () => (
-  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 8h12l-1.4 11.5H7.4z" {...lineProps} /><path d="M8.5 8V6.2a3.5 3.5 0 0 1 7 0V8" {...lineProps} /></svg>
-)
-const ShopIcon = () => (
-  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M4 9.5 6 4.5h12l2 5" {...lineProps} /><path d="M5 9.5v10h14v-10" {...lineProps} /><path d="M9.5 19.5v-5h5v5" {...lineProps} /></svg>
-)
+/* 展开那一张的详情页（备注卡）已抽到 `components/EntryDetail.jsx`：
+   食物手账与「存下这一餐」的照片墙共用同一个组件，字段白名单在 storage.js 里。 */

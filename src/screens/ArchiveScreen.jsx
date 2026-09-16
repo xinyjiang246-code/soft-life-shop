@@ -1,65 +1,172 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Camera, Check, ImagePlus, Settings2, Sparkles, Wand2, X } from 'lucide-react'
-import { loadArchives, saveArchives } from '../storage.js'
-import { counters, dateSeed, foodNotes, getItemsByCounter, hashSeed, moodTags, pickN, pickOne } from '../data.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, Camera, Check, ImagePlus, PenLine, Settings2, Sparkles, Wand2, X } from 'lucide-react'
+import { addJournalItem, journalKey, loadJournal, removeJournalItem, updateJournalItem } from '../storage.js'
+import { newPhotoId, preparePhoto, putPhoto } from '../photoStore.js'
+import { counters, foodNotes, getItemsByCounter, hashSeed, moodTags, pickN, pickOne } from '../data.js'
 import { extractPalette, hexToRgb } from '../colorUtils.js'
-import FlipImage from '../components/FlipImage.jsx'
+import ItemArt from '../components/ItemArt.jsx'
+import EntryDetail from '../components/EntryDetail.jsx'
 import JournalView from '../components/JournalView.jsx'
+import { DEFAULT_PHOTO_NAME } from '../journalMeta.js'
 import archiveExample from '../assets/matcha-archive-example.webp'
 
+/**
+ * 「把这一餐存下来」+「食物手账」——同一张首页磁贴，两个看法。
+ *
+ * 2026-09-17 用户定的关系（原话：「这里的图片是和旁边的手帐是联动的……就是 2 边功能类似？」）：
+ *   **一套照片，两个看法。** 手账是唯一的存储（`soft-life-journal-v1` + IndexedDB 的照片），
+ *   这一页专门做「上传 + AI 帮你写小记」，手账专门做「按天 / 月翻看」。
+ *   所以这一页**不再有自己的相册** —— 下面那面照片墙读的就是手账里的照片。
+ *
+ * ⚠️ 上一版这里有个真问题（本次修掉的）：
+ *   1. 照片存的是**全尺寸 base64 dataURL**，塞进 localStorage。一张手机照 3MB → 字符串约 4MB，
+ *      而 localStorage 只有 5MB，`saveArchives` 外面又是 `catch {}` → **写满会静默失败**，
+ *      用户以为存下了，其实什么都没有。手账那边早就绕开了（原图进 IndexedDB、
+ *      localStorage 只留 180px 的缩略图）—— 这页从没跟上。现在统一走 `photoStore.js`。
+ *   2. `archives` 那个数组**从来没有被渲染过** —— 上传完 AI 面板一关，
+ *      这张照片就再也找不回来了。所以才有了这面照片墙。
+ *   3. 示例图点一下会**弹文件选择器**（用户想看图，它让你上传）。现在改成点开看大图。
+ */
+
+// 旧版（≤2026-09-16）的照片 key —— 这个数组从来没被渲染过，存在里面的东西本来就是取不回来的
+const LEGACY_KEY = 'soft-life-archives-v1'
+
+/** 手账里所有**带自己拍的照片**的条目，按时间倒序 —— 照片墙的数据源 */
+function collectWall(journal) {
+  const days = journal?.days || {}
+  const out = []
+  Object.keys(days).sort().forEach((dateKey) => {
+    const items = days[dateKey]?.items || []
+    items.forEach((entry, index) => {
+      // index 必须是**在当天 items 里的下标** —— 更新 / 删除都按它定位，
+      // 所以这里遍历原始数组、不要先 filter（否则下标会和 storage 那边对不上）
+      if (entry && entry.thumb) out.push({ dateKey, index, entry })
+    })
+  })
+  return out.sort((a, b) => (b.entry.at || 0) - (a.entry.at || 0))
+}
+
+const shortDate = (dateKey, todayKey) => {
+  if (dateKey === todayKey) return '今天'
+  const [, m, d] = String(dateKey).split('-')
+  return `${Number(m)}.${d}`
+}
+
 export default function ArchiveScreen({ onBack, initialView }) {
-  // 两个视图共用这一张磁贴：「存下这一餐」是原来的照片存档，「食物手账」是每天记下的一笔
+  // 两个视图共用这一张磁贴：「存下这一餐」是上传 + AI 小记，「食物手账」是按天翻看
   // initialView 让结局页的「翻翻手账」能直接落到第二格
   const [view, setView] = useState(initialView === 'journal' ? 'journal' : 'archive')
-  const [image, setImage] = useState(null)
+  const [journal, setJournal] = useState(() => loadJournal())
+  const [image, setImage] = useState(null)          // 刚存下的那张（blob URL，不是 base64）
+  const [busy, setBusy] = useState(false)
+  const [hint, setHint] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [connected, setConnected] = useState(false)
-  const [archives, setArchives] = useState(() => loadArchives())
-  const [aiContent, setAiContent] = useState(null)   // 上传后 AI 生成的内容
-  const [analyzing, setAnalyzing] = useState(false)  // AI 分析中
-  const [revealed, setRevealed] = useState(0)        // 已逐条揭晓的模块数
+  const [aiContent, setAiContent] = useState(null)  // 上传后 AI 生成的内容
+  const [analyzing, setAnalyzing] = useState(false) // AI 分析中
+  const [revealed, setRevealed] = useState(0)       // 已逐条揭晓的模块数
+  const [newEntry, setNewEntry] = useState(null)    // 刚记下的那一笔 { dateKey, index }
+  const [preview, setPreview] = useState(null)      // { mode: 'entry', dateKey, index } | { mode: 'example' }
   const inputRef = useRef(null)
+  const urlRef = useRef(null)
 
-  const chooseImage = (event) => {
+  const todayKey = journalKey()
+  const refresh = () => setJournal(loadJournal())
+  const wall = useMemo(() => collectWall(journal), [journal])
+
+  const previewDay = preview?.mode === 'entry' ? (journal.days || {})[preview.dateKey] : null
+  const previewEntry = previewDay?.items?.[preview.index] || null
+
+  // 旧 key 只在**确实是空的时候**清掉 —— 它占着 localStorage 的配额，
+  // 而手账的缩略图也写在同一份配额里，写满会静默失败。
+  // 万一里面真有内容，宁可让它占着，也不替用户删东西（那种数据本来也读不出来）。
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LEGACY_KEY)
+      if (raw && !(JSON.parse(raw) || []).length) localStorage.removeItem(LEGACY_KEY)
+    } catch { /* 坏了也与我无关 */ }
+  }, [])
+
+  // blob URL 用完要还回去，不然每上传一张就漏一个
+  useEffect(() => () => { if (urlRef.current) URL.revokeObjectURL(urlRef.current) }, [])
+
+  /**
+   * 存下一张照片。顺序是有讲究的：
+   *   压到长边 1600 的 WebP → 进 IndexedDB → **先把这一笔记进手账**（缩略图随条目走）
+   *   → 再把 blob URL 塞给 <img> 预览 → 最后才去跑 AI。
+   * 先落盘再跑 AI：AI 那一步只是锦上添花，它挂了这张照片也该已经存好了。
+   */
+  const chooseImage = async (event) => {
     const file = event.target.files?.[0]
-    if (!file) return
     event.target.value = '' // 允许重复选同一张
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result
-      setImage(dataUrl)
-      const id = Date.now()
-      const next = [{ id, image: dataUrl, date: new Date().toLocaleDateString('zh-CN') }, ...archives]
-      setArchives(next)
-      saveArchives(next)
-      generateAiContent(dataUrl, id)
+    if (!file) return
+    setBusy(true)
+    setHint('正在把这张照片存下来…')
+    try {
+      const { blob, thumb } = await preparePhoto(file)
+      const photoId = newPhotoId()
+      const ok = await putPhoto(photoId, blob)
+      if (!ok) throw new Error('这张照片没能存下来，可能浏览器的相册被限制了')
+
+      const dateKey = journalKey()
+      const entry = addJournalItem(dateKey, DEFAULT_PHOTO_NAME, { photoId, thumb })
+      if (!entry) throw new Error('没能把这一笔记下来')
+      const index = (loadJournal().days[dateKey]?.items || []).length - 1
+
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current)
+      urlRef.current = URL.createObjectURL(blob)
+      setImage(urlRef.current)
+      setNewEntry({ dateKey, index })
+      refresh()
+      setHint('')
+      generateAiContent(urlRef.current, dateKey, index)
+    } catch (err) {
+      setHint(err?.message || '这张照片读不出来，换一张试试')
+    } finally {
+      setBusy(false)
     }
-    reader.readAsDataURL(file)
   }
 
-  const generateAiContent = async (dataUrl, id) => {
+  const generateAiContent = async (src, dateKey, index) => {
     setAnalyzing(true)
     setRevealed(0)
     setAiContent(null)
 
-    const seed = hashSeed(String(id) + dateSeed())
+    // 种子只来自「哪一天 + 第几笔」—— 同一张照片重新渲染永远是同一段小记，不用 Date.now()
+    const seed = hashSeed(`${dateKey}#${index}`)
     const tags = pickN(moodTags, seed, 3)
     const note = pickOne(foodNotes, seed + 1)
 
     // 模拟 AI 分析耗时（让「正在分析」有真实感）
     const [palette] = await Promise.all([
-      extractPalette(dataUrl),
+      extractPalette(src),
       new Promise((r) => setTimeout(r, 950 + Math.random() * 650)),
     ])
     const recommendation = pickColorMatch(palette.dominant)
 
     setAiContent({ tags, note, palette, recommendation, seed })
     setAnalyzing(false)
+
+    // 顺手写进这一笔 —— 手账那边翻开同一张也看得到「当时 AI 写下的」。
+    // 字段白名单在 storage.js 的 ENTRY_TEXT_FIELDS 里，这里塞的 key 必须是那几个。
+    updateJournalItem(dateKey, index, { tags, aiNote: note, swatch: palette.dominant })
+    refresh()
+  }
+
+  const resetArchive = () => {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current)
+    urlRef.current = null
+    setImage(null)
+    setAiContent(null)
+    setRevealed(0)
+    setAnalyzing(false)
+    setNewEntry(null)
+    setHint('')
   }
 
   // 内容就绪后，4 个模块逐条揭晓
   useEffect(() => {
-    if (!aiContent) return
+    if (!aiContent) return undefined
     setRevealed(1)
     const timers = [
       setTimeout(() => setRevealed(2), 280),
@@ -69,12 +176,7 @@ export default function ArchiveScreen({ onBack, initialView }) {
     return () => timers.forEach(clearTimeout)
   }, [aiContent])
 
-  const resetArchive = () => {
-    setImage(null)
-    setAiContent(null)
-    setRevealed(0)
-    setAnalyzing(false)
-  }
+  const openEntry = (target) => setPreview({ mode: 'entry', ...target })
 
   return (
     <div className="shop-page archive-page">
@@ -114,33 +216,109 @@ export default function ArchiveScreen({ onBack, initialView }) {
 
           {image ? (
             <>
-              <section className="archive-card" aria-label="食物存档预览">
-                <div className="archive-photo"><img src={image} alt="上传的食物" /></div>
+              <section className={`archive-card${aiContent && !analyzing ? ' has-ai' : ''}`} aria-label="食物存档预览">
+                <div className="archive-photo"><img src={image} alt="刚存下的这一张" /></div>
                 {analyzing && <AnalyzingState />}
-                {aiContent && !analyzing && <ArchiveAiPanel content={aiContent} revealed={revealed} />}
+                {aiContent && !analyzing && (
+                  <ArchiveAiPanel
+                    content={aiContent}
+                    revealed={revealed}
+                    onWrite={newEntry ? () => openEntry(newEntry) : null}
+                  />
+                )}
               </section>
               <div className="archive-actions">
                 <button className="secondary-action" onClick={() => inputRef.current?.click()}><ImagePlus size={18} />换一张</button>
-                <button className="secondary-action" onClick={resetArchive}>重新选择</button>
+                <button className="secondary-action" onClick={resetArchive}>收起</button>
               </div>
-              <p className="archive-note">当前是本地 AI 预览（预设模板 + 图像主色提取）。连接真实图像 API 后，可把下半部分替换为根据照片生成的手绘纸本插图。</p>
             </>
           ) : (
             <>
-              <button className="archive-example" onClick={() => inputRef.current?.click()}>
-                <img src={archiveExample} alt="抹茶拿铁食物存档示例" />
-                <span>示例：真实照片与纸本食物插画</span>
-              </button>
-              <button className="upload-zone compact" onClick={() => inputRef.current?.click()}>
+              {wall.length === 0 && (
+                // 示例图**不再当上传按钮用** —— 那是「想看图却弹出文件选择器」的根源。
+                // 现在点它就是看大图，上传走下面那颗明确的按钮。
+                <button className="archive-example" onClick={() => setPreview({ mode: 'example' })}>
+                  <img src={archiveExample} alt="抹茶拿铁食物存档示例" />
+                  <span>示例：真实照片与纸本食物插画（点开看大图）</span>
+                </button>
+              )}
+              <button className="upload-zone compact" onClick={() => inputRef.current?.click()} disabled={busy}>
                 <Camera size={23} />
-                <strong>拍下这一餐</strong>
-                <span>相册上传或直接拍摄</span>
+                <strong>{busy ? '正在存下这一张…' : '拍下这一餐'}</strong>
+                <span>相册上传或直接拍摄 —— 存下的照片旁边的手账里也翻得到</span>
               </button>
             </>
           )}
 
-          <input ref={inputRef} className="file-input" type="file" accept="image/*" capture="environment" onChange={chooseImage} />
+          {hint && <p className="archive-hint">{hint}</p>}
+
+          {/* 照片墙：读的就是手账里的照片，两边是同一套 */}
+          <section className="aw" aria-label="存下的照片">
+            <div className="aw-head">
+              <span>存下的照片</span>
+              <span className="aw-count">{wall.length ? `${wall.length} 张` : '还是空的'}</span>
+            </div>
+            {wall.length > 0 ? (
+              <div className="aw-grid">
+                {wall.map((w) => (
+                  <button
+                    key={`${w.dateKey}:${w.index}`}
+                    type="button"
+                    className="aw-cell"
+                    onClick={() => openEntry({ dateKey: w.dateKey, index: w.index })}
+                    aria-label={`看「${w.entry.name}」这张照片`}
+                  >
+                    <img src={w.entry.thumb} alt={w.entry.name || '存下的一张'} loading="lazy" />
+                    <span className="aw-cell-date">{shortDate(w.dateKey, todayKey)}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="aw-empty">
+                还没有存下的照片。拍一张，它会同时出现在旁边的食物手账里 —— 两边是同一套照片。
+              </p>
+            )}
+          </section>
+
+          <p className="archive-note">
+            照片只存在你这台设备的相册里（浏览器里，换台手机就看不到了）。
+            上面的 AI 小记目前是本地模板 + 图像主色提取，接上真实图像 API 后可以由照片直接生成纸本插图。
+          </p>
+
+          <input ref={inputRef} className="file-input" type="file" accept="image/*" onChange={chooseImage} />
         </>
+      )}
+
+      {preview?.mode === 'entry' && previewEntry && (
+        <EntryDetail
+          key={`${preview.dateKey}:${preview.index}`}
+          entry={previewEntry}
+          dateKey={preview.dateKey}
+          index={preview.index}
+          canEdit={preview.dateKey === todayKey}
+          dayMood={previewDay?.mood || ''}
+          // 照片墙从「只看图」进 —— 先看清这张照片，再点一下才出备注（用户要的那个交互）
+          initialStage={0}
+          onClose={() => setPreview(null)}
+          onChanged={refresh}
+          onDelete={() => {
+            removeJournalItem(preview.dateKey, preview.index)
+            setPreview(null)
+            refresh()
+          }}
+        />
+      )}
+
+      {preview?.mode === 'example' && (
+        <EntryDetail
+          entry={{ name: '抹茶拿铁 · 食物存档示例', thumb: archiveExample }}
+          dateKey={todayKey}
+          index={-1}
+          canEdit={false}
+          showNote={false}
+          initialStage={0}
+          onClose={() => setPreview(null)}
+        />
       )}
 
       {showSettings && <ApiSettings close={() => setShowSettings(false)} connected={connected} connect={() => { setConnected(true); setShowSettings(false) }} />}
@@ -173,8 +351,8 @@ function AnalyzingState() {
   )
 }
 
-// AI 生成内容面板：4 个模块（按 revealed 逐条揭晓）
-function ArchiveAiPanel({ content, revealed }) {
+// AI 生成内容面板：4 个模块（按 revealed 逐条揭晓）+ 一个「去写备注」的出口
+function ArchiveAiPanel({ content, revealed, onWrite }) {
   const { tags, note, palette, recommendation } = content
   return (
     <div className="archive-ai-panel">
@@ -227,12 +405,11 @@ function ArchiveAiPanel({ content, revealed }) {
           </div>
           <div className="ai-recommendation">
             <div className="ai-thumb">
-              <FlipImage
-                front={recommendation.item.image}
-                back={recommendation.item.imageReal}
-                alt={recommendation.item.cn}
-                hint={false}
-              />
+              {/* ⚠️ 这里必须走 **ItemArt**（商品图的统一出口），不能直接塞 FlipImage。
+                  「今日特调」（`toItemFromSpecial`）既没有 image 也没有 imageReal，只有 art ——
+                  FlipImage 在这种输入下会退回一个通用同心圆占位，60×80 看着就是个「◎」，
+                  像坏图。ItemArt 会按项目规则改画 DishArt 手绘，和别处一致。 */}
+              <ItemArt item={recommendation.item} size="sm" prefer="real" />
             </div>
             <div className="ai-recommendation-info">
               <strong>{recommendation.item.cn}</strong>
@@ -241,6 +418,13 @@ function ArchiveAiPanel({ content, revealed }) {
             </div>
           </div>
         </div>
+      )}
+
+      {revealed >= 4 && onWrite && (
+        <button type="button" className="ai-write" onClick={onWrite}>
+          <PenLine size={15} strokeWidth={1.8} />
+          给它起个名字、写一句
+        </button>
       )}
 
       {revealed >= 4 && (

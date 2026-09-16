@@ -310,20 +310,50 @@ export function logJournalOrder(entries = []) {
 }
 
 /**
+ * 一笔记录上「用户自己填 / AI 写下的」那些字段。
+ *
+ * ⚠️ 白名单集中在这一处，别再各写各的。原因：备注卡两边共用（食物手账的详情页 +
+ *    「存下这一餐」的照片墙），如果一边往 patch 里塞了字段而这里没放行，
+ *    表现是「填了、界面也显示、刷新就没了」—— 而且不报错，非常难查。
+ */
+const ENTRY_TEXT_FIELDS = ['place', 'mood', 'why', 'company', 'kcal', 'aiNote', 'swatch']
+
+/** 新增时用：空字符串不算数，别把 ''写进去占位 */
+function applyNewFields(entry, extra) {
+  for (const key of ENTRY_TEXT_FIELDS) {
+    const value = extra[key]
+    if (typeof value === 'string' && value.trim()) entry[key] = value.trim()
+  }
+  if (Array.isArray(extra.tags) && extra.tags.length) entry.tags = extra.tags.slice(0, 6)
+  return entry
+}
+
+/** 修改时用：空字符串**要**能写进去 —— 那是「用户把这一格清空了」 */
+function applyPatch(entry, patch) {
+  for (const key of ENTRY_TEXT_FIELDS) {
+    if (typeof patch[key] === 'string') entry[key] = patch[key].trim()
+  }
+  if (Array.isArray(patch.tags)) entry.tags = patch.tags.slice(0, 6)
+  // 名字不能清空 —— 空白名字会让这一笔在手账的列表里变成一行看不见的东西
+  if (typeof patch.name === 'string' && patch.name.trim()) entry.name = patch.name.trim()
+  return entry
+}
+
+/**
  * 手动加一笔。
- * extra 可带 { photoId, thumb, name(覆盖), place, at } —— 用户拍照贴上来时走这条路。
+ * extra 可带 { photoId, thumb, place, mood, why, company, kcal, tags, aiNote, swatch, at }
+ * —— 用户拍照贴上来、或「存下这一餐」上传时走这条路。
  * 返回落盘的条目，UI 可以立刻拿去展开详情，不必再读一遍。
  */
 export function addJournalItem(dateKey, name, extra = {}) {
   if (!dateKey || !name) return null
   const j = loadJournal()
   const day = j.days[dateKey] || { items: [], note: '', mood: '' }
-  const entry = { id: extra.id || null, name }
+  const entry = applyNewFields({ id: extra.id || null, name }, extra)
   if (extra.photoId) {
     entry.photoId = extra.photoId
     if (extra.thumb) entry.thumb = extra.thumb
   }
-  if (extra.place) entry.place = extra.place
   entry.at = extra.at || Date.now()
   day.items = [...(day.items || []), entry]
   j.days[dateKey] = day
@@ -331,15 +361,13 @@ export function addJournalItem(dateKey, name, extra = {}) {
   return entry
 }
 
-/** 改某一笔的字段（详情页里改名字 / 店名） */
+/** 改某一笔的字段（备注卡里改的所有东西都走这里） */
 export function updateJournalItem(dateKey, index, patch = {}) {
   if (!dateKey) return
   const j = loadJournal()
   const day = j.days[dateKey]
   if (!day || !day.items || index < 0 || index >= day.items.length) return
-  const next = { ...day.items[index] }
-  if (typeof patch.name === 'string' && patch.name.trim()) next.name = patch.name.trim()
-  if (typeof patch.place === 'string') next.place = patch.place.trim()
+  const next = applyPatch({ ...day.items[index] }, patch)
   day.items = day.items.map((it, i) => (i === index ? next : it))
   j.days[dateKey] = day
   saveJournal(j)

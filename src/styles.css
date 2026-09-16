@@ -1536,6 +1536,13 @@ img { max-width: 100%; display: block; }
 .archive-card { width: min(310px, calc(100% - 52px)); aspect-ratio: 3/4; margin: 0 auto; overflow: hidden; background: var(--surface); box-shadow: 0 7px 22px rgba(74, 69, 64, .1); }
 .archive-photo { height: 50%; overflow: hidden; background: #ddd0bb; }
 .archive-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+/* ⚠️ 2026-09-17 修掉的一个真问题：`.archive-card` 锁了 3:4 + overflow:hidden，
+   而 AI 面板比这张卡片高得多 —— 实测卡片 413px、内容 807px，**394px 直接被裁掉**，
+   连面板底部的说明都点不到（elementFromPoint 命中不到）。
+   有 AI 面板时把卡片放开：照片改用自己的比例占位，整张卡片跟着内容长高。 */
+.archive-card.has-ai { aspect-ratio: auto; overflow: visible; }
+.archive-card.has-ai .archive-photo { height: auto; aspect-ratio: 3 / 2; }
 .archive-illustration { position: relative; height: 50%; overflow: hidden; background-color: #f4eddf; background-image: radial-gradient(rgba(74, 69, 64, .05) .6px, transparent .8px), repeating-linear-gradient(85deg, rgba(159, 127, 95, .035) 0 1px, transparent 1px 8px); background-size: 5px 5px, 12px 12px; }
 .archive-number { position: absolute; top: 17px; left: 18px; margin: 0; color: var(--caramel); font: 600 8px/1 "Nunito", sans-serif; letter-spacing: .1em; }
 .archive-pending { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: var(--text-sub); font-size: 12px; line-height: 1.6; text-align: center; }
@@ -4814,7 +4821,11 @@ footer {
       等用户确认这版效果，再把这套 token 铺到全场（见第十节的改造路径）
    语气红线：不记卡路里、不算账、不打卡、不催更
    ============================================================ */
-.jh {
+/* ⚠️ 这套变量挂在 `.jh` 与 `.archive-page` 两处 —— 2026-09-17 之后「存下这一餐」页
+   也要用同一套米灰 token（照片墙 + 两边共用的备注卡）。
+   注意别顺手把 padding-bottom / color 一起加给 `.archive-page`：那会盖掉它自己的 34px。 */
+.jh,
+.archive-page {
   --jh-paper: #F1EFE8;
   --jh-card: #FBFAF7;
   --jh-card-2: #EFECE2;
@@ -4826,6 +4837,9 @@ footer {
   --jh-gold: #A88454;
   --jh-moss: #8A9A6B;
   --jh-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.jh {
   padding-bottom: 8px;
   color: var(--jh-ink);
 }
@@ -5125,11 +5139,140 @@ footer {
 .jh-detail-del:hover { background: rgba(196, 112, 63, .07); color: var(--jh-clay); }
 .jh-detail-del.is-armed { background: rgba(196, 112, 63, .11); color: var(--jh-clay); font-weight: 500; }
 
+/* ============================================================
+   备注卡 · 2026-09-17 扩展（两边共用：手账详情页 + 「存下这一餐」照片墙）
+   新增：心情两层、为什么、和谁、热量、AI 当时写下的
+   ============================================================ */
+
+/* 顶栏右位在「不可编辑」时也要占住，标题才居中 */
+.jh-detail-slot { width: 36px; height: 36px; }
+
+.jh-detail-row.is-chips { align-items: flex-start; flex-wrap: wrap; }
+.jh-detail-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.jh-detail-chip {
+  padding: 6px 11px; border: 1px solid var(--jh-line); border-radius: 999px;
+  background: var(--jh-paper); color: var(--jh-ink-2);
+  font-family: inherit; font-size: 12px; cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
+}
+.jh-detail-chip:hover:not(:disabled) { transform: translateY(-1px); }
+.jh-detail-chip.is-on { background: #EFE7DA; border-color: var(--jh-clay); color: var(--jh-clay); }
+.jh-detail-chip:disabled { cursor: default; opacity: .55; }
+.jh-detail-chip:disabled.is-on { opacity: 1; }
+
+.jh-detail-daymood { margin: 3px 4px 0; font-size: 11.5px; color: var(--jh-ink-3); }
+
+/* AI 当时写下的 —— 只读，灰一点，和「用户自己填的」在视觉上分开 */
+.jh-detail-ai {
+  margin: 22px 0 0; padding: 16px 2px 0;
+  border-top: 1px dashed var(--jh-line);
+}
+.jh-detail-ai-head {
+  display: flex; align-items: center; gap: 7px; margin: 0 0 12px;
+  font-size: 12px; letter-spacing: .05em; color: var(--jh-ink-3);
+}
+.jh-detail-ai-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 11px; }
+.jh-detail-ai-tag {
+  padding: 5px 10px; border-radius: 999px;
+  background: var(--jh-card-2); color: var(--jh-ink-2); font-size: 11.5px;
+}
+.jh-detail-ai-note { margin: 0; font-size: 13px; line-height: 1.75; font-style: italic; color: var(--jh-ink-2); }
+.jh-detail-ai-swatch {
+  display: flex; align-items: center; gap: 8px; margin: 11px 0 0;
+  font-family: var(--jh-mono); font-size: 11px; color: var(--jh-ink-3);
+}
+.jh-detail-ai-swatch i { width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(46, 42, 37, .14); }
+
+/* 详情卡里点照片 → 回到「只看图」那一层（这一层照片能点，不是死图） */
+.jh-detail-photo[role="button"] { cursor: zoom-in; }
+
+/* ============================================================
+   只看这一张（stage 0）—— 用户要的「点开跳出来」
+   照片铺在压暗的背景上，**再点一下**才翻到备注卡
+   ============================================================ */
+.jh-detail.is-peek { align-items: center; }
+.jh-peek {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  width: 100%; max-width: 430px; height: 100%; margin: 0 auto; min-height: 0;
+  /* ⚠️ 必须不透明。第一版让照片直接浮在 34% 的暗底上，结果**底下的页面整个透上来**：
+     顶部「这一张」和页面标题叠在一起，底部那句提示和小记、主色那几行糊成一团。
+     和 stage 1 用同一块米纸面板，两段之间的过渡也才连得上。 */
+  background: var(--jh-paper);
+  box-shadow: 0 18px 50px rgba(46, 42, 37, .26);
+  animation: jhFade .2s ease both;
+}
+.jh-peek-tap {
+  flex: 1; min-height: 0;
+  display: grid; place-items: center;
+  padding: 0 18px 8px;
+  border: 0; background: none; cursor: zoom-out;
+}
+.jh-peek-tap.is-static { cursor: default; }
+.jh-peek-tap img {
+  max-width: 100%; max-height: 100%;
+  border-radius: 12px; background: #fff;
+  box-shadow: 0 0 0 5px #fff, 0 16px 40px rgba(30, 27, 23, .38);
+  animation: jhStickerPop .4s cubic-bezier(.34, 1.5, .64, 1) both;
+}
+.jh-peek-hint {
+  margin: 0 0 26px; text-align: center;
+  font-family: var(--jh-mono); font-size: 11.5px; letter-spacing: .04em;
+  color: var(--jh-ink-2);
+}
+
+/* ============================================================
+   照片墙（「存下这一餐」页）—— 数据来自手账，不另存一份
+   ============================================================ */
+.aw { margin: 24px 18px 0; }
+.aw-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 12px;
+}
+.aw-head > span:first-child { font-size: 13px; letter-spacing: .03em; color: var(--jh-ink-2); }
+.aw-count { font-family: var(--jh-mono); font-size: 11px; letter-spacing: .04em; color: var(--jh-ink-3); }
+.aw-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.aw-cell {
+  position: relative; display: block; padding: 0; aspect-ratio: 1;
+  border: 0; border-radius: 13px; overflow: hidden; background: var(--jh-card-2);
+  box-shadow: 0 0 0 1px var(--jh-line); cursor: pointer;
+  transition: transform .22s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease;
+}
+.aw-cell:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--jh-clay); }
+.aw-cell img { display: block; width: 100%; height: 100%; object-fit: cover; filter: saturate(1.04) contrast(1.02); }
+.aw-cell-date {
+  position: absolute; left: 6px; bottom: 6px;
+  padding: 2px 6px; border-radius: 999px;
+  background: rgba(255, 255, 255, .84);
+  font-family: var(--jh-mono); font-size: 9.5px; letter-spacing: .03em; color: var(--jh-ink-2);
+}
+.aw-empty { margin: 0; font-size: 12.5px; line-height: 1.75; color: var(--jh-ink-3); }
+
+.archive-hint {
+  margin: 14px 28px 0; padding: 9px 12px;
+  border-radius: 11px; background: var(--jh-card-2);
+  font-size: 12px; line-height: 1.6; color: var(--jh-ink-2);
+  text-align: center;
+}
+
+/* AI 面板底部的出口：去备注卡补名字和那一句 */
+.ai-write {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; margin-top: 14px; padding: 12px;
+  border: 1px solid var(--jh-line); border-radius: 14px;
+  background: var(--jh-card); color: var(--jh-clay);
+  font-family: inherit; font-size: 12.5px; cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+.ai-write:hover { background: var(--jh-card-2); transform: translateY(-1px); }
+
 @media (prefers-reduced-motion: reduce) {
   .jh-cell, .jh-stage-month, .jh-stage-week, .jh-stage-day, .jh-line, .jh-hint { animation: none; }
   .jh-arrows button, .jh-mood, .jh-add-btn, .jh-dock button, .jh-add > svg,
-  .jh-line, .jh-shoot, .jh-detail-top button, .jh-detail-del { transition: none; }
-  .jh-detail-bg, .jh-detail-panel, .jh-detail-photo img, .jh-detail-row { animation: none; }
+  .jh-line, .jh-shoot, .jh-detail-top button, .jh-detail-del,
+  .jh-detail-chip, .aw-cell, .ai-write { transition: none; }
+  .jh-detail-bg, .jh-detail-panel, .jh-detail-photo img, .jh-detail-row,
+  .jh-peek, .jh-peek-tap img { animation: none; }
 }
 
 /* 结局页那行轻量回执：送达就记了，不占版面 */

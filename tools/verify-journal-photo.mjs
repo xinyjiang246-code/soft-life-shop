@@ -171,7 +171,14 @@ try {
   ok('展开页', detail)
   assert.ok(detail.有大图, '展开页应该显示上传的那张照片')
   assert.ok(detail.容器是照片样式, '自己拍的照片应该走 cover（.is-photo）')
-  assert.equal(detail.可编辑字段.length, 2, '展开页应该能补名字和店名')
+  // ⚠️ 这里原来断的是 `可编辑字段.length === 2`（只补名字和店名）。
+  //    2026-09-17 备注卡加了「为什么想吃它 / 和谁一起 / 热量」三格，那个数字必然失效 ——
+  //    所以改成**按 aria-label 点名**：数字对不上只是「加了字段」，名字对不上才是真坏了。
+  assert.deepEqual(
+    detail.可编辑字段.slice().sort(),
+    ['为什么想吃它', '在哪家买的', '和谁一起', '这一份叫什么', '热量'].sort(),
+    '备注卡应该能填这五格'
+  )
 
   console.log('\n[5] 补上名字和店名，按 ✓ 存下')
   await evaluate(`(() => {
