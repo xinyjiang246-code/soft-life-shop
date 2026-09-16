@@ -6,6 +6,8 @@ import { loadMood, saveMood } from '../storage.js'
 import FlipImage from '../components/FlipImage.jsx'
 import DishArt from '../components/DishArt.jsx'
 import SoftPet, { moodFromEmoji, neighborArtUrl } from '../components/SoftPet.jsx'
+import PetPops, { spawnPops } from '../components/PetPops.jsx'
+import { playPatReaction, zoneFromPoint } from '../petTouch.js'
 import ShopRow from '../components/ShopRow.jsx'
 import matchaLatteDraw from '../assets/products/matcha-latte-draw.webp'
 import matchaLatteReal from '../assets/products/matcha-latte-real.webp'
@@ -218,11 +220,27 @@ function HomeCat({ pet }) {
     return () => { alive = false; clearTimeout(timer.current) }
   }, [])
 
-  const tapCat = () => {
+  const [pops, setPops] = useState([])
+  const hitRef = useRef(null)
+  const tapCat = (e) => {
     setLoved(true)
     setBubble(CAT_SAY[Math.floor(Math.random() * CAT_SAY.length)])
     clearTimeout(bubbleTimer.current)
     bubbleTimer.current = setTimeout(() => { setBubble(null); setLoved(false) }, 2100)
+
+    // 摸它也要有身体反应（和宠物页同一套：分部位 + 形变 + 指尖小图）
+    const btn = e.currentTarget
+    const rect = btn.getBoundingClientRect()
+    const hasPoint = !(e.clientX === 0 && e.clientY === 0)
+    const zone = hasPoint ? zoneFromPoint(rect, e.clientX, e.clientY) : 'tummy'
+    playPatReaction(hitRef.current, zone, 0)
+    const batch = spawnPops(
+      hasPoint ? e.clientX - rect.left : rect.width / 2,
+      hasPoint ? e.clientY - rect.top : rect.height / 2,
+      3,
+    )
+    setPops((ps) => [...ps.slice(-6), ...batch])
+    setTimeout(() => setPops((ps) => ps.filter((p) => !batch.some((b) => b.id === p.id))), 1400)
   }
 
   return (
@@ -230,9 +248,12 @@ function HomeCat({ pet }) {
       <button className="home-cat-btn" style={{ left: `${pos.x}%` }} onClick={tapCat} aria-label={`摸摸${PET_NAME}`}>
         <span className="home-cat-flip" style={{ transform: `scaleX(${pos.dir})` }}>
           <span className={`home-cat-body ${walking ? 'is-walking' : ''} ${jumping ? 'is-jumping' : ''}`}>
-            <SoftPet stage={level} mood={loved ? 'love' : 'happy'} colorway={pet.colorway || 'cream'} size={58} />
+            <span className="home-cat-hit" ref={hitRef}>
+              <SoftPet stage={level} mood={loved ? 'love' : 'happy'} colorway={pet.colorway || 'cream'} size={58} />
+            </span>
           </span>
         </span>
+        <PetPops pops={pops} />
       </button>
       {bubble && <span className="home-cat-bubble" role="status">{bubble}</span>}
     </div>

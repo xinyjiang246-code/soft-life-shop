@@ -2,10 +2,12 @@ import { useMemo, useRef, useState } from 'react'
 import { ArrowLeft, PawPrint, RefreshCw } from 'lucide-react'
 import { LEVEL_MEALS, PET_COLORWAYS, PET_NAME, PET_SPECIES, dateSeed, hashSeed, levelForMeals, petStages, petLinesByStage, stickerPool } from '../data.js'
 import SoftPet, { moodFromEmoji } from '../components/SoftPet.jsx'
+import PetPops, { spawnPops } from '../components/PetPops.jsx'
+import { HEAT_WINDOW, ZONE_LINES, playPatReaction, zoneFromPoint } from '../petTouch.js'
 
-// 拍拍台词：模拟真实撸猫的反应（里程碑 3/8/15/25 有专属反应）
-const PAT_LINES = ['呼噜呼噜……', '蹭了一下你的手心。', '耳朵转过来了——很受用。', '尾巴慢慢竖起来了。', '（把头往你手底下压了压）']
+// 拍拍里程碑：摸够次数后专门说一句（3/8/15/25 是有讲究的，别改）
 const PAT_MILESTONES = { 3: '呼噜呼噜——它开始踩奶了。', 8: '翻出肚皮了，这是最高信任。', 15: '眯上眼睛了……别停。', 25: '（睡着了，尾巴还在轻轻晃）' }
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 
 export default function PetScreen({ pet, onColorway, onBack }) {
   const level = levelForMeals(pet.meals)
@@ -37,18 +39,47 @@ export default function PetScreen({ pet, onColorway, onBack }) {
   // 形象画风 A/B 对比开关已在 2026-09-14 用户敲定猫咪形象后移除。
   // 现在只有一套素材（a-cream-stage*），petArtUrl 会自动兜底，不会露出旧 SVG。
 
-  // ---- 拍拍：点猫模拟真实撸猫（压扁回弹 + 爱心 + 呼噜台词）----
+  // ---- 拍拍：点猫的不同部位 → 身体做不同动作 + 从指尖冒小图 + 一句台词 ----
+  // 为什么分部位：软软是一张平面图，图里的耳朵/尾巴动不了，
+  //   所以靠「形变 + 支点」来表达身体反应（见 src/petTouch.js 顶部说明）。
   const [patTick, setPatTick] = useState(0)
-  const [patHearts, setPatHearts] = useState([])
+  const [pops, setPops] = useState([])
   const [patBubble, setPatBubble] = useState(null)
+  const [patZone, setPatZone] = useState('tummy')
+  const hitRef = useRef(null)
+  const heatRef = useRef(0)
+  const lastPatRef = useRef(0)
+  const heatTimer = useRef(null)
   const bubbleTimer = useRef(null)
-  const patCat = () => {
+
+  const patCat = (e) => {
+    const btn = e.currentTarget
+    const rect = btn.getBoundingClientRect()
+    // 键盘/程序化 click 没有真实坐标（clientX/Y = 0），按「摸肚子」兜底，
+    // 免得整块判定偏到左上角去。
+    const hasPoint = !(e.clientX === 0 && e.clientY === 0)
+    const zone = hasPoint ? zoneFromPoint(rect, e.clientX, e.clientY) : 'tummy'
+    const px = hasPoint ? e.clientX - rect.left : rect.width / 2
+    const py = hasPoint ? e.clientY - rect.top : rect.height / 2
+
+    // 连击：1.5 秒内接着点，幅度越来越大
+    const now = Date.now()
+    const heat = now - lastPatRef.current < HEAT_WINDOW ? heatRef.current + 1 : 0
+    heatRef.current = heat
+    lastPatRef.current = now
+    clearTimeout(heatTimer.current)
+    heatTimer.current = setTimeout(() => { heatRef.current = 0 }, HEAT_WINDOW)
+
+    playPatReaction(hitRef.current, zone, heat)
+
     const n = patTick + 1
     setPatTick(n)
-    const heart = { id: Math.random(), dx: Math.random() * 48 - 24 }
-    setPatHearts((hs) => [...hs.slice(-4), heart])
-    setTimeout(() => setPatHearts((hs) => hs.filter((h) => h.id !== heart.id)), 1300)
-    setPatBubble(PAT_MILESTONES[n] || PAT_LINES[Math.floor(Math.random() * PAT_LINES.length)])
+    setPatZone(zone)
+    const batch = spawnPops(px, py, heat >= 3 ? 6 : 4)
+    setPops((ps) => [...ps.slice(-8), ...batch])
+    setTimeout(() => setPops((ps) => ps.filter((p) => !batch.some((b) => b.id === p.id))), 1400)
+
+    setPatBubble(PAT_MILESTONES[n] || pick(ZONE_LINES[zone] || ZONE_LINES.tummy))
     clearTimeout(bubbleTimer.current)
     bubbleTimer.current = setTimeout(() => setPatBubble(null), 2200)
   }
@@ -66,20 +97,29 @@ export default function PetScreen({ pet, onColorway, onBack }) {
       <section className="pet-hero" aria-label={`${PET_NAME}的成长`}>
         <div className={`pet-avatar-wrap pet-tone-${colorway}`}>
           <div className="pet-avatar-glow" aria-hidden="true" />
-          <button className="pet-pat-btn" onClick={patCat} aria-label={`拍拍${PET_NAME}`}>
-            {/* key 变化让压扁回弹动画每次都能重放 */}
-            <div className="pet-pat-squish" key={patTick}>
-              <SoftPet stage={level} mood={patBubble ? 'love' : mood} colorway={colorway} size={150} />
-            </div>
-            {patHearts.map((h) => (
-              <i key={h.id} className="pat-heart" style={{ ['--dx']: `${h.dx}px` }} aria-hidden="true">♥</i>
-            ))}
+          {/* 三层各管一件事，千万别合并：.pet-idle 呼吸（无限循环）·
+              .pet-hit 点它的身体反应（JS 播放，会随手 cancel）· 底下才是软软本身 */}
+          <button
+            className="pet-pat-btn"
+            onClick={patCat}
+            data-zone={patZone}
+            data-pats={patTick}
+            aria-label={`拍拍${PET_NAME}——耳朵、肚子、爪子反应不一样`}
+            title={`拍拍${PET_NAME}`}
+          >
+            <span className="pet-idle">
+              <span className="pet-hit" ref={hitRef}>
+                <SoftPet stage={level} mood={patBubble ? 'love' : mood} colorway={colorway} size={150} />
+              </span>
+            </span>
+            <PetPops pops={pops} />
           </button>
           {patBubble && <span className="pet-pat-bubble" role="status">{patBubble}</span>}
         </div>
         <p className="eyebrow">SOFT LIFE COMPANION</p>
         <h1>{PET_NAME} · {stage.name}</h1>
         <p className="pet-stage-desc">{stage.desc}</p>
+        <p className="pet-pat-hint">摸摸它 —— 点耳朵、肚子、爪子，它的反应不一样</p>
 
         {/* 毛色选择器：只有一种毛色时不渲染（现在是「奶白三花」一种） */}
         {PET_COLORWAYS.length > 1 && (

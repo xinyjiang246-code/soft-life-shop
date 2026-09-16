@@ -4503,30 +4503,43 @@ footer {
    猫咪互动（2026-09-15）：宠物页拍拍 + 主页溜达猫
    ============================================================ */
 
-/* ---- 宠物页：拍拍（点猫 → 压扁回弹 + 爱心 + 台词） ---- */
+/* ---- 宠物页：拍拍（点身体的哪个部位，就有哪种反应） ----
+   三层结构，JSX 里别合并：
+     .pet-idle → 呼吸（无限循环）：一张静态水彩图，只有一直在轻轻起伏才像活的
+     .pet-hit  → 点它的形变反应，由 src/petTouch.js 用 WAAPI 播（分部位 + 连击放大，
+                 需要按次生成关键帧，所以不写在这里）
+     .pat-pop  → 从指尖冒出来的小图（爱心 / 小饼干 / 星，一律 SVG，禁 emoji）
+   ⚠️ 呼吸与反应必须挂在**两个不同元素**上 —— 同一元素上两个 transform 动画会互相覆盖。 */
 .pet-pat-btn {
   position: relative;
   display: block;
   padding: 0; border: none; background: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .pet-pat-btn:focus-visible { outline: 2px dashed var(--caramel); outline-offset: 6px; border-radius: 12px; }
-.pet-pat-squish { animation: patSquish .55s cubic-bezier(.3, 1.6, .5, 1); transform-origin: 50% 100%; }
-@keyframes patSquish {
-  0% { transform: scale(1, 1); }
-  30% { transform: scale(1.12, .82); }
-  60% { transform: scale(.94, 1.08); }
-  100% { transform: scale(1, 1); }
+.pet-idle { display: block; animation: petBreath 4.6s ease-in-out infinite; }
+@keyframes petBreath {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-2.5px) scale(1.012, 1.02); }
 }
-.pat-heart {
-  position: absolute; top: 4px; left: 50%;
-  font-style: normal; font-size: 15px; color: #E4708A;
-  animation: patHeartUp 1.25s ease-out forwards;
-  pointer-events: none;
+.pet-hit { display: block; transform-origin: 50% 100%; will-change: transform; }
+.pet-pat-hint {
+  margin: -14px auto 22px;
+  color: var(--text-sub);
+  font-size: 12px;
+  letter-spacing: .02em;
 }
-@keyframes patHeartUp {
-  0% { opacity: 0; transform: translate(0, 0) scale(.6); }
-  25% { opacity: .95; }
-  100% { opacity: 0; transform: translate(var(--dx, 0px), -46px) scale(1.2); }
+.pat-pop-layer { position: absolute; inset: 0; pointer-events: none; }
+.pat-pop {
+  position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+  font-style: normal; pointer-events: none;
+  animation: patPopUp 1.25s cubic-bezier(.2, .7, .3, 1) forwards;
+}
+.pat-pop svg { display: block; width: 100%; height: 100%; }
+@keyframes patPopUp {
+  0% { opacity: 0; transform: translate(0, 0) scale(.4) rotate(0deg); }
+  18% { opacity: 1; transform: translate(calc(var(--dx) * .25), calc(var(--dy) * .2)) scale(var(--pop-scale, 1)) rotate(calc(var(--rot) * .4)); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(calc(var(--pop-scale, 1) * .9)) rotate(var(--rot)); }
 }
 .pet-pat-bubble {
   position: absolute; left: 50%; bottom: calc(100% + 10px);
@@ -4561,6 +4574,9 @@ footer {
 }
 .home-cat-flip { display: block; transition: transform .25s ease; }
 .home-cat-body { display: block; transform-origin: 50% 100%; }
+/* 摸它时的身体反应挂在这一层 —— 不能挂在 .home-cat-body 上，
+   那层已经有走路的 catTrot / 起跳的 catHop，两个 transform 动画会打架 */
+.home-cat-hit { display: block; transform-origin: 50% 100%; }
 /* 走路：轻微上下颠 */
 .home-cat-body.is-walking { animation: catTrot .42s ease-in-out infinite; }
 @keyframes catTrot {
@@ -4586,7 +4602,9 @@ footer {
   animation: patBubbleIn .25s cubic-bezier(.34, 1.5, .64, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-  .pet-pat-squish, .pat-heart, .home-cat-body { animation: none !important; }
+  /* 呼吸与溜达猫的颠步关掉（大幅、持续的动）；指尖小图特意**不关** ——
+     它 1.25 秒就没了、又是唯一的即时反馈，关了会变成「点了完全没反应」。 */
+  .pet-idle, .home-cat-body { animation: none !important; }
 }
 /* 透明底版（*-t.webp）：去掉相纸框，猫咪是「活的」 */
 .pet-photo.is-cut {
