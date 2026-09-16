@@ -5082,6 +5082,178 @@ footer {
 
 
 /* ============================================================
+   首页「chic」皮肤（2026-09-16）
+   ------------------------------------------------------------
+   用户原话：「我的主页太老了非常不 chic」「我们 UI 页面风格可以和这个简笔画差不多」。
+   参照 = 用户给的「手账 App」截图（`参考图/手账App界面/`）：
+   米灰底 + 近黑字 + 打字机等宽数字 + 大圆角 + 细线代替暖阴影 + 贴纸/印章当隐喻。
+
+   ⚠️ 作用域收在 `.home-page` 内（HomeScreen 根节点加了这个类），**其他页面零影响**。
+   这是「先改一页看效果」的同款手法（和手账页的 `.jh` 一致）。
+   要铺全场：把这组 `--hm-*` 的值搬进 `:root`，再把下面这些覆盖删掉。
+
+   ⚠️ 这里**只用 longhand**（font-family / font-size…），不用 `font:` 简写 ——
+   文件最末那条 `font-variant-numeric: lining-nums` 汇总规则不能被挤到简写后面。
+   ============================================================ */
+.home-page {
+  --hm-paper: #F1EFE8;
+  --hm-card: #FBFAF7;
+  --hm-card-2: #EFECE2;
+  --hm-line: #E3E0D5;
+  --hm-ink: #2E2A25;
+  --hm-ink-2: #6B6459;
+  --hm-ink-3: #9C9488;
+  --hm-clay: #C4703F;
+  --hm-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--hm-paper);
+  color: var(--hm-ink);
+}
+
+/* ---- 顶栏：暖棕描边换一条冷灰细线 ---- */
+.home-page .topbar { border-bottom-color: var(--hm-line); background: rgba(241, 239, 232, .88); }
+.home-page .brand { color: var(--hm-ink); }
+.home-page .cart-count { background: var(--hm-clay); }
+.home-page .wish-count { background: #B98A80; }
+
+/* ---- AI 小气泡：两色渐变 → 平卡片 + 细线 ---- */
+.home-page .hint-bubble {
+  border-radius: 18px;
+  border-color: var(--hm-line);
+  background: var(--hm-card-2);
+}
+.home-page .hint-spark { background: var(--hm-card); color: var(--hm-ink-2); }
+.home-page .hint-bubble p { color: var(--hm-ink); }
+.home-page .hint-close { color: var(--hm-ink-3); }
+
+/* ---- 时刻氛围条：保留时段色，但整体压冷压淡 ---- */
+.home-page .home-ambience { border-radius: 18px; border-color: var(--hm-line); background: var(--hm-card); }
+.home-page .home-ambience.is-noon { background: linear-gradient(120deg, #F8F5EA 0%, rgba(248, 245, 234, 0) 72%), var(--hm-card); }
+.home-page .home-ambience.is-afternoon { background: linear-gradient(120deg, #F2F1EA 0%, rgba(242, 241, 234, 0) 72%), var(--hm-card); }
+.home-page .home-ambience.is-evening { background: linear-gradient(120deg, #F6EDE5 0%, rgba(246, 237, 229, 0) 72%), var(--hm-card); }
+.home-page .home-ambience.is-late { background: linear-gradient(120deg, #EEEAF1 0%, rgba(238, 234, 241, 0) 72%), var(--hm-card); }
+.home-page .amb-greet b { color: var(--hm-ink); }
+.home-page .amb-greet span { color: var(--hm-ink-2); }
+
+/* ---- Hero：把「暖橄榄渐变块」换成米灰卡（这是首页最土的一块） ---- */
+.home-page .hero {
+  border-radius: 22px;
+  background:
+    radial-gradient(rgba(46, 42, 37, .035) .7px, transparent 1px),
+    linear-gradient(168deg, #F5F3EC, #EFEDE4 58%, #E9E7DC);
+  background-size: 12px 12px, auto;
+  box-shadow: inset 0 0 0 1px var(--hm-line);
+}
+.home-page .hero-issue { border-bottom-color: var(--hm-line); color: var(--hm-ink-2); }
+.home-page .hero-issue em { color: var(--hm-clay); font-family: var(--hm-mono); letter-spacing: .08em; }
+.home-page .hero-copy h1 { color: var(--hm-ink); }
+.home-page .hero-quote { color: var(--hm-ink-2); }
+.home-page .hero-foot { color: var(--hm-ink-2); }
+.home-page .hero-foot small { color: var(--hm-ink-3); font-family: var(--hm-mono); letter-spacing: .14em; }
+.home-page .hero-stamp {
+  border-color: rgba(196, 112, 63, .78);
+  color: rgba(196, 112, 63, .9);
+  background: rgba(245, 243, 236, .92);
+  box-shadow: 0 1px 4px rgba(46, 42, 37, .1);
+}
+.home-page .hero-flip .flip-frame { background: var(--hm-card); box-shadow: 0 4px 14px rgba(46, 42, 37, .13); }
+.home-page .hero-tape { background: rgba(199, 178, 138, .45); box-shadow: none; }
+.home-page .hero-cap { color: var(--hm-ink-2); }
+.home-page .hero-cap em { color: var(--hm-clay); font-family: var(--hm-mono); }
+
+/* ---- 每日心情 ---- */
+.home-page .mood-ritual { border-radius: 18px; background: var(--hm-card); border-color: var(--hm-line); box-shadow: none; }
+.home-page .mood-ritual-head { color: var(--hm-ink); }
+.home-page .mood-ritual-head svg { color: var(--hm-clay); }
+.home-page .mood-ritual-head em { color: var(--hm-ink-3); font-family: var(--hm-mono); }
+.home-page .mood-chip { border-color: var(--hm-line); color: var(--hm-ink-2); }
+.home-page .mood-chip:hover { border-color: var(--hm-clay); color: var(--hm-clay); }
+.home-page .mood-chip.is-active { background: #F6EDE4; border-color: var(--hm-clay); color: var(--hm-clay); box-shadow: none; }
+.home-page .mood-ritual-line { color: var(--hm-ink-2); }
+
+/* ---- 店铺列表 ---- */
+.home-page .shop-kinds { padding-top: 6px; }
+.home-page .kind-chip { border-color: var(--hm-line); background: var(--hm-card); color: var(--hm-ink-2); }
+.home-page .kind-chip.is-active { background: var(--hm-ink); border-color: var(--hm-ink); color: var(--hm-paper); }
+.home-page .section-title { color: var(--hm-ink); }
+.home-page .section-title em { font-family: var(--hm-mono); letter-spacing: .06em; }
+.home-page .shop-list-sub { color: var(--hm-ink-3); }
+.home-page .shop-row {
+  border-color: var(--hm-line);
+  border-radius: 18px;
+  background: var(--hm-card);
+  box-shadow: none;
+}
+.home-page .shop-row:hover { background: var(--hm-card); box-shadow: 0 6px 18px rgba(46, 42, 37, .07); }
+.home-page .shop-cover { border-radius: 13px; background: var(--hm-card-2); }
+.home-page .shop-cover-badge { background: rgba(196, 112, 63, .92); font-family: var(--hm-mono); letter-spacing: .04em; }
+.home-page .shop-body h3 { color: var(--hm-ink); }
+.home-page .shop-en { color: var(--hm-ink-3); font-family: var(--hm-mono); letter-spacing: .12em; }
+.home-page .shop-stats { color: var(--hm-ink-2); }
+.home-page .shop-rating { color: var(--hm-clay); font-family: var(--hm-mono); }
+.home-page .shop-chip { background: var(--hm-card-2); color: var(--hm-ink-2); }
+.home-page .shop-chip-promo { background: rgba(196, 112, 63, .14); color: var(--hm-clay); }
+.home-page .shop-chip-ghost { background: var(--hm-card-2); color: var(--hm-ink-3); }
+.home-page .shop-arrow { color: var(--hm-ink-3); }
+.home-page .for-you-chip { background: var(--hm-ink); box-shadow: none; font-family: var(--hm-mono); }
+
+/* ---- 惜食柜 / 世界菜单 两条入口：去渐变，回到「卡片 + 细线」 ---- */
+.home-page .rescue-strip,
+.home-page .world-entry {
+  border-color: var(--hm-line);
+  border-radius: 18px;
+  background: var(--hm-card);
+}
+.home-page .rescue-strip:hover,
+.home-page .world-entry:hover { background: var(--hm-card-2); }
+.home-page .rescue-strip-copy b { color: var(--hm-ink); }
+.home-page .rescue-strip-copy b em { color: var(--hm-clay); font-family: var(--hm-mono); }
+.home-page .rescue-strip-copy small { color: var(--hm-ink-2); }
+.home-page .rescue-strip-thumbs img { border-color: var(--hm-card); box-shadow: 0 1px 4px rgba(46, 42, 37, .12); }
+.home-page .rescue-strip-arrow { color: var(--hm-ink-3); }
+.home-page .world-entry b { color: var(--hm-ink); }
+.home-page .world-entry small { color: var(--hm-ink-2); }
+.home-page .world-entry > svg { color: var(--hm-ink-3); }
+
+/* ---- 2×2 角落磁贴 ---- */
+.home-page .corner-tile {
+  border-color: var(--hm-line);
+  border-radius: 18px;
+  background: var(--hm-card);
+  box-shadow: none;
+}
+.home-page .corner-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(46, 42, 37, .07); }
+.home-page .corner-tile b { color: var(--hm-ink); }
+.home-page .corner-tile small { color: var(--hm-ink-2); }
+.home-page .corner-tile-icon { background: var(--hm-card-2); border-color: var(--hm-line); }
+.home-page .corner-tile-icon.is-charity { background: #F4E9E4; }
+.home-page .corner-tile-icon.is-archive { background: #EAEFE2; }
+.home-page .corner-tile-icon.is-myshop { background: #E9EDF2; }
+.home-page .corner-tile-icon svg { color: var(--hm-clay); }
+
+/* ---- 今日特调：暖奶油渐变 + 蜜桃光斑 → 回到卡片；按钮走近黑 ---- */
+.home-page .daily-special {
+  border-radius: 20px;
+  border-color: var(--hm-line);
+  background: var(--hm-card);
+}
+.home-page .daily-special::after { background: radial-gradient(circle, rgba(196, 112, 63, .14), transparent 68%); }
+.home-page .special-badge { background: var(--hm-card-2); color: var(--hm-clay); font-family: var(--hm-mono); }
+.home-page .special-day { color: var(--hm-ink-3); font-family: var(--hm-mono); opacity: 1; }
+.home-page .special-info h3 { color: var(--hm-ink); }
+.home-page .special-en { color: var(--hm-ink-3); font-family: var(--hm-mono); }
+.home-page .special-desc { color: var(--hm-ink-2); }
+.home-page .special-foot { border-top-color: var(--hm-line); }
+.home-page .special-price { color: var(--hm-clay); font-family: var(--hm-mono); }
+.home-page .special-add { background: var(--hm-ink); color: var(--hm-paper); }
+.home-page .special-add:hover { background: #1F1C18; }
+.home-page .special-note { color: var(--hm-ink-3); opacity: 1; }
+
+/* ---- 串门 / 溜达的猫（气泡与文字） ---- */
+.home-page .home-cat-bubble { background: var(--hm-ink); color: var(--hm-paper); }
+.home-page .pet-says-line { color: var(--hm-ink-2); }
+
+
+/* ============================================================
    数字字形：Cormorant Garamond 默认是旧式数字（1 像 I、3/4/5 带长尾），
    读价格和统计容易看错。全部换成等高数字（lining）。
 

@@ -291,7 +291,7 @@ export default function HomeScreen({
   const forYouIds = kind === 'all' && moodCfg ? moodCfg.shops : []
 
   return (
-    <div className="shop-page">
+    <div className="shop-page home-page">
       <TopBar count={cartCount} wishCount={wishes.length} onNavigate={onNavigate} onOpenMenu={() => onNavigate('counters')} />
 
       {/* 反向 AI 推送：主动冒出来的小气泡 */}
