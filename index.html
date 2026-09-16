@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F6F1E8" />
+    <title>慢活小铺 · Soft Life</title>
+  </head>
+  <body>
+    <div id="root">
+      <section id="launch-help" hidden style="max-width: 520px; margin: 12vh auto; padding: 32px; background: #FCFBF7; color: #4A4540; border: 1px solid #E8E1D4; border-radius: 16px; font: 16px/1.8 -apple-system, BlinkMacSystemFont, sans-serif;">
+        <p style="color: #9F7F5F; letter-spacing: 2px;">SOFT LIFE</p>
+        <h1 style="font-size: 24px;">小铺需要先启动</h1>
+        <p>你打开的是项目入口文件，不是独立网页。直接双击 index.html 无法运行这个应用。</p>
+        <ol style="padding-left: 24px;">
+          <li>回到项目文件夹，双击「启动慢活小铺.command」。</li>
+          <li>保留打开的终端窗口，浏览器会自动进入小铺。</li>
+        </ol>
+        <p><a href="http://127.0.0.1:5173/" style="color: #68553F;">已启动？打开慢活小铺 →</a></p>
+        <p style="font-size: 13px; color: #746D63;">关闭启动窗口后，本地服务会停止；下次重新双击启动文件即可。</p>
+      </section>
+    </div>
+    <script>
+      if (window.location.protocol === 'file:') {
+        document.getElementById('launch-help').hidden = false;
+        document.body.style.background = '#F6F1E8';
+        document.body.style.margin = '20px';
+      }
+    </script>
+    <noscript>请启用浏览器的 JavaScript，并通过本地服务打开慢活小铺。</noscript>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
