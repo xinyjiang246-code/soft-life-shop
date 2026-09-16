@@ -17,6 +17,10 @@ export default function FlipImage({
   className = '',
   hint = true,
   showTag = true,
+  // 角标文案跟着「传进来的哪张图在前面」走 —— 调用方若把实拍放正面（prefer="real"），
+  // 标签必须跟着掉头，否则正面明明是实拍、角标却写着「手绘」。
+  frontTag = '手绘',
+  backTag = '实拍',
   stopPropagation = true,
 }) {
   const [flipped, setFlipped] = useState(false)
@@ -28,7 +32,13 @@ export default function FlipImage({
         {front ? (
           <img className="flip-solo" src={front} alt={alt} />
         ) : (
-          <span className="flip-emoji" aria-hidden="true">🍽️</span>
+          <span className="flip-emoji" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none"
+              stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="7.2" />
+              <circle cx="12" cy="12" r="3.4" />
+            </svg>
+          </span>
         )}
       </div>
     )
@@ -48,11 +58,11 @@ export default function FlipImage({
       >
         <span className="flip-inner">
           <span className="flip-face flip-front">
-            {showTag && <span className="flip-tag">手绘</span>}
+            {showTag && <span className="flip-tag">{frontTag}</span>}
             <img src={front} alt={alt} />
           </span>
           <span className="flip-face flip-back">
-            {showTag && <span className="flip-tag">实拍</span>}
+            {showTag && <span className="flip-tag">{backTag}</span>}
             <img src={back} alt="" aria-hidden="true" />
           </span>
         </span>

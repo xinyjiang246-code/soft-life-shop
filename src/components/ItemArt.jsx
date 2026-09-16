@@ -26,8 +26,19 @@ export default function ItemArt({ item, size = 'lg', prefer = 'draw' }) {
   if (item.image && item.imageReal && item.imageReal !== item.image) {
     const draw = item.image
     const real = item.imageReal
-    const [front, back] = prefer === 'real' ? [real, draw] : [draw, real]
-    return <FlipImage front={front} back={back} alt={item.cn} showTag={big} hint={big} />
+    const realFirst = prefer === 'real'
+    const [front, back] = realFirst ? [real, draw] : [draw, real]
+    return (
+      <FlipImage
+        front={front}
+        back={back}
+        alt={item.cn}
+        showTag={big}
+        hint={big}
+        frontTag={realFirst ? '实拍' : '手绘'}
+        backTag={realFirst ? '手绘' : '实拍'}
+      />
+    )
   }
 
   // ② 只有一张实拍图 → 静态铺满
