@@ -7,9 +7,13 @@
 // 用法：node tools/verify-journal-photo.mjs [url] [screenshot.png]
 import { writeFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
+import { findSeedAsset, seedPhotoScript } from './seedPhoto.mjs'
 
 const url = process.argv[2] || 'http://127.0.0.1:8080/'
 const screenshot = process.argv[3]
+
+// 测试素材（项目自带的真照片）——构建产物里名字带 hash，所以按前缀现找
+const seedAsset = await findSeedAsset()
 
 const version = await fetch('http://127.0.0.1:9222/json/version').then((r) => r.json())
 const socket = new WebSocket(version.webSocketDebuggerUrl)
@@ -123,23 +127,11 @@ try {
   ok('两个入口都接到同一个 input', wired)
 
   console.log('\n[3] 塞一张真照片进去')
-  const seeded = await evaluate(`(async () => {
-    const c = document.createElement('canvas');
-    c.width = 1200; c.height = 1200;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#E4D6BE'; ctx.fillRect(0, 0, 1200, 1200);
-    ctx.fillStyle = '#9A6434'; ctx.beginPath(); ctx.arc(600, 640, 330, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#FBF6EC'; ctx.beginPath(); ctx.arc(600, 640, 210, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#C4703F'; ctx.beginPath(); ctx.arc(600, 640, 96, 0, Math.PI * 2); ctx.fill();
-    const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
-    const file = new File([blob], '自己拍的一张.png', { type: 'image/png' });
-    const input = document.querySelector('.jh .file-input');
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return { size: blob.size, kind: blob.type };
-  })()`)
+  // 素材是项目自带的**真照片**（一张抹茶拿铁的竖图），不是 canvas 画的合成图 ——
+  // 那张合成图会进到交付图里，用户看到只会问「这个图是啥」。见 tools/seedPhoto.mjs
+  const seeded = await evaluate(
+    seedPhotoScript({ assetUrl: seedAsset, inputSelector: '.jh .file-input' }),
+  )
   ok('测试图已送入 input', seeded)
 
   console.log('\n[4] 存完自动展开，看到的是「我拍的那张」')
@@ -237,7 +229,7 @@ try {
     return { 尺寸: [img.naturalWidth, img.naturalHeight], 来源: img.src.startsWith('blob:') ? 'IndexedDB(blob)' : 'dataURL' };
   })()`)
   ok('重开的大图', reopened)
-  assert.deepEqual(reopened.尺寸, [1200, 1200], '刷新后应该从相册里读回原尺寸的那张，而不是缩略图')
+  assert.deepEqual(reopened.尺寸, seeded.宽高, '刷新后应该从相册里读回原尺寸的那张，而不是缩略图')
   assert.equal(reopened.来源, 'IndexedDB(blob)', '大图应该来自 IndexedDB')
 
   // 截图里总是「顶部标题糊、背景文字透过来」——那条得查清楚，不能靠眼睛判。

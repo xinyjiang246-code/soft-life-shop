@@ -12,9 +12,13 @@
 // 用法：node tools/verify-archive.mjs [url] [截图前缀]
 import { writeFile, mkdir } from 'node:fs/promises'
 import assert from 'node:assert/strict'
+import { findSeedAsset, seedPhotoScript } from './seedPhoto.mjs'
 
 const url = process.argv[2] || 'http://127.0.0.1:8080/'
 const shotPrefix = process.argv[3] || ''
+
+// 测试素材（项目自带的真照片）——构建产物里名字带 hash，所以按前缀现找
+const seedAsset = await findSeedAsset()
 
 const version = await fetch('http://127.0.0.1:9222/json/version').then((r) => r.json())
 const socket = new WebSocket(version.webSocketDebuggerUrl)
@@ -170,26 +174,11 @@ try {
   await waitFor(`!document.querySelector('.jh-detail')`)
 
   console.log('\n[3] 真上传一张照片')
-  // 用**竖图**（900×1200）—— 手机拍的食物照片就是竖的，横图验不出竖图才会暴露的排版问题
-  const seeded = await evaluate(`(async () => {
-    const c = document.createElement('canvas');
-    c.width = 900; c.height = 1200;
-    const ctx = c.getContext('2d');
-    const g = ctx.createLinearGradient(0, 0, 0, 1200);
-    g.addColorStop(0, '#E8E0CE'); g.addColorStop(1, '#C9BFA6');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 900, 1200);
-    ctx.fillStyle = 'rgba(120,150,105,.85)'; ctx.beginPath(); ctx.ellipse(450, 700, 200, 250, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(232,240,222,.9)'; ctx.beginPath(); ctx.ellipse(450, 640, 140, 175, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#FBF6EC'; ctx.fillRect(280, 320, 340, 54);
-    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
-    const file = new File([blob], '窗边那杯.jpg', { type: 'image/jpeg' });
-    const input = document.querySelector('.archive-page .file-input');
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return { 原始字节: blob.size, 形状: '900x1200 竖图' };
-  })()`)
+  // 素材是项目自带的**真照片**（竖图，一张抹茶拿铁），不是 canvas 画的合成图 ——
+  // 那张合成图会一路进到交付图里，用户看到只会问「这个图是啥」。见 tools/seedPhoto.mjs
+  const seeded = await evaluate(
+    seedPhotoScript({ assetUrl: seedAsset, inputSelector: '.archive-page .file-input' }),
+  )
   ok('测试图已送入 input', seeded)
 
   console.log('\n[4] 落盘方式：照片进 IndexedDB，localStorage 里不许有大 base64')
@@ -204,6 +193,12 @@ try {
   const noError = await evaluate(`document.querySelector('.archive-hint')?.innerText || null`)
   assert.equal(noError, null, `上传过程不该出现提示文案，实际：${noError}`)
 
+  // ⚠️ 别写死「data URL 超过 N 个字符就是大图」—— 阈值是跟着素材走的。
+  //    换成真照片之后，缩略图从几百字符涨到 2935，原先用 2000 当线，缩略图自己就越线了，
+  //    于是报一个「localStorage 里塞了大图」的假警报（真凶在那儿从来就没回来过）。
+  //    正确的问法不是「长不长」，而是「**它是不是原图**」——拿它跟原图的 base64 长度比：
+  //    原图 27KB → base64 约 3.6 万字符；缩略图 2.9K，差着一个数量级，怎么换素材都不会误判。
+  const 原图base64约 = Math.ceil(seeded.字节 / 3) * 4
   const storage = await evaluate(`(() => {
     const raw = localStorage.getItem('soft-life-journal-v1') || '{"days":{}}';
     const j = JSON.parse(raw);
@@ -212,6 +207,7 @@ try {
     const withPhoto = items.filter(i => i.photoId);
     // 旧版的元凶：全尺寸 base64 直接躺在 localStorage 里
     const legacy = localStorage.getItem('soft-life-archives-v1');
+    const 所有dataURL = raw.match(/data:image\\/[a-z]+;base64,[A-Za-z0-9+/=]+/g) || [];
     return {
       手账笔数: items.length,
       带照片的笔数: withPhoto.length,
@@ -220,15 +216,21 @@ try {
       缩略图是dataURL: (withPhoto[0]?.thumb || '').startsWith('data:image'),
       旧key还在吗: legacy === null ? '已清掉' : legacy,
       手账JSON总字符: raw.length,
-      // 照片原文绝不该出现在 localStorage 里 —— 按 base64 的长度特征扫一遍
-      手账里有base64大图: /data:image\\/[a-z]+;base64,[A-Za-z0-9+/]{2000}/.test(raw),
+      最长dataURL字符: 所有dataURL.reduce((m, s) => Math.max(m, s.length), 0),
     };
   })()`)
-  ok('两处存储', storage)
+  ok('两处存储', { ...storage, 原图base64约 })
   assert.equal(storage.带照片的笔数, 1, '应该多了一笔带照片的记录')
   assert.ok(storage.有条目photoId, '这一笔应该带 photoId（指向 IndexedDB 里的大图）')
-  assert.ok(!storage.手账里有base64大图, '手账里不该出现大图 base64 —— 那是旧版的病根')
   assert.ok(storage.缩略图字节 > 0 && storage.缩略图字节 < 40000, `缩略图应该是小图，实际 ${storage.缩略图字节} 字符`)
+  assert.ok(
+    storage.最长dataURL字符 > 0 && storage.最长dataURL字符 < 原图base64约 / 3,
+    `localStorage 里最长的 data URL 有 ${storage.最长dataURL字符} 字符，接近原图的 ${原图base64约} —— 说明存的不是缩略图`,
+  )
+  assert.ok(
+    storage.手账JSON总字符 < 原图base64约,
+    `整本手账 ${storage.手账JSON总字符} 字符，比一张原图的 base64（${原图base64约}）还大 —— 存几张就得撑爆配额`,
+  )
 
   const idb = await evaluate(`new Promise((resolve) => {
     const req = indexedDB.open('soft-life-photo-v1', 1);

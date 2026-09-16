@@ -7,9 +7,13 @@
 //
 // 用法：node tools/shot-archive-ab.mjs [url] [输出目录]
 import { writeFile, mkdir } from 'node:fs/promises'
+import { findSeedAsset, seedPhotoScript } from './seedPhoto.mjs'
 
 const url = process.argv[2] || 'http://127.0.0.1:8080/'
 const outDir = process.argv[3] || '/tmp/archive-ab/'
+
+// 测试素材（项目自带的真照片）——构建产物里名字带 hash，所以按前缀现找
+const seedAsset = await findSeedAsset()
 
 const version = await fetch('http://127.0.0.1:9222/json/version').then((r) => r.json())
 const socket = new WebSocket(version.webSocketDebuggerUrl)
@@ -77,23 +81,9 @@ try {
   await click('.corner-grid .corner-tile:nth-child(3)')
   await waitFor(`document.querySelector('.aw')`)
 
-  await evaluate(`(async () => {
-    const c = document.createElement('canvas');
-    c.width = 900; c.height = 1200;
-    const ctx = c.getContext('2d');
-    const g = ctx.createLinearGradient(0, 0, 0, 1200);
-    g.addColorStop(0, '#E8E0CE'); g.addColorStop(1, '#C9BFA6');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 900, 1200);
-    ctx.fillStyle = 'rgba(120,150,105,.85)'; ctx.beginPath(); ctx.ellipse(450, 700, 200, 250, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(232,240,222,.9)'; ctx.beginPath(); ctx.ellipse(450, 640, 140, 175, 0, 0, Math.PI*2); ctx.fill();
-    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
-    const file = new File([blob], '窗边那杯.jpg', { type: 'image/jpeg' });
-    const input = document.querySelector('.archive-page .file-input');
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  })()`)
+  await evaluate(
+    seedPhotoScript({ assetUrl: seedAsset, inputSelector: '.archive-page .file-input' }),
+  )
 
   await waitFor(`document.querySelector('.ai-footer-note')`)
   await evaluate('new Promise(r => setTimeout(r, 600))')
