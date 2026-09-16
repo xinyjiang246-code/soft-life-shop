@@ -96,8 +96,25 @@ async function shot(name) {
       width: r.width + pad * 2, height: r.height + pad * 2,
     };
   })()`)
-  const { data } = await send('Page.captureScreenshot', { format: 'png', clip: { ...clip, scale: 2 } })
-  await writeFile(`${outDir}${name}.png`, Buffer.from(data, 'base64'))
+  // ⚠️ 拍之前把「指尖小图」(.pat-pop-layer) 藏掉：粒子活 1400ms、表情只停 1150ms，
+  //    等粒子飘走时表情已经没了，**永远等不到干净的一帧**。
+  //    不藏的话交付图上就是几块大贴纸糊着脸 —— 而这张图要说的是脸。
+  await setPopLayer(false)
+  try {
+    const { data } = await send('Page.captureScreenshot', { format: 'png', clip: { ...clip, scale: 2 } })
+    await writeFile(`${outDir}${name}.png`, Buffer.from(data, 'base64'))
+  } finally {
+    await setPopLayer(true)
+  }
+}
+
+async function setPopLayer(visible) {
+  await evaluate(`(() => {
+    document.querySelectorAll('.pat-pop-layer').forEach((n) => {
+      n.style.visibility = ${visible ? "''" : "'hidden'"};
+    });
+    return true;
+  })()`)
 }
 
 async function faceState() {

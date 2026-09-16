@@ -19,16 +19,29 @@ import { FACE_EYE, FACE_INK, faceAnchor } from '../petFace.js'
 
 const SW = 9            // 笔宽：原图描边 8~11px，取中间值
 const BLUSH = '#F0A6B2'
+const MOUTH_IN = '#E9889B'   // 张嘴时的口腔色：比浮空爱心深一档，才读得出「张开」
+const TONGUE = '#F4B7C2'
+// 爱心眼 / 星星眼跟**浮空小记号**同一套色系（见下方 Mark），这样两层看着是一件事。
+// 别改回 FACE_EYE（深棕）—— 那会让「眼睛变成爱心」读成一坨深色，跟旁边的粉爱心不搭。
+const EYE_HEART = '#F28FA6'
+const EYE_STAR = '#EFC97A'
 
-/** 每种表情：眼睛形状 + 要不要腮红 + 额外的浮空小记号 */
+/** 每种表情：眼睛形状 + 嘴形 + 要不要腮红 + 额外的浮空小记号
+ *
+ *  ⚠️ 2026-09-17 补：**嘴必须跟着表情变**。
+ *  软软这张图原本**只有眼睛和鼻子、没有嘴**（鼻子下面是水彩纸纹，放大 7 倍确认过）。
+ *  第一版表情只换眼睛，于是七种表情共用同一张下半脸 —— 眼睛再变也像「只有上半脸在演」
+ *  （`startle` 那张尤其别扭：眼睛瞪得老大，嘴却一如既往地平静）。
+ *  现在嘴按 `nose` 锚点推算：鼻子正下方、跟着 `tilt` 转。
+ */
 export const EXPRESSIONS = {
-  squint: { blush: 0.30, marks: [] },                                        // 耳朵被碰 → 眯起眼
-  bliss: { blush: 0.42, marks: ['sparkle'] },                                // 被摸头 → 闭眼享受
-  smile: { blush: 0.62, marks: ['heart1'] },                                 // 被摸腮 → 闭眼笑 + 脸红
-  purr: { blush: 0.72, marks: ['purr'] },                                    // 摸肚皮 → 呼噜
-  startle: { blush: 0.0, marks: ['shock'] },                                 // 碰爪子 → 惊
-  heart: { blush: 0.8, marks: ['hearts'] },                                  // 连摸 → 爱心眼
-  star: { blush: 0.5, marks: ['sparkles'] },                                 // 摸嗨了 → 星星眼
+  squint: { blush: 0.30, mouth: 'flat', marks: [] },                          // 耳朵被碰 → 眯起眼
+  bliss: { blush: 0.42, mouth: 'smile', marks: ['sparkle'] },                 // 被摸头 → 闭眼享受
+  smile: { blush: 0.62, mouth: 'grin', marks: ['heart1'] },                   // 被摸腮 → 张口笑 + 脸红
+  purr: { blush: 0.72, mouth: 'wave', marks: ['purr'] },                      // 摸肚皮 → 呼噜（ω 嘴）
+  startle: { blush: 0.0, mouth: 'o', marks: ['shock'] },                      // 碰爪子 → 惊（小圆嘴）
+  heart: { blush: 0.8, mouth: 'grin', marks: ['hearts'] },                    // 连摸 → 爱心眼
+  star: { blush: 0.5, mouth: 'laugh', marks: ['sparkles'] },                  // 摸嗨了 → 星星眼 + 大笑
 }
 
 export default function PetFace({ stage = 0, expr = 'bliss', className = '' }) {
@@ -43,6 +56,7 @@ export default function PetFace({ stage = 0, expr = 'bliss', className = '' }) {
   const ry = (a.eyeH * H) / 2
   const gap = a.gap * W
   const mid = [(eL[0] + eR[0]) / 2, (eL[1] + eR[1]) / 2]
+  const nose = [a.nose[0] * W, a.nose[1] * H]
 
   return (
     <svg
@@ -63,12 +77,25 @@ export default function PetFace({ stage = 0, expr = 'bliss', className = '' }) {
         </g>
       )}
 
-      {/* 两只眼睛：各自平移 + 按 tilt 旋转 */}
+      {/* 两只眼睛：各自平移 + 按 tilt 旋转。
+          类名 `pf-eye` 是给验收脚本用的**明确钩子** —— 别让探针靠「带 transform 的 <g>」去猜，
+          那样以后往表情层里再加任何一层带 transform 的 <g>（比如嘴）都会把眼睛数错。 */}
       {[['L', eL], ['R', eR]].map(([side, [cx, cy]]) => (
-        <g key={side} transform={`translate(${cx} ${cy}) rotate(${a.tilt})`}>
+        <g key={side} className="pf-eye" transform={`translate(${cx} ${cy}) rotate(${a.tilt})`}>
           <Eye expr={expr} rx={rx} ry={ry} side={side} />
         </g>
       ))}
+
+      {/* 嘴：位置由鼻子推出来，不是量出来的（原图本来没有嘴）。
+          ⚠️ 外面这层 <g> 只放 SVG 的 transform 属性，里面 .pf-mouth 才留给 CSS 动画 ——
+          CSS 的 transform 会**盖掉** SVG 的 transform 属性，两层混在一起嘴会跳回原点。 */}
+      {cfg.mouth && (
+        <g transform={`translate(${nose[0]} ${nose[1] + ry * 0.85}) rotate(${a.tilt})`}>
+          <g className={`pf-mouth pf-mouth-${cfg.mouth}`}>
+            <Mouth kind={cfg.mouth} w={rx * 1.6} ry={ry} />
+          </g>
+        </g>
+      )}
 
       {/* 浮空小记号 */}
       <g className="pf-marks" stroke={FACE_INK} fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -78,6 +105,51 @@ export default function PetFace({ stage = 0, expr = 'bliss', className = '' }) {
       </g>
     </svg>
   )
+}
+
+/* ---------- 嘴（原图没有，全是我们画的） ---------- */
+
+/**
+ * 嘴形。局部坐标以**嘴心**为原点，w = 半宽，ry = 眼睛半高（当作这一阶段的「面部尺度」）。
+ *
+ * 为什么纵向不用固定像素、要跟 ry 挂钩：
+ *   第一版把嘴的幅度写成 `眼距 * 0.078`，结果 `flat`（摸耳朵时那条浅弧）只有
+ *   **3 个 viewBox 单位高** —— 换到宠物页 150px 的软软身上还不到 1 个 CSS 像素，
+ *   等于没画。眼睛本身就是 32x44（约 7x9 CSS px）这个量级，嘴只能跟它同一个尺度说话。
+ *
+ * 形状要按类分：细弧 / 中弧 / 波浪 / 小圆 / 张口（实心）。
+ * 光靠「弧度深浅」区分是不够的 —— 缩到 150px 就是同一个嘴。
+ */
+function Mouth({ kind, w, ry }) {
+  if (kind === 'wave') {
+    // ω 嘴：呼噜时嘴角是软的。两段都要走满 w（-w → 0 → +w）。
+    // ⚠️ 第一版第二段只写 w/1.5，整条路径止于 +0.33w → ω 整体偏到鼻子左边
+    //    （约 1/3 个嘴宽），小尺寸下就是「嘴歪了」。
+    const dip = ry * 0.45
+    return <path d={`M${-w},0 q ${w / 2},${dip * 2} ${w},0 q ${w / 2},${dip * 2} ${w},0`} strokeWidth={SW * 0.8} />
+  }
+  if (kind === 'o') {
+    // 惊：小小的圆嘴（空心的，比实心更「呆住」）
+    return <ellipse cx={0} cy={ry * 0.34} rx={w * 0.32} ry={ry * 0.42} strokeWidth={SW * 0.75} />
+  }
+  if (kind === 'grin' || kind === 'laugh') {
+    // 张口笑：口线是直的，下半鼓出去 —— 中间填口腔色
+    const h2 = kind === 'laugh' ? ry * 0.95 : ry * 0.56
+    const hw = kind === 'laugh' ? w * 1.1 : w * 0.85
+    return (
+      <g>
+        <path d={`M${-hw},0 Q 0,${h2 * 1.9} ${hw},0 Z`} fill={MOUTH_IN} strokeWidth={SW * 0.78} />
+        {/* 一点舌头：不填会读成一个黑洞 */}
+        {kind === 'laugh' && (
+          <path d={`M${-hw * 0.4},${h2 * 0.62} Q 0,${h2 * 1.5} ${hw * 0.4},${h2 * 0.62} Z`} fill={TONGUE} stroke="none" />
+        )}
+      </g>
+    )
+  }
+  // flat / smile：上弯的弧，只是深浅不同。
+  // 二次贝塞尔的顶点在 t=.5 处 = 控制点的一半，所以控制点要写 dip*2 才得到 dip 的下沉量。
+  const dip = kind === 'smile' ? ry * 0.62 : ry * 0.34
+  return <path d={`M${-w},0 Q 0,${dip * 2} ${w},0`} strokeWidth={SW * 0.85} />
 }
 
 /* ---------- 眼睛 ---------- */
@@ -91,10 +163,10 @@ function Eye({ expr, rx, ry, side = 'L' }) {
   }
 
   if (expr === 'heart') {
-    return <Heart cx={0} cy={0} r={rx * 0.95} fill={FACE_EYE} />
+    return <Heart cx={0} cy={0} r={rx * 0.95} fill={EYE_HEART} stroke={FACE_INK} strokeWidth={SW * 0.66} />
   }
   if (expr === 'star') {
-    return <Sparkle cx={0} cy={0} r={rx * 1.25} fill={FACE_EYE} />
+    return <Sparkle cx={0} cy={0} r={rx * 1.25} fill={EYE_STAR} stroke={FACE_INK} strokeWidth={SW * 0.66} />
   }
   if (expr === 'startle') {
     // 受惊：**睁大的眼白 + 缩小的瞳孔**。

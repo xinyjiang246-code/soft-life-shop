@@ -61,6 +61,9 @@
 - **表情层（2026-09-17，用户：「表情也可以变呀」）**：扁平图五官动不了 → 走「**换底图 + 重画五官**」。`tools/petFace.py` 量锚点（**不能腐蚀去噪**，眼睛是环形带高光会被整只吃掉）+ 出**无眼底图** `assets/pets/noeye/*-t.webp`（**必须用 `MaxFilter` 形态学膨胀**，扩散填充会把眼睛周围灰水彩晕抹进来）。锚点落在自动生成的 `src/petFace.js`，**别手改**；表情在 `components/PetFace.jsx`。
   **七个表情**：耳=`squint` / 头=`bliss` / 脸=`smile`（左右要镜像）/ 肚=`purr` / 爪=`startle`（**白眼球放大+瞳孔缩小**，不是放大黑眼）/ 连点 3 下=`heart` / 5 下=`star`；`FACE_HOLD=1150ms` 自己收回。
   ⚠️ **只有宠物页传 `faces={true}`** —— 首页 58px 溜达猫开了会白下 25KB 图、且 `.pet-noeye` **把点击吃掉**（首页摸猫失效）。
+- **`nose` 不是 `mouth`，且软软本来没有嘴（2026-09-17 补的第二刀）**：量到的那个点是**鼻子**（放大 7 倍确认鼻子下面是水彩纸纹）。**嘴全靠 `PetFace.jsx` 画**，位置从 nose 推（`nose.y + ry*0.85`，跟 tilt 转）。
+  踩过的三条：① 嘴的纵向尺寸**只能跟眼睛挂钩**（第一版按眼距算，`flat` 只有 3 个 viewBox 单位高 ≈ 亚像素，等于没画）② **二次贝塞尔顶点只有控制点的一半**（想要 `dip` 就得写 `dip*2`）③ **ω 嘴两段都要走满 w**（第二段只写 `w/1.5` 会让嘴整体偏左 1/3 宽）。
+  **嘴那层必须包两层 `<g>`**：外层放 SVG `transform` 属性、内层 `.pf-mouth` 留给 CSS 动画 —— **CSS transform 会盖掉 SVG 的 transform 属性**。
 
 ## 七、惜食柜 · 打折区
 
@@ -87,7 +90,7 @@
 
 ## 九、技术 / 验证约定
 
-**操作细节全部见 skill `soft-life-web-dev`（含 56 条坑点）。这里只留最贵的：**
+**操作细节全部见 skill `soft-life-web-dev`（含 59 条坑点）。这里只留最贵的：**
 
 - 预览：`python3 -m http.server 8080 --bind 127.0.0.1`（**cwd 必须是 `dist/`**）→ http://127.0.0.1:8080/；**别让用户直接开 `file://` 的 dist/index.html**（白屏）。`vite.config.js` 的 `base: './'` 不能动
 - **购物袋金额只有一处实现**：`data.js` 的 `cartBreakdown(cart)`。**新增用到金额的页面一律调它**
@@ -95,7 +98,8 @@
 - ⚠️ **「build 绿」≠「接线对」**：esbuild 不查作用域，`onXxx={从未定义的函数}` 照样构建成功，只在进到那个页面时才炸（出过两次）。**加/改回调 prop 后一定 grep 一遍定义**，并**真机走到那个页面**验一次
 - ⚠️ **假警报比漏报更贵**（懒加载没触发 / `onBlur` 没触发 / BSD `grep` 失配，各骗过一次）。**纪律：断言失败先怀疑探针，用第二种独立手段复核，最后才改产品代码**
 - ⚠️ **截图或量几何前必须等动画播完**（`getBoundingClientRect` 返回的是**变换之后**的矩形）；**别用 `getAnimations().map(a => a.finished)`** —— 无限循环动画（乱走的猫 / 雨丝）永不 resolve。用 `scripts/shot-page.mjs`
-- ⚠️ **`captureScreenshot` 的 `clip` 是页面坐标**，滚动过就得加 `scrollX/scrollY`；**注入 `Runtime.evaluate` 的字符串里的正则转义会被 Node 先吃一遍**（`/\\s+/` → `/s+/`）
+- ⚠️ **`captureScreenshot` 的 `clip` 是页面坐标**，滚动过就得加 `scrollX/scrollY`；**注入 `Runtime.evaluate` 的字符串里的正则转义会被 Node 先吃一遍**（`/\\s+/` → `/s+/`），**反引号模板也不能嵌套**（会被提前闭合）。改完 `.mjs` 先 `node --check`
+- ⚠️ **探针要用明确类名定位，别按结构猜**（给表情层加嘴时，「找眼睛」的 `g[transform]` 把嘴也抓进去了 → 报 TypeError，像产品坏了其实是探针太宽松）；**断言先比数量再算偏差**
 - ⚠️ **网络中断可能只丢「半个文件」**（别因「文件里有新代码」就判定改动完整，要逐个标识符核对）；**「等图」阈值要区分缩略图（180）和大图（`>400` 或 `blob:`）**
 - 搜中文多关键词**一律用 `Grep` 工具**（bash `grep` 的 `\|` 在 macOS BSD grep 下常静默失配）；**`SoftPet.jsx` 的 Edit 会静默失败且 `Grep` 对它失灵**，改完必须用 python 复核
 - CSS：`.flip-frame` 必须 `position:relative`；**`lining-nums` 汇总规则必须留在文件最末**（压缩器会把 `font:` 简写挪后而重置它），**新皮肤块写在它之前、只用 longhand**

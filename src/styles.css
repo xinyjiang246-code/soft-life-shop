@@ -4539,10 +4539,30 @@ footer {
   from { opacity: 0; transform: scale(.93); }
   to { opacity: 1; transform: scale(1); }
 }
-.pf-mark { animation: pfMarkIn .36s cubic-bezier(.34, 1.56, .64, 1) both; }
+.pf-mark {
+  /* ⚠️ transform-box/origin 不能省：SVG 元素的 CSS transform-origin 默认是 `0 0`
+     （整个 viewBox 的左上角），光写 scale() 的话小爱心是**从版面左上角飞进来**的，
+     而不是在原地弹出来。第一版就是这样，看着像贴纸从画外飘入。 */
+  transform-box: fill-box; transform-origin: center;
+  animation: pfMarkIn .36s cubic-bezier(.34, 1.56, .64, 1) both;
+}
 @keyframes pfMarkIn {
   from { opacity: 0; transform: scale(.4); }
   to { opacity: 1; transform: scale(1); }
+}
+/* 呼噜：两侧的弧线要「震」，不然只是一圈静止的括号，读不出在打呼。
+   ⚠️ 必须挂在 .pf-mark 的**内层**（外层有 SVG transform 属性，CSS 会把它盖掉）。 */
+.pet-face-purr .pf-mark { animation: pfMarkIn .36s cubic-bezier(.34, 1.56, .64, 1) both, pfPurr .62s ease-in-out .36s 3; }
+@keyframes pfPurr {
+  0%, 100% { transform: scale(1); opacity: .5; }
+  50% { transform: scale(1.16); opacity: .82; }
+}
+.pf-mouth { transform-box: fill-box; transform-origin: 50% 0%; }
+/* 张口笑的时候嘴稍微「张一下」，静态的一个半月看着有点贴上去 */
+.pf-mouth-grin, .pf-mouth-laugh { animation: pfMouthPop .26s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes pfMouthPop {
+  from { transform: scaleY(.35); }
+  to { transform: scaleY(1); }
 }
 .pet-hit { display: block; transform-origin: 50% 100%; will-change: transform; }
 .pet-pat-hint {
@@ -4628,7 +4648,7 @@ footer {
      它 1.25 秒就没了、又是唯一的即时反馈，关了会变成「点了完全没反应」。
      表情层的弹入也保留（只去掉缩放，留淡入）—— 它同样是「点了有反应」的证据。 */
   .pet-idle, .home-cat-body { animation: none !important; }
-  .pet-face, .pf-mark { animation-name: petFaceFade !important; }
+  .pet-face, .pf-mark, .pf-mouth { animation-name: petFaceFade !important; }
 }
 @keyframes petFaceFade {
   from { opacity: 0; }

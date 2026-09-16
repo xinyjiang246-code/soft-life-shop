@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-量出软软每张图里「眼睛 / 鼻子嘴」的位置（归一化 0~1），并画一张标记图供肉眼复核。
+量出软软每张图里「眼睛 / 鼻子」的位置（归一化 0~1），并画一张标记图供肉眼复核。
 
 为什么要量：
   图片模式下五官是**画死在图里的**，要让「表情能变」只能在图之上盖一层
@@ -14,14 +14,20 @@
   腐蚀 7px 会把它整个吃掉，五个阶段全部量不到。
   正确做法：直接在暗像素上取连通域，按**形状**筛：
     眼睛 = 面积 > 300、填充率 > .5、宽高比 .5~1.3、最长边 < 70px（轮廓是上千像素的大块，胡须是细长条）
-    鼻子嘴 = 两眼连线下方那块最大的小团（面积 > 40）
-  再按「距两眼中点最近」挑嘴。
+    鼻子 = 两眼连线下方那块小团（面积 > 40），再按「距两眼中点最近」挑
+
+  ⚠️ **2026-09-17 更正：那个点量到的是「鼻子」，不是「鼻子嘴」**。
+  软软这张脸**本来就没有嘴**（鼻子下面只有水彩纸纹，放大 7 倍确认过）。
+  早先把字段叫 `mouth` 是量错了名字，已正名为 `nose`。
+  为什么这事重要：没有嘴的猫，七个表情共用同一张下半脸 —— **嘴才是补全表情的那一块**。
+  `components/PetFace.jsx` 现在按 `nose` 推算出嘴的位置（鼻子下方、跟着 tilt 转）。
 
 输出：
-  src/petFace.js                  —— 每阶段的 eyeL / eyeR / eyeW / eyeH / mouth / gap
+  src/petFace.js                  —— 每阶段的 eyeL / eyeR / eyeW / eyeH / nose / gap / tilt
   预览截图/软软_脸部锚点_复核.png —— 把量到的点画回原图（**必须人眼看一次**）
 
-用法：python3 tools/petFace.py
+用法：/Users/s/.workbuddy/binaries/python/envs/default/bin/python tools/petFace.py
+      （这个脚本要 numpy，只有 envs/default 里那个解释器装了；系统 python3 会 ImportError）
 """
 import os, sys
 import numpy as np
@@ -97,7 +103,7 @@ def analyse(path):
         return None
     eyes = eyes[:2]
 
-    # ---- 鼻子嘴：两眼连线下方窗口里最大的小团（排除两只眼睛本身）----
+    # ---- 鼻子：两眼连线下方窗口里那块小团（排除两只眼睛本身）----
     eye_ids = {id(b) for b in eyes}
     (_, _, _, lw, lh, lx, ly, _), (_, _, _, rw, rh, rx, ry, _) = eyes
     gap = abs(rx - lx)
@@ -168,13 +174,13 @@ def analyse(path):
         'eye': [[lx / w, ly / h], [rx / w, ry / h]],
         'eyeW': (lw + rw) / 2 / w,
         'eyeH': (lh + rh) / 2 / h,
-        'mouth': [mx / w, my / h] if mx is not None else [(lx + rx) / 2 / w, (ly + ry) / 2 / h + 0.02],
+        'nose': [mx / w, my / h] if mx is not None else [(lx + rx) / 2 / w, (ly + ry) / 2 / h + 0.02],
         'gap': gap / w,
         'tilt': float(ang),
         'size': [w, h],
         'ink': list(ink), 'eyeInk': eye_ink, 'furL': furL, 'furR': furR,
         '_px': dict(eyes=[(lx, ly, lw, lh), (rx, ry, rw, rh)],
-                    mouth=(mx, my) if mx is not None else None),
+                    nose=(mx, my) if mx is not None else None),
     }
 
 
@@ -245,12 +251,12 @@ def main():
             print(f"stage{i} 无眼底图 → {os.path.relpath(made, ROOT)} "
                   f"({os.path.getsize(made) // 1024}KB)")
         e = r['_px']['eyes']
-        m = r['_px']['mouth']
+        m = r['_px']['nose']
         print(f"stage{i}: 眼 ({e[0][0]:.0f},{e[0][1]:.0f}) ({e[1][0]:.0f},{e[1][1]:.0f}) "
-              f"尺寸 {e[0][2]}x{e[0][3]} · 嘴 {m} · 倾斜 {r['tilt']:.1f}°")
+              f"尺寸 {e[0][2]}x{e[0][3]} · 鼻 {m} · 倾斜 {r['tilt']:.1f}°")
         print(f"        归一化 eyeL=[{r['eye'][0][0]:.4f}, {r['eye'][0][1]:.4f}] "
               f"eyeR=[{r['eye'][1][0]:.4f}, {r['eye'][1][1]:.4f}] "
-              f"mouth=[{r['mouth'][0]:.4f}, {r['mouth'][1]:.4f}] gap={r['gap']:.4f}")
+              f"nose=[{r['nose'][0]:.4f}, {r['nose'][1]:.4f}] gap={r['gap']:.4f}")
 
     if not stages:
         sys.exit('一个阶段都没量到，先查阈值/形状条件')
@@ -281,7 +287,7 @@ def main():
             d.ellipse([(ex - x0 - ew / 2 - 3) * k, (ey - y0 - eh / 2 - 3) * k,
                        (ex - x0 + ew / 2 + 3) * k, (ey - y0 + eh / 2 + 3) * k], outline=col, width=2)
         d.line([(lx - x0) * k, (ly - y0) * k, (rx - x0) * k, (ry - y0) * k], fill=(110, 190, 110), width=2)
-        mx, my = r['_px']['mouth']
+        mx, my = r['_px']['nose']
         d.rectangle([(mx - x0 - 14) * k, (my - y0 - 14) * k, (mx - x0 + 14) * k, (my - y0 + 14) * k],
                     outline=(226, 146, 20), width=2)
         d.rectangle([0, 0, ZW - 1, z.size[1] - 1], outline=(200, 196, 186))
@@ -293,7 +299,7 @@ def main():
         sheet.paste(c, (ZW * k, 16))
     os.makedirs(os.path.dirname(OUT_PNG), exist_ok=True)
     sheet.save(OUT_PNG)
-    print('\n复核图 →', OUT_PNG, '（**打开看一眼**: 红/蓝圈要套住两只眼睛，橙框要在鼻子嘴上）')
+    print('\n复核图 →', OUT_PNG, '（**打开看一眼**: 红/蓝圈要套住两只眼睛，橙框要框住鼻子）')
 
     # ---- 无眼底图复核：原图 | 抹掉眼睛后 ----
     rows = len(stages)
@@ -338,24 +344,27 @@ def main():
         "// 图片模式下五官是画死在图里的，要让「表情能变」只能在其上盖一层。",
         "// 五个阶段的头在画面里各不相同，所以坐标逐阶段单独量。",
         "//",
-        "// 生成：python3 tools/petFace.py",
-        "//       （同时输出 预览截图/软软_脸部锚点_复核.png —— 改了素材务必重跑并人眼复核）",
+        "// 生成：/Users/s/.workbuddy/binaries/python/envs/default/bin/python tools/petFace.py",
+        "//       （要 numpy，只有这个解释器装了；同时输出 预览截图/软软_脸部锚点_复核.png",
+        "//         —— 改了素材务必重跑并人眼复核）",
         "//",
         "// 坐标一律是**相对整张图的 0~1 归一化值**。容器宽高比 220:248 与素材 720:812 几乎一致，",
         "// 且 .pet-photo img 是 object-fit: cover，所以直接乘容器尺寸即可，不需要额外换算。",
         "// tilt = 两眼连线的倾角（度）。侧脸图两只眼睛不在一条水平线上，",
         "// 表情元素要按这个角度跟着转，否则会像贴歪的贴纸。",
+        "// nose = 鼻子的中心（**不是嘴** —— 软软这张脸本来就没有嘴，鼻子下面是水彩纸纹）。",
+        "// 嘴的位置由 PetFace.jsx 从 nose 推算（鼻子下方、跟着 tilt 转）。",
         "// furL/furR = 各自眼睛周围那一圈的毛色，盖眼睛时用它当底色（左右分开取，别用一个值）。",
         "",
         "export const FACE_ANCHORS = {",
     ]
     for r in stages:
-        m = r['mouth']
+        m = r['nose']
         L.append(f"  {r['stage']}: {{")
         L.append(f"    eyeL: [{r['eye'][0][0]:.4f}, {r['eye'][0][1]:.4f}],")
         L.append(f"    eyeR: [{r['eye'][1][0]:.4f}, {r['eye'][1][1]:.4f}],")
         L.append(f"    eyeW: {r['eyeW']:.4f}, eyeH: {r['eyeH']:.4f},")
-        L.append(f"    mouth: [{m[0]:.4f}, {m[1]:.4f}],")
+        L.append(f"    nose: [{m[0]:.4f}, {m[1]:.4f}],")
         L.append(f"    gap: {r['gap']:.4f}, tilt: {r['tilt']:.1f},")
         L.append(f"    furL: '{hexs(r['furL'])}', furR: '{hexs(r['furR'])}',")
         L.append("  },")

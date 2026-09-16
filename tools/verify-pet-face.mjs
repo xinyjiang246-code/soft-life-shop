@@ -10,11 +10,13 @@
 //  4. 连击要升级：第三下爱心眼、第五下星星眼。
 //
 // 用法：node tools/verify-pet-face.mjs [url] [截图前缀]
-import { writeFile, readFile } from 'node:fs/promises'
+import { writeFile, readFile, mkdir } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 
 const url = process.argv[2] || 'http://127.0.0.1:8080/'
 const shotPrefix = process.argv[3] || '/tmp/petface/'
+// 自己建目录：以前是「刚好」目录已存在才没炸，换个前缀就 ENOENT
+await mkdir(shotPrefix, { recursive: true })
 
 const version = await fetch('http://127.0.0.1:9222/json/version').then((r) => r.json())
 const socket = new WebSocket(version.webSocketDebuggerUrl)
@@ -111,9 +113,28 @@ async function shotHero(name) {
       width: r.width + pad * 2, height: r.height + pad * 2,
     };
   })()`)
-  const { data } = await send('Page.captureScreenshot', { format: 'png', clip: { ...clip, scale: 2 } })
-  await writeFile(`${shotPrefix}${name}.png`, Buffer.from(data, 'base64'))
+  // ⚠️ 拍之前先把「指尖小图」藏掉。粒子和表情的存活窗口是重叠的
+  //    （粒子 1400ms、表情 1150ms），等粒子自己飘走时表情已经收回去了 ——
+  //    所以永远等不到干净的一帧，图里一直是几块大贴纸糊在脸上。
+  //    只影响截图：所有断言读的都是 DOM 状态，不看像素。
+  await hidePopLayer(true)
+  try {
+    const { data } = await send('Page.captureScreenshot', { format: 'png', clip: { ...clip, scale: 2 } })
+    await writeFile(`${shotPrefix}${name}.png`, Buffer.from(data, 'base64'))
+  } finally {
+    await hidePopLayer(false)
+  }
   return `${shotPrefix}${name}.png`
+}
+
+async function hidePopLayer(hide) {
+  await evaluate(`(() => {
+    document.querySelectorAll('.pat-pop-layer').forEach((n) => {
+      if (${hide}) { n.style.visibility = 'hidden'; }
+      else { n.style.visibility = ''; }
+    });
+    return true;
+  })()`)
 }
 
 // ---- 从源码里解析锚点表，避免脚本里再抄一份 ----
@@ -129,7 +150,17 @@ function anchorsOf(stage) {
     const m = block[1].match(new RegExp(`${key}: ([-\\d.]+)`))
     return m ? Number(m[1]) : null
   }
-  return { eyeL: num('eyeL'), eyeR: num('eyeR'), gap: one('gap'), tilt: one('tilt') }
+  return { eyeL: num('eyeL'), eyeR: num('eyeR'), nose: num('nose'), eyeW: one('eyeW'), eyeH: one('eyeH'), gap: one('gap'), tilt: one('tilt') }
+}
+
+// ---- 嘴形也**从 PetFace.jsx 里解析**，不在脚本里抄第二份映射 ----
+// （抄一份就会出现「组件改了嘴、验收还在按老一套断言」的假绿）
+const faceSrc = await readFile(new URL('../src/components/PetFace.jsx', import.meta.url), 'utf8')
+function mouthKindOf(expr) {
+  const block = faceSrc.match(new RegExp(`\\n  ${expr}: \\{([^}]*)\\}`))
+  assert.ok(block, `PetFace.jsx 的 EXPRESSIONS 里应该有 ${expr}`)
+  const m = block[1].match(/mouth: '([a-z]+)'/)
+  return m ? m[1] : null
 }
 
 const ZONES = {
@@ -175,14 +206,23 @@ async function tapAndRead(zone, { shot = null } = {}) {
     const noeye = document.querySelector('.pet-noeye');
     const img = document.querySelector('.pet-photo img');
     const svg = face ? face.getBoundingClientRect() : null;
-    const groups = face ? Array.from(face.querySelectorAll('g[transform]')) : [];
-    const eyes = groups
-      .filter((g) => /translate/.test(g.getAttribute('transform')))
-      .map((g) => {
-        const b = g.getBoundingClientRect();
-        return { cx: b.left + b.width / 2, cy: b.top + b.height / 2, children: g.children.length };
-      });
+    // 眼睛用**明确的类名**找，不靠「带 transform 的 <g>」猜 ——
+    // 2026-09-17 加嘴的时候就是这么炸的：嘴的外层 <g> 也带 translate，
+    // 被当成第三只眼睛，于是去比对不存在的锚点，报「Cannot read properties of undefined」。
+    // 看着像产品坏了，其实是探针太宽松（同类坑见 #48「文本包含匹配」）。
+    const eyes = face ? Array.from(face.querySelectorAll('.pf-eye')).map((g) => {
+      const b = g.getBoundingClientRect();
+      return { cx: b.left + b.width / 2, cy: b.top + b.height / 2, children: g.children.length };
+    }) : [];
     const shapes = face ? Array.from(face.querySelectorAll('path, ellipse, circle, rect')) : [];
+    const mouth = face ? face.querySelector('.pf-mouth') : null;
+    const mb = mouth ? mouth.getBoundingClientRect() : null;
+    // 嘴的**几何尺寸用 getBBox()** —— 它返回的是 SVG 用户坐标系（viewBox 单位），
+    // 跟宠物显示多大无关。用 getBoundingClientRect() 得到的是屏幕像素，而宠物页上
+    // 软软只有 150px 宽 → 眼睛才 7px、嘴才 2px 高，拿屏幕像素设阈值等于在量放大倍数。
+    const mbb = mouth && mouth.getBBox ? mouth.getBBox() : null;
+    // 嘴里的形状签名：只看几何，不看类名 —— 类名对了但画的是同一张嘴也得算数
+    const mShapes = mouth ? Array.from(mouth.querySelectorAll('path, ellipse, circle')) : [];
     return {
       // ⚠️ 别在这里写 /\\s+/ 之外的转义：这段字符串是**先被 Node 的模板字符串解释**、
       //    再交给浏览器的。写 /\s+/ 会被 Node 吃成 /s+/，把 "squint" 变成 " quint"。
@@ -196,6 +236,25 @@ async function tapAndRead(zone, { shot = null } = {}) {
       形状数: shapes.length,
       形状标签: Array.from(new Set(shapes.map((s) => s.tagName))).sort(),
       有文字: face ? face.textContent.trim().length : 0,
+      嘴: mb
+        ? {
+            cls: mouth.className.baseVal.trim(),
+            子元素: mShapes.length,
+            签名: mShapes
+              // ⚠️ 这里**不能用反引号模板**：整段代码本身就是一个模板字符串，
+              //    嵌套反引号会把它提前闭合 → 报 "missing ) after argument list"。
+              //    跟下面那条 \s 的坑是一家人：注入进去的代码里，转义和引号都得少一层。
+              .map((s) => s.tagName + ':' + (s.getAttribute('d') || '(' + s.getAttribute('rx') + 'x' + s.getAttribute('ry') + ')'))
+              .join('|'),
+            box: [mb.left + mb.width / 2, mb.top + mb.height / 2],
+            // viewBox 单位（跟显示尺寸无关）—— 判断「够不够大」要用这个
+            w: mbb ? Math.round(mbb.width) : 0,
+            h: mbb ? Math.round(mbb.height) : 0,
+            偏心: mbb ? Math.round(mbb.x + mbb.width / 2) : 0,   // 相对嘴心的横向偏移，应该≈0
+            宽: Math.round(mb.width),
+            高: Math.round(mb.height),
+          }
+        : null,
       zone: document.querySelector('.pet-pat-btn').dataset.zone,
       台词: document.querySelector('.pet-pat-bubble')?.innerText || null,
     };
@@ -231,6 +290,7 @@ try {
   const anchor = anchorsOf(3)
   const seenCls = {}
   const seenShapes = {}
+  const seenMouths = {}
   for (const zone of ['ear', 'head', 'cheekL', 'cheekR', 'tummy', 'paw']) {
     await wait(1400) // 等上一次表情收回去
     const s = await tapAndRead(zone, { shot: `stage3_${zone}` })
@@ -244,6 +304,22 @@ try {
     assert.equal(s.有文字, 0, '表情层里不该有文字（项目禁 emoji，也禁文字表情）')
     assert.ok(s.形状数 >= 2, `${zone} 表情至少要画出两只眼睛`)
 
+    // ---- 嘴：原图根本没有嘴，七种表情共用一张下半脸是最容易漏掉的那一半 ----
+    assert.ok(s.嘴, `${zone}：表情层上应该有嘴（原图没有嘴，全靠我们画）`)
+    assert.equal(s.嘴.cls, `pf-mouth pf-mouth-${mouthKindOf(ZONE_EXPR[zone])}`,
+      `${zone} 的嘴形应该跟 PetFace.jsx 里声明的一致，实际 ${s.嘴.cls}`)
+    assert.ok(s.嘴.子元素 >= 1, `${zone}：嘴不能是空的`)
+    // 尺寸用 viewBox 单位跟眼睛比（跟显示尺寸无关）：嘴至少要跟眼睛一个量级，
+    // 不然在 150px 的宠物身上等于没有。
+    // 门槛放到 0.85 个眼半径是因为「惊」的圆嘴本来就该小 —— 但小也是有限度的。
+    const eyeRx = (anchor.eyeW * 720) / 2
+    const eyeRy = (anchor.eyeH * 812) / 2
+    assert.ok(s.嘴.w >= eyeRx * 0.85, `${zone}：嘴太窄了（${s.嘴.w} vs 眼半径 ${eyeRx.toFixed(0)}，viewBox 单位）`)
+    assert.ok(s.嘴.h >= eyeRy * 0.25, `${zone}：嘴太扁了（${s.嘴.h} vs 眼半径 ${eyeRy.toFixed(0)}，viewBox 单位）`)
+    // 嘴必须**以鼻子为轴左右对称**。ω 嘴第一版的第二段贝塞尔只走了 w/1.5，
+    // 整条路径止于 +0.33w → 嘴整体偏左 1/3 个宽度（小尺寸下就是「嘴歪了」）。
+    assert.ok(Math.abs(s.嘴.偏心) <= eyeRx * 0.3, `${zone}：嘴没对中，偏离嘴心 ${s.嘴.偏心}（viewBox 单位）`)
+
     // 眼睛分组必须落在锚点上（换算成屏幕坐标比对，容差 4px）
     const rect = await evaluate(`(() => {
       const r = document.querySelector('.pet-photo').getBoundingClientRect();
@@ -254,12 +330,26 @@ try {
       [rect.left + anchor.eyeR[0] * rect.w, rect.top + anchor.eyeR[1] * rect.h],
     ]
     const got = s.眼睛分组.map((e) => [e.cx, e.cy])
+    // 先断言数量再算偏差：不然多抓到一个元素就会变成 TypeError，
+    // 报「Cannot read properties of undefined」—— 看不出是哪儿的问题
+    assert.equal(got.length, want.length, `${zone}：眼睛分组数量不对，抓到 ${got.length} 组（应为 ${want.length}）`)
     const dev = got.map((g, i) => Math.hypot(g[0] - want[i][0], g[1] - want[i][1]))
     assert.equal(got.length, 2, `${zone}：应该有左右两组眼睛`)
     assert.ok(Math.max(...dev) < 6, `${zone}：眼睛画歪了，偏离锚点 ${dev.map((d) => d.toFixed(1)).join('/')}px`)
 
+    // 嘴必须在**鼻子正下方**：横向对齐鼻尖、纵向落在鼻子以下、又不能掉到下巴上。
+    // 位置是从鼻子推出来的（见 PetFace.jsx），推错了就会糊在鼻子上或飘到胸口。
+    const noseY = rect.top + anchor.nose[1] * rect.h
+    const noseX = rect.left + anchor.nose[0] * rect.w
+    const ry = (anchor.eyeH * rect.h) / 2      // 眼睛半高（换算到容器像素）
+    const dx = Math.abs(s.嘴.box[0] - noseX)
+    const dy = s.嘴.box[1] - noseY
+    assert.ok(dx < 8, `${zone}：嘴没对在鼻子下方（横向偏了 ${dx.toFixed(1)}px）`)
+    assert.ok(dy > ry * 0.4 && dy < ry * 2.6, `${zone}：嘴的纵向位置不对（离鼻子 ${dy.toFixed(1)}px，瞳高的一半是 ${ry.toFixed(1)}px）`)
+
     seenCls[zone] = s.cls
     seenShapes[zone] = `${s.形状标签.join('+')}|${s.形状数}`
+    seenMouths[zone] = s.嘴.签名
   }
   const uniq = new Set(Object.values(seenCls))
   assert.ok(uniq.size >= 5, `六个部位至少要出现 5 种不同表情，实际 ${uniq.size}`)
@@ -272,15 +362,27 @@ try {
   assert.notEqual(seenCls.cheekL, seenCls.tummy, '摸腮和摸肚子不该是同一个表情')
   ok('形状差异', { 受惊: seenShapes.paw, 闭眼: seenShapes.head, 呼噜: seenShapes.tummy })
 
+  console.log('\n[4b] 嘴不是摆设：七种表情的嘴真的不一样，而且位置对')
+  const uniqMouths = new Set(Object.values(seenMouths))
+  ok('每个部位的嘴', Object.fromEntries(Object.entries(seenMouths).map(([k, v]) => [k, v.split('|')[0]])))
+  // 六个部位里左/右脸共用 smile，所以独立嘴形至少 5 种；
+  // 若只剩 1 种就是「所有表情共用一张嘴」的退化（那正是补这一刀之前的样子）
+  assert.ok(uniqMouths.size >= 5, `六种部位至少要有 5 种不同的嘴，实际 ${uniqMouths.size} 种`)
+  assert.notEqual(seenMouths.tummy, seenMouths.paw, '呼噜的 ω 嘴和受惊的圆嘴不能同形')
+  assert.notEqual(seenMouths.head, seenMouths.tummy, '闭眼享受和呼噜的嘴不能同形')
+  ok('不同嘴形数', uniqMouths.size)
+
   console.log('\n[5] 连击升级：第三下爱心眼、第五下星星眼')
   await wait(1400)
   const { x: cx, y: cy } = await pointOf(0.5, 0.7)
   const stages = []
+  const combos = []
   for (let i = 1; i <= 5; i++) {
     await mouseTap(cx, cy)
     await wait(120)
     const cls = await evaluate(`(document.querySelector('.pet-face')?.className.baseVal || '').trim()`)
     stages.push(cls)
+    combos.push(await evaluate(`(document.querySelector('.pf-mouth')?.className.baseVal || '').trim()`))
     if (i === 2) await shotHero('stage3_combo2')
     if (i === 3) await shotHero('stage3_combo3')
     if (i === 5) await shotHero('stage3_combo5')
@@ -289,6 +391,10 @@ try {
   assert.ok(stages[0].endsWith('-purr'), `第一下应该是 purr，实际 ${stages[0]}`)
   assert.ok(stages[2].endsWith('-heart'), `第三下应该升级成爱心眼，实际 ${stages[2]}`)
   assert.ok(stages[4].endsWith('-star'), `第五下应该升级成星星眼，实际 ${stages[4]}`)
+  // 连击升级时嘴也得跟着升级：爱心眼是张口的笑，星星眼是更大的笑（还要有舌头）
+  ok('连击时的嘴', combos)
+  assert.equal(combos[2], `pf-mouth pf-mouth-${mouthKindOf('heart')}`, `爱心眼的嘴形不对：${combos[2]}`)
+  assert.equal(combos[4], `pf-mouth pf-mouth-${mouthKindOf('star')}`, `星星眼的嘴形不对：${combos[4]}`)
 
   console.log('\n[6] 表情会自己收回去，回到本来那张脸')
   await wait(1500)
@@ -318,9 +424,18 @@ try {
       [rect.left + a.eyeR[0] * rect.w, rect.top + a.eyeR[1] * rect.h],
     ]
     const got = s.眼睛分组.map((e) => [e.cx, e.cy])
+    assert.equal(got.length, want.length, `stage${st}：眼睛分组数量不对，抓到 ${got.length} 组（应为 ${want.length}）`)
     const dev = got.map((g, i) => Math.hypot(g[0] - want[i][0], g[1] - want[i][1]))
     assert.ok(Math.max(...dev) < 6, `stage${st}：眼睛偏离锚点 ${dev.map((d) => d.toFixed(1)).join('/')}px`)
-    ok(`stage${st}`, { 偏离: dev.map((d) => Number(d.toFixed(1))), 形状: s.形状标签.join('+') })
+    // 嘴的位置是从**这个阶段的鼻子**推出来的 —— 五个阶段的鼻子高度差很多（趴着的胖崽 vs 坐姿侧脸），
+    // 所以这里必须逐阶段验一遍，不能只验阶段 3
+    assert.ok(s.嘴, `stage${st}：应该有嘴`)
+    const noseY = rect.top + a.nose[1] * rect.h
+    const dxm = Math.abs(s.嘴.box[0] - (rect.left + a.nose[0] * rect.w))
+    const dym = s.嘴.box[1] - noseY
+    assert.ok(dxm < 8, `stage${st}：嘴横向没对在鼻子上（偏 ${dxm.toFixed(1)}px）`)
+    assert.ok(dym > 2, `stage${st}：嘴没在鼻子下面（差 ${dym.toFixed(1)}px）`)
+    ok(`stage${st}`, { 偏离: dev.map((d) => Number(d.toFixed(1))), 形状: s.形状标签.join('+'), 嘴: s.嘴.cls.replace('pf-mouth pf-mouth-', '') })
     shots.push(`stage${st}_head`)
     // 顺手也拍一张爱心眼，方便拼图对比
     const { x: hx, y: hy } = await pointOf(0.5, 0.7)
