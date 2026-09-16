@@ -132,7 +132,7 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
         {/* 这一单也写进了食物手账 —— 首页「把这一餐存下来」那张磁贴翻得到 */}
         {journaled && (
           <section className="journal-recap" aria-label="食物手账">
-            <p className="journal-recap-eyebrow">📓 食物手账</p>
+            <p className="journal-recap-eyebrow">食物手账</p>
             <p className="journal-recap-body">
               这一单的 <strong>{journaled.count}</strong> 样，已经写进今天那一页了。
             </p>

@@ -4725,140 +4725,224 @@ footer {
    语气红线：不记卡路里、不打卡、不催更；数据只在这台设备上，页脚必须诚实说明。
    ============================================================ */
 .archive-tabs {
-  display: flex; gap: 5px;
-  margin: 12px 16px 0; padding: 4px;
-  background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 12px;
+  display: flex; gap: 4px;
+  margin: 12px 14px 0; padding: 4px;
+  background: #FBFAF7;
+  border: 1px solid #E3E0D5;
+  border-radius: 999px;
 }
 .archive-tabs button {
-  flex: 1; padding: 9px 8px;
-  border: 0; border-radius: 9px; background: none; cursor: pointer;
-  font-family: inherit; font-size: 12.5px; letter-spacing: .02em; color: var(--text-sub);
+  flex: 1; padding: 8px;
+  border: 0; border-radius: 999px; background: none; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; letter-spacing: .02em; color: #6B6459;
   transition: background .2s ease, color .2s ease;
 }
-.archive-tabs button.is-active { background: #F6EEDF; color: var(--caramel); font-weight: 600; }
+.archive-tabs button.is-active { background: #EFE7DA; color: #2E2A25; font-weight: 500; }
 .archive-bar .icon-button.is-placeholder { visibility: hidden; }
 
-.journal-view { padding-bottom: 26px; }
+/* ============================================================
+   食物手账 · 2026-09-16 按用户给的参考 App 重做
+   参考：`参考图/手账App界面/`（一个「咖啡记录 + 集章」App）
+   抄的是它的设计语言：中性米灰底 / 近黑墨色 / 等宽打字机数字 / 大圆角 / 贴纸
+   ⚠️ 新配色用变量作用域收在 .jh 里 —— 其他页面完全不受影响，
+      等用户确认这版效果，再把这套 token 铺到全场（见第十节的改造路径）
+   语气红线：不记卡路里、不算账、不打卡、不催更
+   ============================================================ */
+.jh {
+  --jh-paper: #F1EFE8;
+  --jh-card: #FBFAF7;
+  --jh-card-2: #EFECE2;
+  --jh-line: #E3E0D5;
+  --jh-ink: #2E2A25;
+  --jh-ink-2: #6B6459;
+  --jh-ink-3: #9C9488;
+  --jh-clay: #C4703F;
+  --jh-gold: #A88454;
+  --jh-moss: #8A9A6B;
+  --jh-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  padding-bottom: 8px;
+  color: var(--jh-ink);
+}
 
-.journal-intro { padding: 22px 22px 16px; text-align: center; }
-.journal-intro .eyebrow { margin: 0 0 10px; }
-.journal-intro h1 {
-  margin: 0; font: 500 25px/1.25 "Cormorant Garamond", "PingFang SC", serif;
+.jh-mark { display: block; width: 100%; height: 100%; padding: 6px; box-sizing: border-box; color: var(--jh-ink-3); }
+.jh-mark path { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- 顶部：标题（点一下回今天）+ 前后翻 ---------- */
+.jh-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 18px 16px 13px; }
+.jh-heading { display: grid; gap: 3px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font-family: inherit; }
+.jh-h1 { font-size: 20px; font-weight: 500; letter-spacing: .01em; color: var(--jh-ink); }
+.jh-h2 { font-family: var(--jh-mono); font-size: 11.5px; letter-spacing: .05em; color: var(--jh-ink-2); }
+.jh-arrows { display: flex; gap: 6px; }
+.jh-arrows button {
+  display: grid; place-items: center; width: 32px; height: 32px;
+  border: 1px solid var(--jh-line); border-radius: 999px; background: var(--jh-card);
+  color: var(--jh-ink-2); cursor: pointer;
+  transition: background .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
 }
-.journal-intro > p:last-child {
-  margin: 12px auto 0; max-width: 268px;
-  color: var(--text-sub); font-size: 12px; line-height: 1.7;
+.jh-arrows button:hover { background: var(--jh-card-2); transform: scale(1.07); }
+
+/* ---------- 换视图 / 换日期都换 key，动画自然重放 ---------- */
+.jh-stage { padding: 0 14px; }
+.jh-stage-month, .jh-stage-week { animation: jhFlipIn .36s cubic-bezier(.34,1.4,.64,1) both; }
+.jh-stage-day { animation: jhRiseIn .32s cubic-bezier(.34,1.4,.64,1) both; }
+@keyframes jhFlipIn { from { opacity: 0; transform: perspective(620px) rotateX(-8deg) translateY(7px); } to { opacity: 1; transform: none; } }
+@keyframes jhRiseIn { from { opacity: 0; transform: translateY(11px); } to { opacity: 1; transform: none; } }
+@keyframes jhDrop { from { opacity: 0; transform: translateY(-13px) scale(.9); } to { opacity: 1; transform: none; } }
+
+/* ---------- 月历 / 周历 ---------- */
+.jh-grid, .jh-week {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px;
+  padding: 12px; border-radius: 18px;
+  background: var(--jh-card); border: 1px solid var(--jh-line);
+}
+.jh-dow { text-align: center; padding-bottom: 2px; font-family: var(--jh-mono); font-size: 10.5px; letter-spacing: .06em; color: var(--jh-ink-3); }
+.jh-blank { aspect-ratio: 1; }
+
+.jh-cell {
+  position: relative; aspect-ratio: 1; padding: 3px;
+  display: flex; flex-direction: column; align-items: center;
+  border: 0; border-radius: 11px; background: var(--jh-card-2);
+  cursor: pointer; font-family: inherit;
+  animation: jhDrop .46s cubic-bezier(.34,1.56,.64,1) backwards;
+  animation-delay: calc(var(--i, 0) * 11ms);
+  transition: background .18s ease, transform .18s ease;
+}
+.jh-cell:hover { transform: translateY(-2px); }
+.jh-cell.is-big { aspect-ratio: auto; height: 92px; }
+
+.jh-dnum { align-self: flex-start; margin: 2px 0 0 3px; font-family: var(--jh-mono); font-size: 10.5px; color: var(--jh-ink-3); }
+.jh-cell.has .jh-dnum { color: var(--jh-ink-2); }
+.jh-cell.is-today { box-shadow: inset 0 0 0 1.5px var(--jh-clay); }
+.jh-cell.is-today .jh-dnum { color: var(--jh-clay); font-weight: 500; }
+.jh-cell.is-focus { background: #E8DDC9; }
+
+.jh-thumbs { display: flex; align-items: center; justify-content: center; width: 100%; flex: 1; }
+.jh-thumbs img {
+  width: 76%; max-width: 30px; aspect-ratio: 1; object-fit: contain;
+  background: #fff; border-radius: 6px;
+  box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(46, 42, 37, .10);
+}
+.jh-cell.is-big .jh-thumbs img { width: 78%; max-width: 36px; }
+.jh-thumbs .jh-mark { width: 22px; height: 22px; }
+
+.jh-badge {
+  position: absolute; right: -3px; bottom: -3px;
+  min-width: 16px; height: 16px; padding: 0 3px;
+  display: grid; place-items: center; border-radius: 999px;
+  background: var(--jh-clay); color: #fff;
+  font-family: var(--jh-mono); font-size: 10px; line-height: 1;
+  box-shadow: 0 0 0 1.5px var(--jh-card);
 }
 
-/* 今天那一页：可编辑 */
-.journal-today {
-  margin: 0 16px 14px; padding: 14px;
-  background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-}
-.jt-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
-.jt-date { font-size: 12px; letter-spacing: .04em; color: var(--text-sub); }
-.jt-tag {
-  padding: 2px 9px; border: 1px solid var(--divider); border-radius: 999px;
-  font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--caramel);
-}
-.jt-empty {
-  padding: 12px; border-radius: 10px; background: #FAF6EE;
-  font-size: 12.5px; line-height: 1.65; color: var(--text-sub);
-}
-.journal-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.journal-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 7px 9px; border-radius: 10px; background: #FAF6EE;
-}
-.ji-art {
-  position: relative; flex: 0 0 44px; width: 44px; height: 44px;
-  border-radius: 8px; overflow: hidden; background: #EFE7D8;
-}
-.ji-art .flip-frame { position: relative; width: 100%; height: 100%; }
-.ji-mark { display: block; width: 100%; height: 100%; padding: 10px; box-sizing: border-box; color: #B9A88C; }
-.ji-mark path { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.ji-name { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; }
-.ji-del {
-  flex: 0 0 auto; display: grid; place-items: center;
-  width: 26px; height: 26px; padding: 0;
-  border: 0; border-radius: 50%; background: none;
-  color: var(--text-sub); cursor: pointer; opacity: .5;
-  transition: opacity .2s ease, background .2s ease;
-}
-.ji-del:hover { opacity: 1; background: #EFE7D8; }
+/* ---------- 日视图 ---------- */
+.jh-day { display: grid; gap: 13px; }
+.jh-day-hint { margin: 0; font-size: 12.5px; color: var(--jh-ink-2); }
+.jh-day-hint button { margin-left: 7px; padding: 0; border: 0; background: none; color: var(--jh-clay); font: inherit; text-decoration: underline; cursor: pointer; }
+.jh-day-empty { margin: 0; font-size: 13px; line-height: 1.7; color: var(--jh-ink-2); }
 
-.jt-add { display: flex; align-items: center; gap: 8px; margin-top: 11px; }
-.jt-add > svg { flex: 0 0 auto; color: var(--text-sub); }
-.jt-add input {
-  flex: 1; min-width: 0; padding: 9px 10px;
-  border: 1px solid var(--divider); border-radius: 10px;
-  background: #FFFDF8; font-family: inherit; font-size: 13px; color: var(--text-main);
+.jh-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.jh-line {
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 12px; border-radius: 14px;
+  background: var(--jh-card); border: 1px solid var(--jh-line);
+  animation: jhRiseIn .3s ease both;
 }
-.jt-add input:focus { outline: none; border-color: var(--caramel); }
-.jt-add button {
-  flex: 0 0 auto; padding: 9px 14px;
-  border: 0; border-radius: 10px; cursor: pointer;
-  background: var(--caramel); color: #FFFDF8;
-  font-family: inherit; font-size: 12.5px;
-}
-.jt-add button:disabled { opacity: .35; cursor: default; }
+.jh-line-art { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; }
+.jh-line-art img { width: 100%; height: 100%; object-fit: contain; }
+.jh-line-art .jh-mark { width: 24px; height: 24px; }
+.jh-line-name { flex: 1; min-width: 0; font-size: 13.5px; }
+.jh-line-del { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 999px; background: none; color: var(--jh-ink-3); cursor: pointer; opacity: .6; }
+.jh-line-del:hover { opacity: 1; background: var(--jh-card-2); color: var(--jh-clay); }
 
-/* 心情 */
-.journal-mood { margin: 0 16px 14px; }
-.journal-mood-head { margin: 0 0 9px; font-size: 12px; color: var(--text-sub); }
-.journal-mood-row { display: flex; flex-wrap: wrap; gap: 7px; }
-.jm-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 7px 11px;
-  border: 1px solid var(--divider); border-radius: 999px;
-  background: var(--surface); color: var(--text-sub); cursor: pointer;
-  font-family: inherit; font-size: 12px;
-  transition: background .2s ease, color .2s ease, border-color .2s ease;
+.jh-add { display: flex; align-items: center; gap: 9px; padding: 7px 12px; border-radius: 14px; background: var(--jh-card); border: 1px solid var(--jh-line); }
+.jh-add > svg { flex: 0 0 auto; color: var(--jh-ink-3); transition: transform .34s cubic-bezier(.34,1.56,.64,1), color .2s ease; }
+.jh-add:focus-within > svg { transform: rotate(90deg); color: var(--jh-clay); }
+.jh-add input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--jh-ink); }
+.jh-add input:focus { outline: none; }
+.jh-add input::placeholder { color: var(--jh-ink-3); }
+.jh-add-btn {
+  flex: 0 0 auto; padding: 6px 13px; border: 0; border-radius: 999px;
+  background: var(--jh-clay); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer;
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), opacity .2s ease;
 }
-.jm-chip.is-active { background: #F6EEDF; border-color: var(--caramel); color: var(--caramel); }
+.jh-add-btn:hover { transform: scale(1.05); }
+.jh-add-btn:disabled { opacity: .3; cursor: default; transform: none; }
 
-/* 便签 */
-.journal-note-box { margin: 0 16px 16px; }
-.journal-note-box label { display: block; margin-bottom: 7px; font-size: 12px; color: var(--text-sub); }
-.journal-note {
-  display: block; width: 100%;
-  padding: 11px 12px; resize: vertical;
-  border: 1px solid var(--divider); border-radius: 12px;
-  background: var(--surface);
-  font-family: inherit; font-size: 13px; line-height: 1.7; color: var(--text-main);
+.jh-moods { display: flex; flex-wrap: wrap; gap: 7px; }
+.jh-mood {
+  padding: 7px 13px; border: 1px solid var(--jh-line); border-radius: 999px;
+  background: var(--jh-card); color: var(--jh-ink-2);
+  font-family: inherit; font-size: 12.5px; cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
 }
-.journal-note:focus { outline: none; border-color: var(--caramel); }
-.journal-note-hint { margin: 5px 0 0; font-size: 11px; color: var(--text-sub); }
+.jh-mood:hover { transform: translateY(-1px); }
+.jh-mood.is-on { background: #EFE7DA; border-color: var(--jh-clay); color: var(--jh-clay); }
 
-/* 以前那些天 */
-.journal-history { margin: 0 16px; }
-.jh-head {
-  display: flex; align-items: center; gap: 6px;
-  padding-bottom: 9px; margin-bottom: 12px;
-  border-bottom: 1px solid var(--divider);
-  font-size: 12px; letter-spacing: .04em; color: var(--caramel);
+.jh-note-box { display: grid; gap: 7px; }
+.jh-note-box > span { font-size: 12px; color: var(--jh-ink-2); }
+.jh-note-box > em { font-style: normal; font-size: 11px; color: var(--jh-ink-3); }
+.jh-note {
+  width: 100%; box-sizing: border-box; padding: 12px 13px; resize: vertical;
+  border: 1px solid var(--jh-line); border-radius: 14px;
+  background: var(--jh-card); font: inherit; font-size: 13.5px; line-height: 1.7; color: var(--jh-ink);
 }
-.jh-head em { margin-left: auto; font-style: normal; font-size: 11px; color: var(--text-sub); }
-.jh-empty { margin: 0; font-size: 12.5px; line-height: 1.65; color: var(--text-sub); }
-.jh-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
-.jh-day { padding-left: 12px; border-left: 2px solid var(--divider); }
-.jd-head { display: flex; align-items: center; gap: 8px; }
-.jd-head b { font-size: 12.5px; font-weight: 600; }
-.jd-head span { font-size: 11px; color: var(--text-sub); }
-.jd-head em { font-style: normal; font-size: 14px; }
-.jd-items { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 4px 10px; }
-.jd-item { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; line-height: 1.5; color: var(--text-sub); }
-.jd-dot { flex: 0 0 auto; width: 4px; height: 4px; border-radius: 50%; background: var(--caramel); opacity: .6; }
-.jd-note { margin: 6px 0 0; font-size: 12px; line-height: 1.6; font-style: italic; color: var(--text-sub); }
-.journal-foot {
-  margin: 24px 16px 0; padding-top: 13px;
-  border-top: 1px solid var(--divider);
-  font-size: 11px; line-height: 1.75; color: var(--text-sub);
+.jh-note:focus { outline: none; border-color: var(--jh-clay); }
+.jh-note-read { margin: 0; font-size: 13px; line-height: 1.75; font-style: italic; color: var(--jh-ink-2); }
+.jh-mood-read { margin: 0; font-size: 12px; color: var(--jh-ink-3); }
+
+/* ---------- 集章 ---------- */
+.jh-stamps, .jh-review {
+  margin: 20px 14px 0; padding: 16px;
+  border-radius: 18px; background: var(--jh-card); border: 1px solid var(--jh-line);
+}
+.jh-sec-head { margin: 0 0 13px; font-size: 12px; letter-spacing: .05em; color: var(--jh-ink-2); }
+.jh-stamp-row { display: flex; gap: 8px; }
+.jh-stamp { position: relative; flex: 1; aspect-ratio: 1; display: grid; align-content: center; justify-items: center; gap: 1px; }
+.jh-stamp-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.jh-stamp-ring path { fill: none; stroke: var(--jh-line); stroke-width: 1.5; stroke-dasharray: 3 3.5; }
+.jh-stamp.is-on .jh-stamp-ring path { stroke: var(--jh-gold); stroke-dasharray: none; }
+.jh-stamp b { font-family: var(--jh-mono); font-size: 14px; color: var(--jh-ink-3); }
+.jh-stamp.is-on b { color: var(--jh-gold); }
+.jh-stamp span { font-family: var(--jh-mono); font-size: 9px; color: var(--jh-ink-3); }
+.jh-sec-foot { margin: 10px 0 0; font-size: 11px; color: var(--jh-ink-3); }
+
+/* ---------- 回顾：只留温柔的回顾，不记卡路里也不算账 ---------- */
+.jh-review-nums { display: flex; gap: 28px; }
+.jh-review-nums div { display: grid; gap: 2px; }
+.jh-review-nums b { font-family: var(--jh-mono); font-size: 25px; font-weight: 500; color: var(--jh-ink); }
+.jh-review-nums span { font-size: 11.5px; color: var(--jh-ink-2); }
+.jh-review-fav { margin: 14px 0 0; padding-top: 13px; border-top: 1px solid var(--jh-line); font-size: 12px; color: var(--jh-ink-2); }
+.jh-review-fav b { margin-left: 5px; font-size: 16px; font-weight: 500; color: var(--jh-ink); }
+.jh-review-fav em { margin-left: 8px; font-style: normal; font-family: var(--jh-mono); font-size: 11px; color: var(--jh-ink-3); }
+.jh-review-empty { margin: 0; font-size: 12.5px; color: var(--jh-ink-3); }
+
+.jh-foot { margin: 17px 18px 0; font-size: 11px; line-height: 1.75; color: var(--jh-ink-3); }
+
+/* ---------- 悬浮胶囊底栏 ---------- */
+.jh-dock {
+  position: sticky; bottom: 12px; z-index: 6;
+  margin: 18px auto 0; width: max-content; max-width: 100%;
+  display: flex; align-items: center; gap: 3px; padding: 5px;
+  border-radius: 999px; background: rgba(251, 250, 247, .95);
+  border: 1px solid var(--jh-line);
+  box-shadow: 0 6px 20px rgba(46, 42, 37, .09);
+}
+.jh-dock button {
+  min-width: 48px; height: 40px; padding: 0 13px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 999px; background: none;
+  font-family: inherit; font-size: 12.5px; color: var(--jh-ink-2); cursor: pointer;
+  transition: background .2s ease, color .2s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+.jh-dock button:hover { transform: translateY(-1px); }
+.jh-dock button.is-on { background: #EFE7DA; color: var(--jh-ink); }
+.jh-dock button.jh-dock-add { min-width: 40px; width: 40px; padding: 0; background: var(--jh-clay); color: #fff; }
+.jh-dock-add svg { transition: transform .36s cubic-bezier(.34,1.56,.64,1); }
+.jh-dock-add:hover svg { transform: rotate(90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .jh-cell, .jh-stage-month, .jh-stage-week, .jh-stage-day, .jh-line { animation: none; }
+  .jh-arrows button, .jh-mood, .jh-add-btn, .jh-dock button, .jh-add > svg { transition: none; }
 }
 
 /* 结局页那行轻量回执：送达就记了，不占版面 */
