@@ -7,12 +7,16 @@ import {
   PET_NAME,
   RIDER_EXCHANGES,
   RIDER_LETTERS,
+  RIDER_MOMENTS,
+  WAIT_MODES,
   WAIT_SECONDS,
   weatherTypes,
 } from '../data.js'
-import { DAILY_PATIENCE, loadPatience, patienceLeft, savePatience } from '../storage.js'
+import { DAILY_PATIENCE, loadPatience, loadWaitMode, patienceLeft, savePatience, saveWaitMode } from '../storage.js'
 import SoftPet from '../components/SoftPet.jsx'
 import RiderWindow from '../components/RiderWindow.jsx'
+import RiderHop from '../components/RiderHop.jsx'
+import FoldRitual from '../components/FoldRitual.jsx'
 
 const STEPS = [
   { key: 'received', label: '接单', icon: ShoppingBag },
@@ -70,6 +74,10 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
   const [patience, setPatience] = useState(() => loadPatience())
   const [offlineDone, setOfflineDone] = useState(false)
   const [petLine, setPetLine] = useState(null)
+  // 陪骑手走：路上替他做的那些小决定（不计分，只是陪过）—— 会带进结局页的「路上的纪念」
+  const [roadChoices, setRoadChoices] = useState({})
+  // 陪等的方式：三选一，随时可换，记住上次挑的那个
+  const [waitMode, setWaitMode] = useState(() => loadWaitMode())
   const offlineTask = useMemo(() => OFFLINE_TASKS[Math.floor(Math.random() * OFFLINE_TASKS.length)], [])
   const leaving = useRef(false)
 
@@ -97,7 +105,12 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
       const next = { ...patience, used: patience.used, waited: (patience.waited || 0) + 1 }
       savePatience(next)
       setPatience(next)
-      onNavigate('ending', { waited: true, waitedSeconds: WAIT_SECONDS, letters: RIDER_LETTERS.length })
+      onNavigate('ending', {
+        waited: true,
+        waitedSeconds: WAIT_SECONDS,
+        letters: RIDER_LETTERS.length,
+        road: roadChoices,
+      })
     }
   }, [phase, secondsLeft, patience, onNavigate])
 
@@ -130,6 +143,7 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
         skipped: costMinutes,
         letters: letterCount,
         exchange: item.key,
+        road: roadChoices,
       })
     }, 1700)
   }
@@ -191,10 +205,45 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
         </section>
       )}
 
-      {/* 等待阶段：骑手骑到哪了 —— 一扇进度窗，不是小游戏（没有操作、不计分） */}
+      {/* 等待阶段：这两分钟你想怎么过 —— 三选一，随时可换（都不计分、都不会输） */}
       {isWaiting && (
-        <RiderWindow progress={progress} secondsLeft={secondsLeft} totalSeconds={WAIT_SECONDS} />
+        <section className="wait-modes" aria-label="陪等的方式">
+          <p className="wait-modes-lead">这两分钟，你想怎么过</p>
+          <div className="wait-mode-list">
+            {WAIT_MODES.map((m) => (
+              <button
+                key={m.key}
+                className={`wait-mode${waitMode === m.key ? ' is-on' : ''}`}
+                aria-pressed={waitMode === m.key}
+                onClick={() => { setWaitMode(m.key); saveWaitMode(m.key) }}
+              >
+                <b>{m.label}</b>
+                <small>{m.hint}</small>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
+
+      {/* 等待阶段：骑手骑到哪了 —— 一扇进度窗 + 路上能搭把手（不计分、不理也行） */}
+      {isWaiting && (
+        <RiderWindow
+          progress={progress}
+          secondsLeft={secondsLeft}
+          totalSeconds={WAIT_SECONDS}
+          mode={waitMode}
+          choices={roadChoices}
+          onChoose={(momentKey, optKey) =>
+            setRoadChoices((prev) => (prev[momentKey] ? prev : { ...prev, [momentKey]: optKey }))
+          }
+        />
+      )}
+
+      {/* 陪等方式 · 帮他看路（有点手感，但撞了也只是溅一裤腿水） */}
+      {isWaiting && waitMode === 'road' && <RiderHop active={isWaiting} />}
+
+      {/* 陪等方式 · 先下线（折完就让你放下手机） */}
+      {isWaiting && waitMode === 'offline' && <FoldRitual />}
 
       {/* 等待阶段：骑手来信（等待不是空转） */}
       {isWaiting && (

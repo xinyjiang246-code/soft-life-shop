@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Gift, Heart, PawPrint, RotateCcw, Sparkles } from 'lucide-react'
-import { CHARITY, LEVEL_MEALS, PET_NAME, getCounter, getItem, gramsForAmount, levelForMeals, petStages, stickerPool } from '../data.js'
+import { CHARITY, LEVEL_MEALS, PET_NAME, RIDER_MOMENTS, getCounter, getItem, gramsForAmount, levelForMeals, petStages, stickerPool } from '../data.js'
 import SoftPet from '../components/SoftPet.jsx'
 
 const ENDINGS = [
@@ -165,6 +165,24 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
                   不赶时间的话，下次可以听完 —— 他会讲讲路过的猫和花店。
                 </p>
               </>
+            )}
+            {/* 陪骑手走：你替他做的几个小决定 —— 只记事，不给奖励（陪伴不是任务） */}
+            {wait.road && Object.keys(wait.road).length > 0 && (
+              <div className="road-with" aria-label="路上你搭的几次手">
+                <p className="road-with-title">路上你搭的 {Object.keys(wait.road).length} 次手</p>
+                <ul className="road-with-list">
+                  {RIDER_MOMENTS.filter((m) => wait.road[m.key]).map((m) => {
+                    const opt = m.options.find((o) => o.key === wait.road[m.key])
+                    return (
+                      <li key={m.key}>
+                        <b>{opt?.label}</b>
+                        <span>{m.ask}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <p className="road-with-foot">他不认识你，但这一路不算一个人骑。</p>
+              </div>
             )}
           </section>
         )}

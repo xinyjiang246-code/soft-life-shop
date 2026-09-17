@@ -213,6 +213,23 @@ function todayKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// ===== 陪等的方式（等待页三选一，记住你上次挑的那个）=====
+// 只是 UI 偏好，不涉及任何数值：写失败也无所谓，下次默认回「陪他走」。
+const KEY_WAIT_MODE = 'soft-life-wait-mode-v1'
+export const DEFAULT_WAIT_MODE = 'walk'
+
+export function loadWaitMode() {
+  try {
+    return localStorage.getItem(KEY_WAIT_MODE) || DEFAULT_WAIT_MODE
+  } catch {
+    return DEFAULT_WAIT_MODE
+  }
+}
+
+export function saveWaitMode(mode) {
+  try { localStorage.setItem(KEY_WAIT_MODE, mode) } catch { /* 无所谓 */ }
+}
+
 export function loadPatience() {
   try {
     const raw = localStorage.getItem(KEY_PATIENCE)

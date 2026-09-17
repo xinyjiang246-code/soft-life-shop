@@ -1391,6 +1391,26 @@ img { max-width: 100%; display: block; }
   color: var(--caramel);
 }
 
+/* 结局页 · 陪骑手走：只记事，不给奖励（陪伴不是任务） */
+.road-with { margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(159, 127, 95, .22); }
+.road-with-title {
+  margin: 0 0 7px;
+  font: 400 11px/1.4 "PingFang SC", sans-serif;
+  letter-spacing: .08em; color: var(--caramel);
+}
+.road-with-list { margin: 0; padding: 0; list-style: none; }
+.road-with-list li {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 4px 0; font: 400 11.5px/1.5 "Songti SC", serif;
+}
+.road-with-list li b {
+  flex: 0 0 auto; padding: 2px 8px; border-radius: 999px;
+  background: rgba(228, 198, 168, .3); color: var(--text-main);
+  font: 500 11px/1.5 "PingFang SC", sans-serif;
+}
+.road-with-list li span { color: var(--text-sub); }
+.road-with-foot { margin: 7px 0 0; font: 400 11px/1.5 "Songti SC", serif; color: var(--text-sub); }
+
 .sticker-drop.is-bonus {
   background: linear-gradient(135deg, rgba(184, 198, 172, .16), rgba(232, 216, 168, .2));
   border: 1px solid rgba(184, 198, 172, .45);
@@ -4878,6 +4898,132 @@ footer {
 }
 .rw-msg { margin: 11px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--text-main); min-height: 19px; }
 .rw-note { margin: 5px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--text-sub); }
+
+/* 陪骑手走：路上遇事，替他选一下（不计分 · 不理也行 · 一次只等一件事） */
+.rw-moment {
+  margin: 11px 0 0; padding: 11px 12px 10px;
+  background: rgba(228, 198, 168, .16);
+  border: 1px solid rgba(159, 127, 95, .16);
+  border-radius: 12px;
+  animation: rwMomentIn .26s cubic-bezier(.2, .8, .3, 1) both;
+}
+@keyframes rwMomentIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+.rw-moment-ask {
+  display: flex; align-items: center; gap: 5px;
+  margin: 0; font-size: 12.5px; font-weight: 600; color: var(--text-main);
+}
+.rw-moment-hint { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: var(--text-sub); }
+.rw-moment-options { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.rw-moment-opt {
+  padding: 7px 12px; border: 1px solid rgba(159, 127, 95, .3); border-radius: 999px;
+  background: rgba(255, 255, 255, .72); color: var(--text-main);
+  font-size: 11.5px; font-family: inherit; cursor: pointer;
+  transition: background .18s, border-color .18s, transform .18s;
+}
+.rw-moment-opt:hover { background: #fff; border-color: var(--caramel); }
+.rw-moment-opt:active { transform: scale(.97); }
+.rw-moment-foot { margin: 8px 0 0; font-size: 10.5px; color: var(--text-sub); opacity: .82; }
+.rw-reply {
+  margin: 11px 0 0; padding: 9px 11px;
+  background: rgba(228, 198, 168, .13); border-radius: 10px;
+  font-size: 12px; line-height: 1.6; color: var(--text-main);
+}
+.rw-reply i { display: block; margin-bottom: 3px; font-size: 10.5px; font-style: normal; color: var(--text-sub); }
+
+/* ===== 陪等的方式：三选一，随时可换 ===== */
+.wait-modes { margin: 4px 16px 12px; }
+.wait-modes-lead {
+  margin: 0 0 8px; font: 400 11px/1.4 "PingFang SC", sans-serif;
+  letter-spacing: .1em; color: var(--text-sub);
+}
+.wait-mode-list { display: flex; gap: 7px; }
+.wait-mode {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;
+  padding: 9px 8px; border: 1px solid var(--divider); border-radius: 12px;
+  background: var(--surface); text-align: center; cursor: pointer;
+  transition: background .18s, border-color .18s, transform .18s;
+}
+.wait-mode b { font: 500 11.5px/1.3 "PingFang SC", sans-serif; color: var(--text-main); }
+.wait-mode small { font: 400 9.5px/1.35 "PingFang SC", sans-serif; color: var(--text-sub); }
+.wait-mode:hover { border-color: rgba(159, 127, 95, .4); }
+.wait-mode.is-on { background: rgba(228, 198, 168, .34); border-color: var(--caramel); }
+.wait-mode.is-on b { color: var(--text-main); }
+.wait-mode:active { transform: scale(.98); }
+
+/* ===== 陪等方式 · 帮他看路 ===== */
+.rider-hop {
+  margin: 0 16px 14px; padding: 13px 14px 11px;
+  background: var(--surface); border: 1px solid var(--divider);
+  border-radius: 16px; box-shadow: var(--shadow);
+}
+.rh-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.rh-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; letter-spacing: .1em; color: var(--caramel);
+}
+.rh-hint { font-size: 10.5px; color: var(--text-sub); }
+.rh-lane {
+  position: relative; display: block; width: 100%; height: 84px;
+  padding: 0; border: 0; border-radius: 12px; overflow: hidden; cursor: pointer;
+  background: linear-gradient(180deg, rgba(250, 246, 238, .9), rgba(240, 232, 218, .95));
+}
+.rh-road {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 30px;
+  background: rgba(159, 127, 95, .1);
+  border-top: 1px dashed rgba(159, 127, 95, .3);
+}
+.rh-item {
+  position: absolute; bottom: 20px; left: 100%;
+  animation-name: rhSlide; animation-timing-function: linear; animation-fill-mode: forwards;
+}
+@keyframes rhSlide { from { left: 100%; } to { left: -16%; } }
+.rh-item i { display: block; width: 24px; height: 9px; border-radius: 5px; }
+.rh-item em {
+  position: absolute; left: 50%; top: -13px; transform: translateX(-50%);
+  font: 400 9px/1 "PingFang SC", sans-serif; font-style: normal;
+  color: var(--text-sub); white-space: nowrap;
+}
+.rh-item.is-puddle i { background: #a8c6d8; }
+.rh-item.is-cat i { background: #d9c3a5; }
+.rh-item.is-cone i { background: #e0913f; }
+.rh-item.is-leaf i { background: #b9c48a; }
+.rh-rider {
+  position: absolute; left: 15%; bottom: 18px; color: var(--caramel);
+  transform: translateY(0); transition: transform .3s cubic-bezier(.3, .8, .4, 1);
+}
+.rh-rider.is-hop { transform: translateY(-24px); transition: transform .18s cubic-bezier(.3, 1.5, .5, 1); }
+.rh-line { margin: 9px 0 0; font-size: 12px; line-height: 1.55; color: var(--text-main); min-height: 18px; }
+.rh-foot { margin: 4px 0 0; font-size: 10.5px; color: var(--text-sub); }
+
+/* ===== 陪等方式 · 先下线（折个小盒子）===== */
+.fold-ritual {
+  margin: 0 16px 14px; padding: 13px 14px 12px;
+  background: var(--surface); border: 1px solid var(--divider);
+  border-radius: 16px; box-shadow: var(--shadow);
+}
+.fold-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.fold-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; letter-spacing: .1em; color: var(--caramel);
+}
+.fold-hint { font-size: 10.5px; color: var(--text-sub); }
+.fold-say { margin: 0 0 10px; font-size: 12.5px; line-height: 1.6; color: var(--text-main); }
+.fold-step {
+  display: block; width: 100%; padding: 10px; border: 1px solid rgba(159, 127, 95, .3);
+  border-radius: 999px; background: rgba(228, 198, 168, .3);
+  font: 500 12px/1.2 "PingFang SC", sans-serif; color: var(--text-main); cursor: pointer;
+  transition: background .18s, transform .18s;
+}
+.fold-step:hover { background: rgba(228, 198, 168, .45); }
+.fold-step:active { transform: scale(.98); }
+.fold-foot { margin: 8px 0 0; font-size: 10.5px; color: var(--text-sub); text-align: center; }
+.fold-box { display: block; width: 118px; height: auto; margin: 4px auto 6px; }
+.fold-done-title { margin: 0; font: 500 12.5px/1.4 "PingFang SC", sans-serif; text-align: center; color: var(--text-main); }
+.fold-done-body { margin: 6px 0 0; font: 400 11.5px/1.6 "Songti SC", serif; text-align: center; color: var(--text-sub); }
+.fold-done-go {
+  margin: 9px 0 0; padding-top: 8px; border-top: 1px dashed rgba(159, 127, 95, .22);
+  font: 400 11.5px/1.65 "Songti SC", serif; text-align: center; color: var(--caramel);
+}
 @media (prefers-reduced-motion: reduce) {
   .rw-rider, .rw-line-fill, .rw-land { transition: none; }
 }
