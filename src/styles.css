@@ -3582,8 +3582,22 @@ footer {
   color: var(--text-main);
   letter-spacing: -.02em;
 }
+/* 那一大坨克数可以点 —— 点进去看「捐给了谁 / 什么时候 / 多少」 */
+.charity-hero-num.is-tap {
+  display: inline-block; padding: 0; border: 0; background: none;
+  font-family: "Cormorant Garamond", Georgia, serif; cursor: pointer;
+  transition: transform .22s cubic-bezier(.34, 1.56, .64, 1), opacity .18s ease;
+}
+.charity-hero-num.is-tap:hover { transform: scale(1.04); opacity: .82; }
 .charity-hero-num small { margin-left: 5px; font-size: 22px; color: var(--text-sub); }
 .charity-hero-sub { margin: 11px 0 0; font: 400 11.5px/1.6 "PingFang SC", sans-serif; color: var(--text-sub); }
+.charity-hero-more {
+  margin: 12px 0 0; padding: 5px 12px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--card);
+  font: 400 11px/1.5 "PingFang SC", sans-serif; color: var(--text-sub);
+  cursor: pointer; transition: border-color .18s ease, color .18s ease;
+}
+.charity-hero-more:hover { border-color: var(--clay); color: var(--clay); }
 
 .charity-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 22px 20px 0; }
 .charity-stat {
@@ -3621,6 +3635,60 @@ footer {
   font: 600 16px/1 "Cormorant Garamond", Georgia, serif;
   color: var(--clay);
 }
+
+/* ===== 真捐明细（点那一大坨克数进来的那一层） =====
+   这里的每一条都是用户**自己转完账**之后自己记的 —— 和上面「记下的」不是一回事。 */
+.cs-sum { margin: 4px 0 22px; padding: 14px 15px; border-radius: 13px; background: var(--jh-card); }
+.cs-sum-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 5px 0; font: 400 12px/1.5 "PingFang SC", sans-serif; color: var(--jh-ink-2);
+}
+.cs-sum-row b { font: 500 15px/1.2 "Cormorant Garamond", Georgia, serif; color: var(--jh-ink); }
+.cs-sum-row.is-done b { color: var(--jh-clay); }
+.cs-bar { margin: 10px 0 8px; height: 5px; border-radius: 999px; background: var(--jh-line); overflow: hidden; }
+.cs-bar i { display: block; height: 100%; border-radius: 999px; background: var(--jh-clay); transition: width .5s ease; }
+.cs-rate { margin: 0; font: 400 11px/1.6 "PingFang SC", sans-serif; color: var(--jh-ink-3); }
+
+.cs-block { margin: 0 0 20px; }
+.cs-block-head {
+  display: flex; align-items: baseline; gap: 6px; margin: 0 0 10px;
+  font: 400 11px/1 "PingFang SC", sans-serif; letter-spacing: .1em; color: var(--jh-ink-3);
+}
+.cs-block-head em { font: 500 11px/1 "Cormorant Garamond", Georgia, serif; font-style: normal; color: var(--jh-clay); }
+.cs-empty { margin: 0; padding: 14px 15px; border-radius: 12px; background: var(--jh-card); font: 400 12px/1.85 "PingFang SC", sans-serif; color: var(--jh-ink-2); }
+
+.cs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cs-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 13px; border-radius: 12px; background: var(--jh-card);
+  box-shadow: 0 0 0 1px var(--jh-line);
+}
+.cs-item-main { min-width: 0; }
+.cs-item-main b { display: block; margin-bottom: 3px; font: 500 12.5px/1.3 "PingFang SC", sans-serif; color: var(--jh-ink); }
+.cs-item-main small { font: 400 10px/1.3 "PingFang SC", sans-serif; color: var(--jh-ink-3); }
+.cs-item-gram { flex-shrink: 0; font: 600 15px/1 "Cormorant Garamond", Georgia, serif; color: var(--jh-clay); }
+
+.cs-form { display: grid; gap: 12px; margin: 0 0 16px; }
+.cs-field { display: grid; gap: 6px; }
+.cs-field > span { font: 400 11px/1.4 "PingFang SC", sans-serif; color: var(--jh-ink-3); }
+.cs-field input {
+  width: 100%; padding: 11px 12px; box-sizing: border-box;
+  border: 1px solid var(--jh-line); border-radius: 11px; background: var(--jh-card);
+  font: 400 13px/1.4 "PingFang SC", sans-serif; color: var(--jh-ink);
+}
+.cs-field input:focus { outline: none; border-color: var(--jh-clay); }
+.cs-actions { display: flex; gap: 10px; }
+.cs-actions > * { flex: 1; }
+
+.cs-settle {
+  width: 100%; padding: 14px; margin: 0 0 14px;
+  border: 1px solid var(--jh-clay); border-radius: 13px; background: var(--jh-card);
+  font: 500 13px/1 "PingFang SC", sans-serif; color: var(--jh-clay); cursor: pointer;
+  transition: background .18s ease, transform .22s cubic-bezier(.34, 1.56, .64, 1);
+}
+.cs-settle:hover { background: var(--jh-card-2); transform: translateY(-1px); }
+.cs-settle:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.cs-foot { margin: 0 0 10px; font: 400 10.5px/1.8 "PingFang SC", sans-serif; color: var(--jh-ink-3); }
 
 .charity-note { margin: 26px 20px 0; padding: 15px 16px; border-radius: 13px; background: rgba(228, 198, 168, .14); }
 .charity-note p { margin: 0 0 9px; font: 400 11px/1.8 "PingFang SC", sans-serif; color: var(--text-sub); }
@@ -4821,11 +4889,16 @@ footer {
       等用户确认这版效果，再把这套 token 铺到全场（见第十节的改造路径）
    语气红线：不记卡路里、不算账、不打卡、不催更
    ============================================================ */
-/* ⚠️ 这套变量挂在 `.jh` 与 `.archive-page` 两处 —— 2026-09-17 之后「存下这一餐」页
-   也要用同一套米灰 token（照片墙 + 两边共用的备注卡）。
+/* ⚠️ 这套变量挂在 `.jh`、`.archive-page`、`.jh-detail` 三处 —— 2026-09-17 之后
+   「存下这一餐」页与**明细浮层**都要用同一套米灰 token（照片墙、两边共用的备注卡、
+   公益页点克数进来的真捐明细）。
+   `.jh-detail` 单独挂一份，是因为它可能出现在**任何页面**（公益档案页就是一例）：
+   挂了它，浮层自己带齐颜色，不用管自己被塞在哪个根节点下 ——
+   否则 `background: var(--jh-paper)` 取到空值，浮层直接透明，底下的字会透上来。
    注意别顺手把 padding-bottom / color 一起加给 `.archive-page`：那会盖掉它自己的 34px。 */
 .jh,
-.archive-page {
+.archive-page,
+.jh-detail {
   --jh-paper: #F1EFE8;
   --jh-card: #FBFAF7;
   --jh-card-2: #EFECE2;

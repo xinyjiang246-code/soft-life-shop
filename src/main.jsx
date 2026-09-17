@@ -244,6 +244,23 @@ function App() {
     setToast({ key: Date.now(), message: `记下 ${grams}g 猫粮 · 钱还在你手上` })
   }, [])
 
+  // 真捐闭环：钱是用户自己转的，App 只负责**记下这一笔**。
+  // 这才有「已捐」可言 —— 之前那些都只是「打算捐」。
+  const settleCharity = useCallback(({ grams, amount, to }) => {
+    setCharity((prev) => {
+      const next = {
+        ...prev,
+        settled: [
+          { id: `set-${Date.now()}`, grams, amount, to, at: new Date().toISOString() },
+          ...(prev.settled || []),
+        ].slice(0, 60),
+      }
+      saveCharity(next)
+      return next
+    })
+    setToast({ key: Date.now(), message: `记下这次真捐 · ${grams}g · 谢谢你真的去了` })
+  }, [])
+
   // 惜食柜：一单送达后，把「从柜上带走的份数」记进那本账
   // 记的是份数不是钱 —— 钱只是附带的说明（少花多少，不是「省了」）
   const recordRescue = useCallback((snapshot) => {
@@ -397,7 +414,7 @@ function App() {
         />
       )}
       {screen === 'archive' && <ArchiveScreen onBack={goBack} initialView={params.view} />}
-      {screen === 'charity' && <CharityScreen charity={charity} onBack={goBack} />}
+      {screen === 'charity' && <CharityScreen charity={charity} onBack={goBack} onSettle={settleCharity} />}
       {screen === 'rescue' && (
         <RescueScreen
           shelf={rescueShelf}

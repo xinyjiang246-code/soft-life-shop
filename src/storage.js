@@ -146,7 +146,8 @@ export const DEFAULT_CHARITY = {
   grams: 0,        // 累计**记下**的克数（还没捐出去）
   amount: 0,       // 累计**记下**的金额（元，钱一直在用户手上）
   orders: 0,       // 参与的订单数
-  records: [],     // [{ id, grams, amount, ratio, shop, at }]
+  records: [],     // [{ id, grams, amount, ratio, shop, at }]  ← 记下的那一笔笔
+  settled: [],     // 真捐记录 [{ id, grams, amount, to, at }] —— 用户自己转完账之后自己盖的章
 }
 
 export function loadCharity() {
@@ -154,7 +155,12 @@ export function loadCharity() {
     const raw = localStorage.getItem(KEY_CHARITY)
     const parsed = raw ? JSON.parse(raw) : null
     if (!parsed) return { ...DEFAULT_CHARITY }
-    return { ...DEFAULT_CHARITY, ...parsed, records: Array.isArray(parsed.records) ? parsed.records : [] }
+    return {
+      ...DEFAULT_CHARITY,
+      ...parsed,
+      records: Array.isArray(parsed.records) ? parsed.records : [],
+      settled: Array.isArray(parsed.settled) ? parsed.settled : [],
+    }
   } catch {
     return { ...DEFAULT_CHARITY }
   }
