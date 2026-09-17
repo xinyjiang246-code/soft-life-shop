@@ -452,7 +452,55 @@ try {
   await click('.jh-detail-top button')
   await waitFor(`!document.querySelector('.jh-detail')`)
 
-  console.log('\n[11] 体检')
+  console.log('\n[11] 删掉这一笔 —— 照片也要跟着走（不能留孤儿图在 IndexedDB 里）')
+  // 为什么值得单独验：照片原图在 IndexedDB，条目在 localStorage，**两个地方、两把钥匙**。
+  // 只删条目不删图 → 用户以为清干净了，相册里却越堆越多，而那条数据在 UI 上根本没有入口能再删一次。
+  await click('.jh-line')
+  await waitFor(`document.querySelector('.jh-detail-panel')`)
+  await waitFor(`document.querySelector('.jh-detail-del')`)
+  // ⚠️ 别在 `el.click()` 之后**同一 tick** 里读文案 —— React 的状态更新是异步的，
+  //    那一瞬间读到的还是旧文案，看起来像「点了没反应 / 直接删了」，其实只是探针读早了。
+  //    等就等确认态自己长出来（`.is-armed`），别 sleep 一个魔法数字。
+  const before = await evaluate(`document.querySelector('.jh-detail-del')?.innerText`)
+  await click('.jh-detail-del')
+  await waitFor(`document.querySelector('.jh-detail-del.is-armed')`, 3000)
+  const arm = {
+    点之前: before,
+    点之后: await evaluate(`document.querySelector('.jh-detail-del')?.innerText`),
+    条目还在: await evaluate(`!!document.querySelector('.jh-line')`),
+  }
+  ok('第一次点只是「上膛」', arm)
+  assert.notEqual(arm.点之后, arm.点之前, '第一次点要变成「再点一下」的确认态，不该直接删')
+  assert.equal(
+    await evaluate(`(() => !!document.querySelector('.jh-line'))()`),
+    true,
+    '还没确认的时候，这一笔必须还在',
+  )
+
+  await click('.jh-detail-del')
+  await waitFor(`!document.querySelector('.jh-line')`)
+  const afterDelete = await evaluate(`new Promise((resolve) => {
+    const raw = localStorage.getItem('soft-life-journal-v1') || '{"days":{}}';
+    const j = JSON.parse(raw);
+    const 条目 = Object.values(j.days || {}).reduce((n, d) => n + (d.items || []).length, 0);
+    const req = indexedDB.open('soft-life-photo-v1', 1);
+    req.onsuccess = () => {
+      const t = req.result.transaction('photos', 'readonly').objectStore('photos');
+      const all = t.getAll();
+      t.transaction.oncomplete = () => resolve({
+        手账笔数: 条目,
+        IndexedDB剩余张数: all.result.length,
+        残留缩略图: /data:image\\/[a-z]+;base64,/.test(raw),
+      });
+    };
+    req.onerror = () => resolve({ 手账笔数: 条目, IndexedDB剩余张数: -1 });
+  })`)
+  ok('删除之后', afterDelete)
+  assert.equal(afterDelete.手账笔数, 0, '这一笔该从手账里消失（照片墙也读它）')
+  assert.equal(afterDelete.IndexedDB剩余张数, 0, '原图也该一起删掉 —— 不然相册里会堆满没人认领的孤儿图')
+  assert.ok(!afterDelete.残留缩略图, 'localStorage 里也不该留着那张缩略图')
+
+  console.log('\n[12] 体检')
   await evaluate('document.fonts.ready.then(() => true)')
   await waitFor('Array.from(document.images).every(i => i.complete || !i.src)')
   const health = await evaluate(`({
