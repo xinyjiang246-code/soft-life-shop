@@ -268,10 +268,10 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
                 {donated ? (
                   <>
                     <p className="donate-done">
-                      已捐出 <b>{donated.grams}g</b> 猫粮
+                      记下 <b>{donated.grams}g</b> 猫粮
                     </p>
                     <p className="donate-done-sub">
-                      按这一单的 {donated.ratio}% 折算 · 已记进你的公益档案
+                      按这一单的 {donated.ratio}% 折算 · 已记进档案，等你真的去捐
                     </p>
                     <button className="donate-link" onClick={() => onNavigate('charity')}>
                       看看公益档案
@@ -279,23 +279,23 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
                   </>
                 ) : skipped ? (
                   <>
-                    <p className="donate-done is-skip">这次没捐</p>
-                    <p className="donate-done-sub">钱还在这里，你随时可以改主意。</p>
+                    <p className="donate-done is-skip">这次没记</p>
+                    <p className="donate-done-sub">钱还在你手上，你随时可以改主意。</p>
                   </>
                 ) : (
                   <>
                     <p className="donate-amount">
-                      这一单 <b>¥{orderTotal}</b> · 全捐可换 <b>{maxGrams.toLocaleString()}g</b> 猫粮
+                      这一单 <b>¥{orderTotal}</b> · 全都记下是 <b>{maxGrams.toLocaleString()}g</b> 猫粮
                     </p>
 
-                    <div className="donate-presets" role="group" aria-label="捐赠比例">
+                    <div className="donate-presets" role="group" aria-label="记下的比例">
                       {CHARITY.presets.map((p) => (
                         <button
                           key={p}
                           className={`donate-preset ${ratio === p ? 'is-active' : ''}`}
                           onClick={() => setRatio(p)}
                         >
-                          {p === 100 ? '全捐' : `${p}%`}
+                          {p === 100 ? '全记下' : `${p}%`}
                         </button>
                       ))}
                     </div>
@@ -307,12 +307,12 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
                       max="100"
                       step="5"
                       value={ratio}
-                      aria-label="捐赠比例"
+                      aria-label="记下的比例"
                       onChange={(e) => setRatio(Number(e.target.value))}
                     />
 
                     <div className="donate-preview">
-                      <span>捐出 <b>{grams}g</b> 猫粮</span>
+                      <span>记下 <b>{grams}g</b> 猫粮</span>
                       <span className="donate-preview-sub">
                         约 {(grams / CHARITY.gramPerCatDay).toFixed(1)} 只猫一天的口粮
                       </span>
@@ -321,7 +321,7 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
                     <div className="donate-actions">
                       <button className="ghost-button" onClick={() => setSkipped(true)}>这次不捐</button>
                       <button className="primary-button" onClick={handleDonate} disabled={grams <= 0}>
-                        捐 {grams}g
+                        记下 {grams}g
                       </button>
                     </div>
                   </>

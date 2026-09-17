@@ -466,7 +466,7 @@ export default function HomeScreen({
               <img className="corner-tile-art" src={tileCharity} alt="" loading="lazy" />
             </span>
             <b>{CHARITY.name}</b>
-            <small>{charity.grams > 0 ? `已捐 ${charity.grams.toLocaleString()} g 猫粮` : '点完一餐，按克捐一点'}</small>
+            <small>{charity.grams > 0 ? `记下 ${charity.grams.toLocaleString()} g · 还没捐` : '点完一餐，按克记一点'}</small>
           </button>
           <button className="corner-tile" onClick={() => onNavigate('archive')}>
             <span className="corner-tile-icon is-archive" aria-hidden="true">

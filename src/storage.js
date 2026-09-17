@@ -136,14 +136,16 @@ export function saveMood(today, mood) {
   } catch {}
 }
 
-// ===== 公益档案：猫粮捐赠记录 =====
+// ===== 公益档案：猫粮记录 =====
+// ⚠️ 措辞红线：这里记的是「打算捐、还没捐」的账 —— 不是已捐。
+//    「已捐了多少」要等真捐闭环做出来才有（用户自己转账后自己盖的章）。
 // 没有后端，是本地记账 —— 但数字是认真算的（¥1 = 10g）
 const KEY_CHARITY = 'soft-life-charity-v1'
 
 export const DEFAULT_CHARITY = {
-  grams: 0,        // 累计已捐克数
-  amount: 0,       // 累计已捐金额（元）
-  orders: 0,       // 参与捐赠的订单数
+  grams: 0,        // 累计**记下**的克数（还没捐出去）
+  amount: 0,       // 累计**记下**的金额（元，钱一直在用户手上）
+  orders: 0,       // 参与的订单数
   records: [],     // [{ id, grams, amount, ratio, shop, at }]
 }
 

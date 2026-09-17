@@ -21,16 +21,16 @@ export default function CharityScreen({ charity, onBack }) {
         <span className="topbar-spacer" />
       </header>
 
-      <section className="charity-hero" aria-label="已捐猫粮">
+      <section className="charity-hero" aria-label="记下的猫粮">
         <span className="charity-hero-icon" aria-hidden="true"><Heart size={20} strokeWidth={1.5} /></span>
-        <p className="charity-hero-label">你替那些没点成的外卖，攒下的猫粮</p>
+        <p className="charity-hero-label">你替那些没点成的外卖，记下的猫粮</p>
         <p className="charity-hero-num">
           {grams.toLocaleString()}<small>g</small>
         </p>
         <p className="charity-hero-sub">
           {grams > 0
-            ? `约 ${catDays.toFixed(1)} 只猫一天的口粮`
-            : '还没有开始 —— 下一单送达后可以捐第一笔'}
+            ? `约 ${catDays.toFixed(1)} 只猫一天的口粮 · 还没捐出去`
+            : '还没有开始 —— 下一单送达后可以记第一笔'}
         </p>
       </section>
 
@@ -41,11 +41,11 @@ export default function CharityScreen({ charity, onBack }) {
         </div>
         <div className="charity-stat">
           <span className="charity-stat-num">{Math.round(charity.amount || 0)}</span>
-          <span className="charity-stat-label">元折算出去</span>
+          <span className="charity-stat-label">元还没捐</span>
         </div>
         <div className="charity-stat">
           <span className="charity-stat-num">{grams > 0 ? (grams / 1000).toFixed(2) : '0.00'}</span>
-          <span className="charity-stat-label">公斤猫粮</span>
+          <span className="charity-stat-label">公斤待捐</span>
         </div>
       </div>
 
@@ -73,9 +73,10 @@ export default function CharityScreen({ charity, onBack }) {
 
       <section className="charity-note">
         <p><b>这是怎么算的</b></p>
-        <p>每完成一餐，我们会把你花掉的这笔钱按 ¥1 = {CHARITY.gramsPerYuan} g 换算成猫粮，你可以自己决定捐多少比例。</p>
+        <p>每完成一餐，我们会把你花掉的这笔钱按 ¥1 = {CHARITY.gramsPerYuan} g 换算成猫粮，你可以自己决定记多少比例。</p>
+        <p><b>钱一直在你手上</b> —— 这本账只负责把它算清楚、记下来，转账那一步发生在 App 之外，由你自己的手完成。</p>
         <p>{CHARITY.note}</p>
-        <p className="charity-note-dim">这个 App 没有后端，所有数字都记在你自己的浏览器里。它是一本账，不是一次真实的转账 —— 但我们按真实的方式记账。</p>
+        <p className="charity-note-dim">这个 App 没有后端，所有数字都记在你自己的浏览器里。它是一本账，不是一次真实的转账 —— 捐不捐、什么时候捐、捐给谁，都你说了算。</p>
       </section>
 
       <footer>慢一点，也是一种很好的生活。</footer>

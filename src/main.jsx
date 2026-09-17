@@ -239,7 +239,9 @@ function App() {
       saveCharity(next)
       return next
     })
-    setToast({ key: Date.now(), message: `已捐出 ${grams}g 猫粮 · 谢谢你` })
+    // ⚠️ 红线：绝不写「已捐出」—— App 没有后端，钱一直在用户手上，转账发生在 App 之外。
+    //    这句只能说「记下」，并且要顺手提醒一句钱还没走。
+    setToast({ key: Date.now(), message: `记下 ${grams}g 猫粮 · 钱还在你手上` })
   }, [])
 
   // 惜食柜：一单送达后，把「从柜上带走的份数」记进那本账
