@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Nunito:wght@400;500;600&display=swap');
+/* 字体：Fraunces（英文标题/衬线，编辑感）+ Space Mono（数字与微标签）+ PingFang/Songti 兜中文。
+   2026-09-17 参考用户给的 Paper Press demo 统一字型：
+   原来 Cormorant 偏古典纤细、Nunito 是圆润无衬线，两套气质打架；
+   现在英文走一套编辑感衬线，微标签统一打字机 mono —— 中文保持宋体/苹方不变。*/
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
   --bg-base: #F6F1E8;
@@ -15,9 +19,18 @@
   --text-sub: #8D867C;
   --divider: #E8E1D4;
   --shadow: 0 2px 10px rgba(74, 69, 64, 0.05);
+  /* —— 字型角色：全站只从这里取字体，别再写死字体名 ——
+     ⚠️ 这一段必须放在「字体名批量替换」之后才插进来：否则替换规则会咬到自己的定义行，
+     把 family 值换成对这个变量自身的引用（自引用 = 变量失效 → font 简写整条被丢弃 → 文字回落到 16px）。
+     改这里的字体，用「先替换、后补定义」的顺序，或者干脆手改。 */
+  --f-serif: "Fraunces", "Songti SC", "STSong", Georgia, serif;  /* 英文衬线标题 / 大数字（中文落宋体） */
+  --f-mono: "Space Mono", "SF Mono", ui-monospace, monospace;    /* 微标签 / 数据行 / 编号 */
+  --f-body: "PingFang SC", "Microsoft YaHei", sans-serif;        /* 正文 */
+  --f-cn-serif: "Songti SC", "STSong", serif;                    /* 中文衬线（有温度的长句） */
+  --f-hand: "Kaiti SC", "STKaiti", KaiTi, serif;                 /* 手写感（少量） */
   /* Cormorant Garamond 默认是旧式数字：1 长得像 I、3/4/5 带长尾，读价格和统计容易看错。
      全局换成等高数字（lining）—— 只改数字形态，不动字体和排版。 */
-  font-family: "Nunito", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--f-body);
   color: var(--text-main);
   background: var(--bg-base);
 }
@@ -116,7 +129,7 @@ img { max-width: 100%; display: block; }
 
 .brand {
   color: #292622;
-  font: 500 38px/.9 "Cormorant Garamond", Georgia, serif;
+  font: 500 38px/.9 var(--f-serif);
   text-decoration: none;
   letter-spacing: -1.6px;
   text-align: center;
@@ -124,12 +137,12 @@ img { max-width: 100%; display: block; }
 
 .topbar-title {
   text-align: center;
-  font: 500 18px/1 "PingFang SC", "Microsoft YaHei", sans-serif;
+  font: 500 18px/1 var(--f-body);
   color: var(--text-main);
 }
 
 .topbar-title.serif {
-  font: 500 22px/1 "Cormorant Garamond", Georgia, serif;
+  font: 500 22px/1 var(--f-serif);
 }
 
 .nav-actions { display: flex; align-items: center; gap: 0; }
@@ -148,7 +161,7 @@ img { max-width: 100%; display: block; }
   border-radius: 999px;
   background: var(--matcha);
   color: #fff;
-  font: 600 10px/1 "Nunito", sans-serif;
+  font: 600 10px/1 var(--f-mono);
 }
 
 /* 心愿单角标：走水彩的玫瑰色，和购物袋的抹茶绿区分开 */
@@ -185,7 +198,7 @@ img { max-width: 100%; display: block; }
   gap: 7px;
   border-bottom: 1px solid rgba(90, 74, 52, .28);
   color: #7a6a4e;
-  font: 600 9px/1 "Nunito", sans-serif;
+  font: 600 9px/1 var(--f-mono);
   letter-spacing: .17em;
 }
 
@@ -199,14 +212,14 @@ img { max-width: 100%; display: block; }
 .hero-copy h1 {
   margin: 0;
   color: #43392c;
-  font: 500 30px/1.14 "Cormorant Garamond", "Songti SC", serif;
+  font: 500 30px/1.14 var(--f-serif);
   letter-spacing: .02em;
 }
 
 .hero-quote {
   margin: 13px 0 0;
   color: #8a7a5e;
-  font: 400 11px/1.75 "Songti SC", serif;
+  font: 400 11px/1.75 var(--f-cn-serif);
   letter-spacing: .06em;
 }
 
@@ -224,7 +237,7 @@ img { max-width: 100%; display: block; }
 }
 
 .hero-foot small {
-  font: 500 8px/1 "Nunito", sans-serif;
+  font: 500 8px/1 var(--f-mono);
   letter-spacing: .16em;
   color: #a08c6a;
 }
@@ -241,7 +254,7 @@ img { max-width: 100%; display: block; }
   border: 1.5px solid rgba(158, 82, 49, .75);
   border-radius: 50%;
   color: rgba(158, 82, 49, .82);
-  font: 600 17px/1 "Songti SC", serif;
+  font: 600 17px/1 var(--f-cn-serif);
   transform: rotate(-12deg);
   background: rgba(242, 234, 217, .88);
   box-shadow: 0 1px 4px rgba(90, 74, 52, .14);
@@ -291,13 +304,13 @@ img { max-width: 100%; display: block; }
   z-index: 4;
   text-align: center;
   color: #6d5f46;
-  font: 500 10px/1 "Songti SC", serif;
+  font: 500 10px/1 var(--f-cn-serif);
   letter-spacing: .12em;
   white-space: nowrap;
 }
 
 .hero-cap em {
-  font: 500 8px/1 "Nunito", sans-serif;
+  font: 500 8px/1 var(--f-mono);
   font-style: normal;
   letter-spacing: .14em;
   color: #a08c6a;
@@ -314,7 +327,7 @@ img { max-width: 100%; display: block; }
 
 .simple-hero h1 {
   margin: 0;
-  font: 500 32px/1.03 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 32px/1.03 var(--f-serif), "PingFang SC", serif;
   letter-spacing: .01em;
 }
 
@@ -342,7 +355,7 @@ img { max-width: 100%; display: block; }
 .product-section h1 {
   margin: 0 0 22px;
   color: #302c28;
-  font: 500 25px/1 "Cormorant Garamond", Georgia, serif;
+  font: 500 25px/1 var(--f-serif);
   letter-spacing: .035em;
   text-align: center;
 }
@@ -408,13 +421,13 @@ img { max-width: 100%; display: block; }
 
 .counter-name {
   margin: 0 0 3px;
-  font: 500 17px/1 "PingFang SC", "Microsoft YaHei", sans-serif;
+  font: 500 17px/1 var(--f-body);
   color: var(--text-main);
 }
 
 .counter-name-en {
   margin: 0 0 8px;
-  font: 500 9px/1 "Nunito", sans-serif;
+  font: 500 9px/1 var(--f-mono);
   letter-spacing: .1em;
   color: var(--text-sub);
 }
@@ -428,7 +441,7 @@ img { max-width: 100%; display: block; }
   border-radius: 999px;
   background: rgba(159, 127, 95, .12);
   color: var(--caramel);
-  font: 500 10px/1 "Nunito", "PingFang SC", sans-serif;
+  font: 500 10px/1 "Nunito", var(--f-body);
 }
 
 .counter-meta {
@@ -463,7 +476,7 @@ img { max-width: 100%; display: block; }
 .counter-hero.counter-ivory { background: linear-gradient(135deg, #FBFAF6, #F1EFE9); }
 
 .counter-hero-copy { flex: 1; }
-.counter-hero-copy h1 { margin: 8px 0 10px; font: 500 30px/1 "Cormorant Garamond", "PingFang SC", serif; }
+.counter-hero-copy h1 { margin: 8px 0 10px; font: 500 30px/1 var(--f-serif), "PingFang SC", serif; }
 .counter-tagline { margin: 0 0 14px; font-size: 13px; color: var(--text-sub); }
 
 .counter-hero-img {
@@ -552,7 +565,7 @@ img { max-width: 100%; display: block; }
 
 .placeholder-emoji { font-size: 46px; opacity: .82; }
 .placeholder-name {
-  font: 500 13px/1 "PingFang SC", sans-serif;
+  font: 500 13px/1 var(--f-body);
   color: var(--text-sub);
   padding: 0 12px;
   text-align: center;
@@ -561,7 +574,7 @@ img { max-width: 100%; display: block; }
 .product-code {
   margin: 10px 1px 4px;
   color: var(--text-sub);
-  font: 500 9px/1.2 "Nunito", sans-serif;
+  font: 500 9px/1.2 var(--f-mono);
   letter-spacing: .1em;
 }
 
@@ -569,7 +582,7 @@ img { max-width: 100%; display: block; }
   margin: 0;
   overflow: hidden;
   color: #312d29;
-  font: 500 18px/.95 "Cormorant Garamond", Georgia, serif;
+  font: 500 18px/.95 var(--f-serif);
   letter-spacing: .01em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -596,7 +609,7 @@ img { max-width: 100%; display: block; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font: 500 17px/1 "Cormorant Garamond", Georgia, serif;
+  font: 500 17px/1 var(--f-serif);
 }
 
 .add-button {
@@ -640,7 +653,7 @@ img { max-width: 100%; display: block; }
 }
 
 .archive-entry span:nth-child(2) { flex: 1; }
-.archive-entry b { display: block; margin-bottom: 2px; font: 500 18px/1 "Cormorant Garamond", Georgia, serif; }
+.archive-entry b { display: block; margin-bottom: 2px; font: 500 18px/1 var(--f-serif); }
 .archive-entry small { display: block; color: var(--text-sub); font-size: 10px; }
 
 /* Cart */
@@ -679,9 +692,9 @@ img { max-width: 100%; display: block; }
 .cart-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 .cart-info { min-width: 0; }
-.cart-name { margin: 0 0 3px; font: 500 15px/1 "Cormorant Garamond", Georgia, serif; }
+.cart-name { margin: 0 0 3px; font: 500 15px/1 var(--f-serif); }
 .cart-cn { margin: 0 0 6px; font-size: 11px; color: var(--text-sub); }
-.cart-price { margin: 0; font: 500 15px/1 "Cormorant Garamond", Georgia, serif; }
+.cart-price { margin: 0; font: 500 15px/1 var(--f-serif); }
 
 .cart-stepper {
   display: flex;
@@ -743,7 +756,7 @@ img { max-width: 100%; display: block; }
   color: var(--clay);
 }
 
-.drop-title { margin: 0 0 3px; font: 500 15px/1.2 "Cormorant Garamond", Georgia, serif; }
+.drop-title { margin: 0 0 3px; font: 500 15px/1.2 var(--f-serif); }
 .drop-sub { margin: 0; font-size: 11px; color: var(--text-sub); }
 
 .cart-summary {
@@ -767,7 +780,7 @@ img { max-width: 100%; display: block; }
   margin: 14px 0 0;
   padding-top: 12px;
   border-top: 1px solid var(--divider);
-  font: 500 18px/1 "Cormorant Garamond", Georgia, serif;
+  font: 500 18px/1 var(--f-serif);
   color: var(--text-main);
 }
 
@@ -792,7 +805,7 @@ img { max-width: 100%; display: block; }
 
 .bottom-total { display: flex; flex-direction: column; gap: 2px; }
 .bottom-label { font-size: 11px; color: var(--text-sub); }
-.bottom-price { font: 500 22px/1 "Cormorant Garamond", Georgia, serif; }
+.bottom-price { font: 500 22px/1 var(--f-serif); }
 
 .primary-button {
   flex: 1;
@@ -801,7 +814,7 @@ img { max-width: 100%; display: block; }
   border-radius: 12px;
   background: var(--primary);
   color: #fff;
-  font: 500 15px/1 "PingFang SC", sans-serif;
+  font: 500 15px/1 var(--f-body);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -834,7 +847,7 @@ img { max-width: 100%; display: block; }
   align-items: center;
   gap: 6px;
   margin-bottom: 10px;
-  font: 500 13px/1 "PingFang SC", sans-serif;
+  font: 500 13px/1 var(--f-body);
   color: var(--text-main);
 }
 
@@ -844,7 +857,7 @@ img { max-width: 100%; display: block; }
   border: 0;
   border-bottom: 1px solid var(--divider);
   background: transparent;
-  font: 500 22px/1 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 22px/1 var(--f-serif), "PingFang SC", serif;
   color: var(--text-main);
   outline: none;
 }
@@ -857,7 +870,7 @@ img { max-width: 100%; display: block; }
 .decor-address {
   padding: 14px 0;
   border-bottom: 1px solid var(--divider);
-  font: 500 18px/1 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 18px/1 var(--f-serif), "PingFang SC", serif;
   color: var(--text-main);
 }
 
@@ -899,7 +912,7 @@ img { max-width: 100%; display: block; }
 
 .delivery-hero h1 {
   margin: 0 0 12px;
-  font: 500 30px/1.05 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 30px/1.05 var(--f-serif), "PingFang SC", serif;
 }
 
 .delivery-sub { margin: 0; font-size: 14px; color: var(--text-sub); }
@@ -978,7 +991,7 @@ img { max-width: 100%; display: block; }
   50% { box-shadow: 0 0 0 8px rgba(228, 198, 168, 0); }
 }
 
-.timeline-label { margin: 0 0 4px; font: 500 15px/1 "PingFang SC", sans-serif; }
+.timeline-label { margin: 0 0 4px; font: 500 15px/1 var(--f-body); }
 .timeline-desc { margin: 0; font-size: 12px; color: var(--text-sub); }
 
 .delivery-rider { padding: 0 28px 60px; }
@@ -1036,12 +1049,12 @@ img { max-width: 100%; display: block; }
   align-items: center;
   gap: 6px;
   color: var(--caramel);
-  font: 500 12px/1 "PingFang SC", sans-serif;
+  font: 500 12px/1 var(--f-body);
   letter-spacing: .04em;
 }
 
 .rl-count {
-  font: 500 10px/1 "Nunito", sans-serif;
+  font: 500 10px/1 var(--f-mono);
   letter-spacing: .1em;
   color: var(--text-sub);
 }
@@ -1073,7 +1086,7 @@ img { max-width: 100%; display: block; }
 
 .rl-list li p {
   margin: 0;
-  font: 400 12.5px/1.65 "Songti SC", serif;
+  font: 400 12.5px/1.65 var(--f-cn-serif);
   color: var(--text-sub);
   letter-spacing: .02em;
 }
@@ -1111,10 +1124,10 @@ img { max-width: 100%; display: block; }
 .wait-pet-btn:active { transform: scale(.94); }
 
 .wait-pet-text { min-width: 0; }
-.wait-pet-text b { font: 600 12px/1 "PingFang SC", sans-serif; color: var(--caramel); }
+.wait-pet-text b { font: 600 12px/1 var(--f-body); color: var(--caramel); }
 .wait-pet-text p {
   margin: 5px 0 0;
-  font: 400 12px/1.5 "Songti SC", serif;
+  font: 400 12px/1.5 var(--f-cn-serif);
   color: var(--text-sub);
 }
 
@@ -1146,7 +1159,7 @@ img { max-width: 100%; display: block; }
   border-radius: 50%;
   border: 1px solid var(--divider);
   color: var(--text-sub);
-  font: 500 12px/1 "Nunito", sans-serif;
+  font: 500 12px/1 var(--f-mono);
 }
 
 .wait-task.is-done .wait-task-mark {
@@ -1156,7 +1169,7 @@ img { max-width: 100%; display: block; }
 }
 
 .wait-task-copy { min-width: 0; }
-.wait-task-copy b { display: block; font: 500 12.5px/1.4 "PingFang SC", sans-serif; color: var(--text-main); }
+.wait-task-copy b { display: block; font: 500 12.5px/1.4 var(--f-body); color: var(--text-main); }
 .wait-task-copy small { display: block; margin-top: 3px; font-size: 10.5px; color: var(--text-sub); }
 
 /* ===== 慢活额度 ===== */
@@ -1177,13 +1190,13 @@ img { max-width: 100%; display: block; }
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font: 500 12px/1 "PingFang SC", sans-serif;
+  font: 500 12px/1 var(--f-body);
   color: var(--text-sub);
   letter-spacing: .04em;
 }
 
-.patience-head b { font: 600 17px/1 "Cormorant Garamond", Georgia, serif; color: var(--caramel); }
-.patience-head em { font: 500 10px/1 "Nunito", sans-serif; font-style: normal; color: var(--text-sub); letter-spacing: .06em; }
+.patience-head b { font: 600 17px/1 var(--f-serif); color: var(--caramel); }
+.patience-head em { font: 500 10px/1 var(--f-mono); font-style: normal; color: var(--text-sub); letter-spacing: .06em; }
 
 .patience-bar {
   margin: 11px 0 10px;
@@ -1203,7 +1216,7 @@ img { max-width: 100%; display: block; }
 
 .patience-note {
   margin: 0 0 16px;
-  font: 400 10.5px/1.6 "Songti SC", serif;
+  font: 400 10.5px/1.6 var(--f-cn-serif);
   color: #B5AC9E;
   letter-spacing: .02em;
 }
@@ -1269,20 +1282,20 @@ img { max-width: 100%; display: block; }
 
 .exchange-eyebrow {
   margin: 0 0 8px;
-  font: 500 9px/1 "Nunito", sans-serif;
+  font: 500 9px/1 var(--f-mono);
   letter-spacing: .18em;
   color: var(--caramel);
 }
 
 .exchange-card h3 {
   margin: 0 0 7px;
-  font: 500 19px/1.3 "Cormorant Garamond", "Songti SC", serif;
+  font: 500 19px/1.3 var(--f-serif);
   color: var(--text-main);
 }
 
 .exchange-lead {
   margin: 0 0 16px;
-  font: 400 11.5px/1.6 "PingFang SC", sans-serif;
+  font: 400 11.5px/1.6 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -1294,7 +1307,7 @@ img { max-width: 100%; display: block; }
   border-radius: 13px;
   background: var(--bg-base);
   border: 1px solid var(--divider);
-  font: 500 13.5px/1 "PingFang SC", sans-serif;
+  font: 500 13.5px/1 var(--f-body);
   color: var(--text-main);
   transition: background .18s, border-color .18s, transform .18s;
 }
@@ -1309,7 +1322,7 @@ img { max-width: 100%; display: block; }
   margin: 15px 0 0;
   padding-top: 12px;
   border-top: 1px dashed var(--divider);
-  font: 400 10.5px/1.6 "Songti SC", serif;
+  font: 400 10.5px/1.6 var(--f-cn-serif);
   color: #B5AC9E;
   text-align: center;
 }
@@ -1335,7 +1348,7 @@ img { max-width: 100%; display: block; }
 .exchange-reply i {
   display: block;
   margin-bottom: 7px;
-  font: 500 9px/1 "Nunito", sans-serif;
+  font: 500 9px/1 var(--f-mono);
   font-style: normal;
   letter-spacing: .16em;
   color: var(--caramel);
@@ -1343,7 +1356,7 @@ img { max-width: 100%; display: block; }
 
 .exchange-reply p {
   margin: 0;
-  font: 400 13.5px/1.6 "Songti SC", serif;
+  font: 400 13.5px/1.6 var(--f-cn-serif);
   color: var(--text-main);
 }
 
@@ -1366,20 +1379,20 @@ img { max-width: 100%; display: block; }
 
 .road-recap-eyebrow {
   margin: 0 0 7px;
-  font: 500 11px/1 "PingFang SC", sans-serif;
+  font: 500 11px/1 var(--f-body);
   letter-spacing: .04em;
   color: var(--caramel);
 }
 
 .road-recap-title {
   margin: 0 0 6px;
-  font: 500 13.5px/1.45 "PingFang SC", sans-serif;
+  font: 500 13.5px/1.45 var(--f-body);
   color: var(--text-main);
 }
 
 .road-recap-body {
   margin: 0;
-  font: 400 12px/1.65 "Songti SC", serif;
+  font: 400 12px/1.65 var(--f-cn-serif);
   color: var(--text-sub);
 }
 
@@ -1387,7 +1400,7 @@ img { max-width: 100%; display: block; }
   margin: 9px 0 0;
   padding-top: 8px;
   border-top: 1px dashed rgba(159, 127, 95, .22);
-  font: 400 11px/1.5 "Songti SC", serif;
+  font: 400 11px/1.5 var(--f-cn-serif);
   color: var(--caramel);
 }
 
@@ -1395,21 +1408,21 @@ img { max-width: 100%; display: block; }
 .road-with { margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(159, 127, 95, .22); }
 .road-with-title {
   margin: 0 0 7px;
-  font: 400 11px/1.4 "PingFang SC", sans-serif;
+  font: 400 11px/1.4 var(--f-body);
   letter-spacing: .08em; color: var(--caramel);
 }
 .road-with-list { margin: 0; padding: 0; list-style: none; }
 .road-with-list li {
   display: flex; align-items: baseline; gap: 8px;
-  padding: 4px 0; font: 400 11.5px/1.5 "Songti SC", serif;
+  padding: 4px 0; font: 400 11.5px/1.5 var(--f-cn-serif);
 }
 .road-with-list li b {
   flex: 0 0 auto; padding: 2px 8px; border-radius: 999px;
   background: rgba(228, 198, 168, .3); color: var(--text-main);
-  font: 500 11px/1.5 "PingFang SC", sans-serif;
+  font: 500 11px/1.5 var(--f-body);
 }
 .road-with-list li span { color: var(--text-sub); }
-.road-with-foot { margin: 7px 0 0; font: 400 11px/1.5 "Songti SC", serif; color: var(--text-sub); }
+.road-with-foot { margin: 7px 0 0; font: 400 11px/1.5 var(--f-cn-serif); color: var(--text-sub); }
 
 .sticker-drop.is-bonus {
   background: linear-gradient(135deg, rgba(184, 198, 172, .16), rgba(232, 216, 168, .2));
@@ -1455,7 +1468,7 @@ img { max-width: 100%; display: block; }
 
 .ending-number {
   margin: 0;
-  font: 500 9px/1 "Nunito", sans-serif;
+  font: 500 9px/1 var(--f-mono);
   letter-spacing: .15em;
   color: var(--text-sub);
 }
@@ -1477,7 +1490,7 @@ img { max-width: 100%; display: block; }
 
 .ending-title {
   margin: 0 0 16px;
-  font: 500 28px/1.15 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 28px/1.15 var(--f-serif), "PingFang SC", serif;
   color: var(--text-main);
   letter-spacing: .005em;
 }
@@ -1504,7 +1517,7 @@ img { max-width: 100%; display: block; }
 
 .ending-house strong {
   color: var(--text-main);
-  font: 500 14px/1 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 14px/1 var(--f-serif), "PingFang SC", serif;
 }
 
 .ending-actions {
@@ -1545,14 +1558,14 @@ img { max-width: 100%; display: block; }
 
 .ritual-eyebrow {
   margin: 0 0 6px;
-  font: 600 9px/1 "Nunito", sans-serif;
+  font: 600 9px/1 var(--f-mono);
   letter-spacing: .18em;
   color: var(--caramel);
 }
 
 .ritual-title {
   margin: 0 0 10px;
-  font: 500 22px/1.2 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 22px/1.2 var(--f-serif), "PingFang SC", serif;
   color: var(--text-main);
 }
 
@@ -1566,11 +1579,11 @@ img { max-width: 100%; display: block; }
 /* Food archive (kept from original) */
 .archive-page { padding-bottom: 34px; }
 .archive-bar { height: 69px; padding: 0 18px; display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; border-bottom: 1px solid rgba(159, 127, 95, .35); }
-.archive-bar span { font: 500 23px/1 "Cormorant Garamond", Georgia, serif; text-align: center; }
+.archive-bar span { font: 500 23px/1 var(--f-serif); text-align: center; }
 .archive-bar .icon-button:last-child { justify-self: end; }
 .archive-intro { padding: 30px 27px 22px; text-align: center; }
-.eyebrow { margin: 0 0 10px; color: var(--caramel); font: 600 10px/1 "Nunito", sans-serif; letter-spacing: .16em; }
-.archive-intro h1 { margin: 0; font: 500 32px/1.03 "Cormorant Garamond", "PingFang SC", serif; letter-spacing: .01em; }
+.eyebrow { margin: 0 0 10px; color: var(--caramel); font: 600 10px/1 var(--f-mono); letter-spacing: .16em; }
+.archive-intro h1 { margin: 0; font: 500 32px/1.03 var(--f-serif), "PingFang SC", serif; letter-spacing: .01em; }
 .archive-intro > p:last-child { margin: 14px auto 0; max-width: 245px; color: var(--text-sub); font-size: 12px; line-height: 1.65; }
 .archive-card { width: min(310px, calc(100% - 52px)); aspect-ratio: 3/4; margin: 0 auto; overflow: hidden; background: var(--surface); box-shadow: 0 7px 22px rgba(74, 69, 64, .1); }
 .archive-photo { height: 50%; overflow: hidden; background: #ddd0bb; }
@@ -1583,7 +1596,7 @@ img { max-width: 100%; display: block; }
 .archive-card.has-ai { aspect-ratio: auto; overflow: visible; }
 .archive-card.has-ai .archive-photo { height: auto; aspect-ratio: 3 / 2; }
 .archive-illustration { position: relative; height: 50%; overflow: hidden; background-color: #f4eddf; background-image: radial-gradient(rgba(74, 69, 64, .05) .6px, transparent .8px), repeating-linear-gradient(85deg, rgba(159, 127, 95, .035) 0 1px, transparent 1px 8px); background-size: 5px 5px, 12px 12px; }
-.archive-number { position: absolute; top: 17px; left: 18px; margin: 0; color: var(--caramel); font: 600 8px/1 "Nunito", sans-serif; letter-spacing: .1em; }
+.archive-number { position: absolute; top: 17px; left: 18px; margin: 0; color: var(--caramel); font: 600 8px/1 var(--f-mono); letter-spacing: .1em; }
 .archive-pending { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: var(--text-sub); font-size: 12px; line-height: 1.6; text-align: center; }
 .archive-actions { display: flex; gap: 10px; justify-content: center; margin: 18px 0 12px; padding: 0 20px; }
 .secondary-action { display: inline-flex; align-items: center; gap: 6px; padding: 11px 16px; border-radius: 999px; border: 1px solid var(--caramel); background: transparent; color: var(--caramel); font-size: 13px; }
@@ -1593,16 +1606,16 @@ img { max-width: 100%; display: block; }
 .archive-example { display: flex; align-items: center; gap: 14px; width: calc(100% - 40px); max-width: 330px; padding: 11px 13px 11px 11px; margin: 0 auto 14px; border: 1px solid var(--divider); border-radius: 12px; background: rgba(252, 251, 247, .58); text-align: left; }
 .archive-example img { flex: 0 0 96px; width: 96px; aspect-ratio: 3/4; object-fit: cover; border-radius: 9px; box-shadow: 0 3px 10px rgba(74, 69, 64, .14); }
 .archive-example-txt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.archive-example-txt b { font: 500 13px/1.3 "Cormorant Garamond", "PingFang SC", serif; color: var(--text-main); }
-.archive-example-txt i { font: 400 10.5px/1.55 "PingFang SC", sans-serif; font-style: normal; color: var(--text-sub); }
+.archive-example-txt b { font: 500 13px/1.3 var(--f-serif), "PingFang SC", serif; color: var(--text-main); }
+.archive-example-txt i { font: 400 10.5px/1.55 var(--f-body); font-style: normal; color: var(--text-sub); }
 .upload-zone.compact { min-height: 98px; margin: 0 20px 20px; padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--caramel); border-radius: 12px; background: rgba(252, 251, 247, .58); color: var(--text-main); }
-.upload-zone.compact strong { font: 500 16px/1 "Cormorant Garamond", "PingFang SC", serif; }
+.upload-zone.compact strong { font: 500 16px/1 var(--f-serif), "PingFang SC", serif; }
 .upload-zone.compact span { font-size: 11px; color: var(--text-sub); }
 .file-input { display: none; }
 .modal-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(74, 69, 64, .35); z-index: 50; padding: 20px; }
 .api-modal { position: relative; width: 100%; max-width: 340px; padding: 26px; border-radius: 18px; background: var(--surface); box-shadow: 0 12px 40px rgba(74, 69, 64, .18); }
 .modal-close { position: absolute; top: 14px; right: 14px; color: var(--text-sub); }
-.api-modal h2 { margin: 8px 0 12px; font: 500 24px/1.1 "Cormorant Garamond", "PingFang SC", serif; }
+.api-modal h2 { margin: 8px 0 12px; font: 500 24px/1.1 var(--f-serif), "PingFang SC", serif; }
 .api-modal > p { margin: 0 0 18px; font-size: 13px; line-height: 1.6; color: var(--text-sub); }
 .api-modal label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 14px; }
 .api-modal input { width: 100%; margin-top: 8px; padding: 12px; border: 1px solid var(--divider); border-radius: 10px; background: transparent; font-size: 14px; outline: none; }
@@ -1640,7 +1653,7 @@ footer {
   border-radius: 999px;
   background: rgba(74, 69, 64, .92);
   color: #FCFBF7;
-  font: 500 13px/1 "PingFang SC", "Nunito", sans-serif;
+  font: 500 13px/1 var(--f-body);
   z-index: 100;
   box-shadow: 0 8px 24px rgba(74, 69, 64, .25);
   backdrop-filter: blur(6px);
@@ -1895,7 +1908,7 @@ footer {
   border-radius: 999px;
   background: var(--primary);
   color: #fff;
-  font: 500 14px/1 "PingFang SC", sans-serif;
+  font: 500 14px/1 var(--f-body);
   box-shadow: 0 2px 10px rgba(194, 138, 112, .24);
   transition: transform .2s, background .2s;
 }
@@ -1944,7 +1957,7 @@ footer {
 .pet-entry-info b {
   display: block;
   margin-bottom: 3px;
-  font: 500 18px/1 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 18px/1 var(--f-serif), "PingFang SC", serif;
 }
 .pet-entry-info small {
   display: block;
@@ -1966,7 +1979,7 @@ footer {
   border-radius: 13px;
   background: linear-gradient(135deg, var(--clay), var(--primary));
   color: #fff;
-  font: 500 15px/1 "PingFang SC", sans-serif;
+  font: 500 15px/1 var(--f-body);
   box-shadow: 0 3px 12px rgba(194, 138, 112, .28);
   transition: transform .2s, box-shadow .2s;
 }
@@ -2022,14 +2035,14 @@ footer {
 
 .surprise-eyebrow {
   margin: 0 0 8px;
-  font: 600 9px/1 "Nunito", sans-serif;
+  font: 600 9px/1 var(--f-mono);
   letter-spacing: .18em;
   color: var(--caramel);
 }
 
 .surprise-title {
   margin: 0 0 10px;
-  font: 500 23px/1.2 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 23px/1.2 var(--f-serif), "PingFang SC", serif;
   color: var(--text-main);
 }
 
@@ -2151,7 +2164,7 @@ footer {
 
 .pet-hero h1 {
   margin: 0 0 10px;
-  font: 500 30px/1.1 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 30px/1.1 var(--f-serif), "PingFang SC", serif;
   color: var(--text-main);
 }
 
@@ -2179,7 +2192,7 @@ footer {
 .pet-stat { text-align: center; }
 .pet-stat-num {
   display: block;
-  font: 500 26px/1 "Cormorant Garamond", Georgia, serif;
+  font: 500 26px/1 var(--f-serif);
   color: var(--text-main);
 }
 .pet-stat-label {
@@ -2261,7 +2274,7 @@ footer {
   display: flex;
   align-items: center;
   gap: 7px;
-  font: 600 11px/1 "Quicksand", "PingFang SC", sans-serif;
+  font: 600 11px/1 "Quicksand", var(--f-body);
   letter-spacing: .12em;
   color: var(--clay);
 }
@@ -2297,7 +2310,7 @@ footer {
 
 .analyzing-step {
   margin: 10px 0 14px;
-  font: 400 14px/1.4 "PingFang SC", sans-serif;
+  font: 400 14px/1.4 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -2365,7 +2378,7 @@ footer {
 .hint-bubble p {
   flex: 1;
   margin: 0;
-  font: 400 13px/1.5 "PingFang SC", sans-serif;
+  font: 400 13px/1.5 var(--f-body);
   color: #4A453D;
 }
 
@@ -2451,7 +2464,7 @@ footer {
 
 .special-info h3 {
   margin: 0 0 2px;
-  font: 500 21px/1.2 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 21px/1.2 var(--f-serif), "PingFang SC", serif;
   color: #3D3832;
 }
 
@@ -2464,7 +2477,7 @@ footer {
 
 .special-desc {
   margin: 0;
-  font: 400 13px/1.55 "PingFang SC", sans-serif;
+  font: 400 13px/1.55 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -2493,7 +2506,7 @@ footer {
   border-radius: 100px;
   background: #4A453D;
   color: #FBF5EA;
-  font: 500 13px/1 "PingFang SC", sans-serif;
+  font: 500 13px/1 var(--f-body);
   cursor: pointer;
   transition: transform .18s ease, background .18s ease;
 }
@@ -2502,7 +2515,7 @@ footer {
 
 .special-note {
   margin: 10px 0 0;
-  font: 500 10px/1.4 "PingFang SC", sans-serif;
+  font: 500 10px/1.4 var(--f-body);
   color: var(--text-sub);
   opacity: .7;
   position: relative;
@@ -2542,14 +2555,14 @@ footer {
 
 .myshop-entry b {
   display: block;
-  font: 500 14px/1.3 "PingFang SC", sans-serif;
+  font: 500 14px/1.3 var(--f-body);
   color: var(--text);
   margin-bottom: 3px;
 }
 
 .myshop-entry small {
   display: block;
-  font: 400 11px/1.4 "PingFang SC", sans-serif;
+  font: 400 11px/1.4 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -2562,13 +2575,13 @@ footer {
 
 .myshop-intro h1 {
   margin: 8px 0 10px;
-  font: 500 27px/1.15 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 27px/1.15 var(--f-serif), "PingFang SC", serif;
   color: #3D3832;
 }
 
 .myshop-intro p:last-child {
   margin: 0;
-  font: 400 13px/1.6 "PingFang SC", sans-serif;
+  font: 400 13px/1.6 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -2587,7 +2600,7 @@ footer {
 
 .myshop-empty p {
   margin: 0;
-  font: 400 13px/1.5 "PingFang SC", sans-serif;
+  font: 400 13px/1.5 var(--f-body);
 }
 
 .myshop-empty .primary-action { margin-top: 4px; }
@@ -2629,7 +2642,7 @@ footer {
 
 .myshop-info h3 {
   margin: 0 0 2px;
-  font: 500 14px/1.25 "PingFang SC", sans-serif;
+  font: 500 14px/1.25 var(--f-body);
   color: var(--text);
 }
 
@@ -2642,7 +2655,7 @@ footer {
 
 .myshop-counter {
   margin: 0 0 9px;
-  font: 400 10px/1 "PingFang SC", sans-serif;
+  font: 400 10px/1 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -2677,7 +2690,7 @@ footer {
   padding: 12px 14px;
   border-radius: 10px;
   background: rgba(159, 127, 95, .05);
-  font: 400 11px/1.6 "PingFang SC", sans-serif;
+  font: 400 11px/1.6 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -2700,7 +2713,7 @@ footer {
   padding: 4px 10px;
   border-radius: 100px;
   background: rgba(184, 198, 172, .3);
-  font: 600 10px/1 "Quicksand", "PingFang SC", sans-serif;
+  font: 600 10px/1 "Quicksand", var(--f-body);
   letter-spacing: .1em;
   color: #5D6B52;
 }
@@ -2733,7 +2746,7 @@ footer {
   border-radius: 100px;
   background: rgba(30, 28, 25, .68);
   color: #FBF5EA;
-  font: 500 11px/1 "PingFang SC", sans-serif;
+  font: 500 11px/1 var(--f-body);
   cursor: pointer;
   backdrop-filter: blur(6px);
 }
@@ -2754,7 +2767,7 @@ footer {
 
 .draft-palette-caption {
   margin-left: 4px;
-  font: 500 10px/1 "Quicksand", "PingFang SC", sans-serif;
+  font: 500 10px/1 "Quicksand", var(--f-body);
   letter-spacing: .08em;
   color: var(--text-sub);
 }
@@ -2767,7 +2780,7 @@ footer {
 .draft-field > span {
   display: block;
   margin-bottom: 5px;
-  font: 500 10px/1 "Quicksand", "PingFang SC", sans-serif;
+  font: 500 10px/1 "Quicksand", var(--f-body);
   letter-spacing: .12em;
   color: var(--clay);
 }
@@ -2780,7 +2793,7 @@ footer {
   border: 1px solid rgba(159, 127, 95, .22);
   border-radius: 10px;
   background: #FDFBF7;
-  font: 400 14px/1.4 "PingFang SC", sans-serif;
+  font: 400 14px/1.4 var(--f-body);
   color: var(--text);
   outline: none;
   transition: border-color .18s ease;
@@ -2874,7 +2887,7 @@ footer {
   border-radius: 999px;
   background: rgba(255, 255, 255, .74);
   color: #8a7a66;
-  font: 500 8px/1.4 "Nunito", "PingFang SC", sans-serif;
+  font: 500 8px/1.4 "Nunito", var(--f-body);
   letter-spacing: .1em;
 }
 
@@ -3026,7 +3039,7 @@ footer {
   box-shadow: inset 0 -1px 2px rgba(120, 100, 80, .12);
 }
 .pet-color-name {
-  font: 500 10px/1 "Nunito", "PingFang SC", sans-serif;
+  font: 500 10px/1 "Nunito", var(--f-body);
   letter-spacing: .04em;
   color: var(--text-sub);
 }
@@ -3056,13 +3069,13 @@ footer {
 }
 .pet-ladder-art { display: grid; place-items: center; min-height: 74px; }
 .pet-ladder-name {
-  font: 500 9.5px/1.3 "PingFang SC", sans-serif;
+  font: 500 9.5px/1.3 var(--f-body);
   color: var(--text-sub);
   text-align: center;
 }
 .pet-ladder-cell.is-current .pet-ladder-name { color: var(--caramel); }
 .pet-ladder-need {
-  font: 500 8.5px/1 "Nunito", sans-serif;
+  font: 500 8.5px/1 var(--f-mono);
   letter-spacing: .06em;
   color: rgba(138, 122, 102, .72);
 }
@@ -3099,20 +3112,20 @@ footer {
 
 .world-hero-copy h1 {
   margin: 8px 0 4px;
-  font: 500 34px/1.02 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 34px/1.02 var(--f-serif), "PingFang SC", serif;
   color: #33302b;
 }
 
 .world-city-en {
   margin: 0 0 9px;
-  font: 500 10px/1 "Nunito", sans-serif;
+  font: 500 10px/1 var(--f-mono);
   letter-spacing: .22em;
   color: var(--world-hex, #9f7f5f);
 }
 
 .world-blurb {
   margin: 0 0 11px;
-  font: 400 11.5px/1.6 "PingFang SC", sans-serif;
+  font: 400 11.5px/1.6 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -3123,7 +3136,7 @@ footer {
   padding: 5px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, .78);
-  font: 500 9.5px/1 "PingFang SC", sans-serif;
+  font: 500 9.5px/1 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -3159,7 +3172,7 @@ footer {
   border: 1px solid rgba(159, 127, 95, .2);
   border-radius: 999px;
   background: rgba(255, 255, 255, .62);
-  font: 500 11.5px/1 "PingFang SC", sans-serif;
+  font: 500 11.5px/1 var(--f-body);
   color: var(--text-sub);
   cursor: pointer;
   transition: border-color .2s, background .2s, color .2s;
@@ -3194,7 +3207,7 @@ footer {
   border: 1px dashed rgba(159, 127, 95, .45);
   border-radius: 999px;
   background: transparent;
-  font: 500 12px/1 "PingFang SC", sans-serif;
+  font: 500 12px/1 var(--f-body);
   color: var(--text-main);
   cursor: pointer;
   transition: background .2s;
@@ -3202,7 +3215,7 @@ footer {
 .ghost-action:hover { background: rgba(228, 198, 168, .18); }
 
 .world-batch {
-  font: 500 10px/1 "Nunito", sans-serif;
+  font: 500 10px/1 var(--f-mono);
   letter-spacing: .14em;
   color: var(--text-sub);
 }
@@ -3212,7 +3225,7 @@ footer {
   padding: 14px 16px;
   border-radius: 12px;
   background: rgba(228, 198, 168, .12);
-  font: 400 11.5px/1.75 "PingFang SC", sans-serif;
+  font: 400 11.5px/1.75 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -3250,13 +3263,13 @@ footer {
 .world-entry b {
   display: block;
   margin-bottom: 3px;
-  font: 500 14px/1.3 "PingFang SC", sans-serif;
+  font: 500 14px/1.3 var(--f-body);
   color: var(--text);
 }
 
 .world-entry small {
   display: block;
-  font: 400 11px/1.4 "PingFang SC", sans-serif;
+  font: 400 11px/1.4 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -3338,7 +3351,7 @@ footer {
   border: 1px solid rgba(159, 127, 95, .18);
   border-radius: 999px;
   background: rgba(255, 255, 255, .62);
-  font: 500 12.5px/1 "PingFang SC", sans-serif;
+  font: 500 12.5px/1 var(--f-body);
   color: var(--text-sub);
   transition: background .2s, color .2s, border-color .2s;
 }
@@ -3359,7 +3372,7 @@ footer {
   margin-bottom: 12px;
 }
 .shop-list-sub {
-  font: 400 10.5px/1.3 "PingFang SC", sans-serif;
+  font: 400 10.5px/1.3 var(--f-body);
   color: var(--text-sub);
   text-align: right;
 }
@@ -3402,14 +3415,14 @@ footer {
   border-radius: 5px;
   background: rgba(194, 138, 112, .92);
   color: #fff;
-  font: 600 9px/1.3 "Nunito", "PingFang SC", sans-serif;
+  font: 600 9px/1.3 "Nunito", var(--f-body);
 }
 
 .shop-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
 .shop-body h3 {
   margin: 0 0 3px;
-  font: 500 16px/1.25 "PingFang SC", sans-serif;
+  font: 500 16px/1.25 var(--f-body);
   color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
@@ -3417,7 +3430,7 @@ footer {
 }
 .shop-en {
   margin: 0 0 6px;
-  font: 500 8.5px/1 "Nunito", sans-serif;
+  font: 500 8.5px/1 var(--f-mono);
   letter-spacing: .14em;
   color: rgba(141, 134, 124, .75);
 }
@@ -3427,7 +3440,7 @@ footer {
   flex-wrap: wrap;
   gap: 9px;
   margin-bottom: 7px;
-  font: 400 10.5px/1 "PingFang SC", sans-serif;
+  font: 400 10.5px/1 var(--f-body);
   color: var(--text-sub);
 }
 .shop-rating { color: var(--clay); font-weight: 700; }
@@ -3439,7 +3452,7 @@ footer {
   border-radius: 5px;
   background: rgba(228, 198, 168, .24);
   color: #8A6A48;
-  font: 500 9.5px/1.4 "PingFang SC", sans-serif;
+  font: 500 9.5px/1.4 var(--f-body);
 }
 .shop-chip-promo { background: rgba(194, 138, 112, .18); color: var(--clay); }
 .shop-chip-ghost { background: rgba(141, 134, 124, .1); color: var(--text-sub); }
@@ -3472,12 +3485,12 @@ footer {
 .store-head { flex: 1; min-width: 0; }
 .store-head h1 {
   margin: 0 0 4px;
-  font: 500 26px/1.1 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 26px/1.1 var(--f-serif), "PingFang SC", serif;
   color: var(--text-main);
 }
 .store-en {
   margin: 0 0 8px;
-  font: 500 8.5px/1 "Nunito", sans-serif;
+  font: 500 8.5px/1 var(--f-mono);
   letter-spacing: .16em;
   color: rgba(141, 134, 124, .8);
 }
@@ -3486,7 +3499,7 @@ footer {
   flex-wrap: wrap;
   gap: 9px;
   margin-bottom: 8px;
-  font: 400 10.5px/1 "PingFang SC", sans-serif;
+  font: 400 10.5px/1 var(--f-body);
   color: var(--text-sub);
 }
 .store-tags { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -3497,7 +3510,7 @@ footer {
   padding: 9px 11px;
   border-radius: 10px;
   background: rgba(228, 198, 168, .16);
-  font: 400 10.5px/1.65 "PingFang SC", sans-serif;
+  font: 400 10.5px/1.65 var(--f-body);
   color: var(--text-sub);
 }
 .store-notice b { display: block; margin-bottom: 2px; font-weight: 600; color: var(--caramel); }
@@ -3512,7 +3525,7 @@ footer {
   margin-bottom: 12px;
 }
 .menu-head-sub {
-  font: 400 10.5px/1.3 "PingFang SC", sans-serif;
+  font: 400 10.5px/1.3 var(--f-body);
   color: var(--text-sub);
   text-align: right;
 }
@@ -3540,15 +3553,15 @@ footer {
 .menu-thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .menu-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.menu-info h3 { margin: 0 0 3px; font: 500 15px/1.3 "PingFang SC", sans-serif; }
+.menu-info h3 { margin: 0 0 3px; font: 500 15px/1.3 var(--f-body); }
 .menu-en {
   margin: 0 0 5px;
-  font: 500 8.5px/1.2 "Nunito", sans-serif;
+  font: 500 8.5px/1.2 var(--f-mono);
   letter-spacing: .1em;
   color: rgba(141, 134, 124, .72);
 }
-.menu-desc { margin: 0 0 5px; font: 400 11px/1.6 "PingFang SC", sans-serif; color: var(--text-sub); }
-.menu-meta { margin: 0; font: 400 10px/1 "PingFang SC", sans-serif; color: rgba(141, 134, 124, .8); }
+.menu-desc { margin: 0 0 5px; font: 400 11px/1.6 var(--f-body); color: var(--text-sub); }
+.menu-meta { margin: 0; font: 400 10px/1 var(--f-body); color: rgba(141, 134, 124, .8); }
 
 .menu-foot {
   display: flex;
@@ -3557,12 +3570,12 @@ footer {
   margin-top: auto;
   padding-top: 8px;
 }
-.menu-price { font: 600 18px/1 "Cormorant Garamond", Georgia, serif; color: var(--clay); }
+.menu-price { font: 600 18px/1 var(--f-serif); color: var(--clay); }
 .menu-empty {
   margin: 0;
   padding: 24px 0;
   text-align: center;
-  font: 400 12px/1 "PingFang SC", sans-serif;
+  font: 400 12px/1 var(--f-body);
   color: var(--text-sub);
 }
 
@@ -3597,11 +3610,11 @@ footer {
   color: var(--clay);
 }
 .charity-entry-copy { flex: 1; min-width: 0; }
-.charity-entry-copy b { display: block; margin-bottom: 3px; font: 500 14px/1.3 "PingFang SC", sans-serif; }
-.charity-entry-copy small { display: block; font: 400 10.5px/1.5 "PingFang SC", sans-serif; color: var(--text-sub); }
+.charity-entry-copy b { display: block; margin-bottom: 3px; font: 500 14px/1.3 var(--f-body); }
+.charity-entry-copy small { display: block; font: 400 10.5px/1.5 var(--f-body); color: var(--text-sub); }
 .charity-entry-gram {
   flex-shrink: 0;
-  font: 600 16px/1 "Cormorant Garamond", Georgia, serif;
+  font: 600 16px/1 var(--f-serif);
   color: var(--clay);
 }
 
@@ -3617,26 +3630,26 @@ footer {
   background: rgba(234, 197, 200, .42);
   color: var(--clay);
 }
-.charity-hero-label { margin: 0 0 10px; font: 400 11.5px/1.6 "PingFang SC", sans-serif; color: var(--text-sub); }
+.charity-hero-label { margin: 0 0 10px; font: 400 11.5px/1.6 var(--f-body); color: var(--text-sub); }
 .charity-hero-num {
   margin: 0;
-  font: 500 60px/1 "Cormorant Garamond", Georgia, serif;
+  font: 500 60px/1 var(--f-serif);
   color: var(--text-main);
   letter-spacing: -.02em;
 }
 /* 那一大坨克数可以点 —— 点进去看「捐给了谁 / 什么时候 / 多少」 */
 .charity-hero-num.is-tap {
   display: inline-block; padding: 0; border: 0; background: none;
-  font-family: "Cormorant Garamond", Georgia, serif; cursor: pointer;
+  font-family: var(--f-serif); cursor: pointer;
   transition: transform .22s cubic-bezier(.34, 1.56, .64, 1), opacity .18s ease;
 }
 .charity-hero-num.is-tap:hover { transform: scale(1.04); opacity: .82; }
 .charity-hero-num small { margin-left: 5px; font-size: 22px; color: var(--text-sub); }
-.charity-hero-sub { margin: 11px 0 0; font: 400 11.5px/1.6 "PingFang SC", sans-serif; color: var(--text-sub); }
+.charity-hero-sub { margin: 11px 0 0; font: 400 11.5px/1.6 var(--f-body); color: var(--text-sub); }
 .charity-hero-more {
   margin: 12px 0 0; padding: 5px 12px;
   border: 1px solid var(--line); border-radius: 999px; background: var(--card);
-  font: 400 11px/1.5 "PingFang SC", sans-serif; color: var(--text-sub);
+  font: 400 11px/1.5 var(--f-body); color: var(--text-sub);
   cursor: pointer; transition: border-color .18s ease, color .18s ease;
 }
 .charity-hero-more:hover { border-color: var(--clay); color: var(--clay); }
@@ -3652,10 +3665,10 @@ footer {
 .charity-stat-num {
   display: block;
   margin-bottom: 6px;
-  font: 600 21px/1 "Cormorant Garamond", Georgia, serif;
+  font: 600 21px/1 var(--f-serif);
   color: var(--text-main);
 }
-.charity-stat-label { font: 400 9.5px/1.25 "PingFang SC", sans-serif; color: var(--text-sub); }
+.charity-stat-label { font: 400 9.5px/1.25 var(--f-body); color: var(--text-sub); }
 
 .charity-log { padding: 26px 20px 0; }
 .charity-records { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -3670,11 +3683,11 @@ footer {
   background: rgba(255, 255, 255, .74);
 }
 .charity-record-main { min-width: 0; }
-.charity-record-main b { display: block; margin-bottom: 3px; font: 500 12.5px/1.3 "PingFang SC", sans-serif; }
-.charity-record-main small { font: 400 10px/1.3 "PingFang SC", sans-serif; color: var(--text-sub); }
+.charity-record-main b { display: block; margin-bottom: 3px; font: 500 12.5px/1.3 var(--f-body); }
+.charity-record-main small { font: 400 10px/1.3 var(--f-body); color: var(--text-sub); }
 .charity-record-gram {
   flex-shrink: 0;
-  font: 600 16px/1 "Cormorant Garamond", Georgia, serif;
+  font: 600 16px/1 var(--f-serif);
   color: var(--clay);
 }
 
@@ -3683,21 +3696,21 @@ footer {
 .cs-sum { margin: 4px 0 22px; padding: 14px 15px; border-radius: 13px; background: var(--jh-card); }
 .cs-sum-row {
   display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  padding: 5px 0; font: 400 12px/1.5 "PingFang SC", sans-serif; color: var(--jh-ink-2);
+  padding: 5px 0; font: 400 12px/1.5 var(--f-body); color: var(--jh-ink-2);
 }
-.cs-sum-row b { font: 500 15px/1.2 "Cormorant Garamond", Georgia, serif; color: var(--jh-ink); }
+.cs-sum-row b { font: 500 15px/1.2 var(--f-serif); color: var(--jh-ink); }
 .cs-sum-row.is-done b { color: var(--jh-clay); }
 .cs-bar { margin: 10px 0 8px; height: 5px; border-radius: 999px; background: var(--jh-line); overflow: hidden; }
 .cs-bar i { display: block; height: 100%; border-radius: 999px; background: var(--jh-clay); transition: width .5s ease; }
-.cs-rate { margin: 0; font: 400 11px/1.6 "PingFang SC", sans-serif; color: var(--jh-ink-3); }
+.cs-rate { margin: 0; font: 400 11px/1.6 var(--f-body); color: var(--jh-ink-3); }
 
 .cs-block { margin: 0 0 20px; }
 .cs-block-head {
   display: flex; align-items: baseline; gap: 6px; margin: 0 0 10px;
-  font: 400 11px/1 "PingFang SC", sans-serif; letter-spacing: .1em; color: var(--jh-ink-3);
+  font: 400 11px/1 var(--f-body); letter-spacing: .1em; color: var(--jh-ink-3);
 }
-.cs-block-head em { font: 500 11px/1 "Cormorant Garamond", Georgia, serif; font-style: normal; color: var(--jh-clay); }
-.cs-empty { margin: 0; padding: 14px 15px; border-radius: 12px; background: var(--jh-card); font: 400 12px/1.85 "PingFang SC", sans-serif; color: var(--jh-ink-2); }
+.cs-block-head em { font: 500 11px/1 var(--f-serif); font-style: normal; color: var(--jh-clay); }
+.cs-empty { margin: 0; padding: 14px 15px; border-radius: 12px; background: var(--jh-card); font: 400 12px/1.85 var(--f-body); color: var(--jh-ink-2); }
 
 .cs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .cs-item {
@@ -3706,17 +3719,17 @@ footer {
   box-shadow: 0 0 0 1px var(--jh-line);
 }
 .cs-item-main { min-width: 0; }
-.cs-item-main b { display: block; margin-bottom: 3px; font: 500 12.5px/1.3 "PingFang SC", sans-serif; color: var(--jh-ink); }
-.cs-item-main small { font: 400 10px/1.3 "PingFang SC", sans-serif; color: var(--jh-ink-3); }
-.cs-item-gram { flex-shrink: 0; font: 600 15px/1 "Cormorant Garamond", Georgia, serif; color: var(--jh-clay); }
+.cs-item-main b { display: block; margin-bottom: 3px; font: 500 12.5px/1.3 var(--f-body); color: var(--jh-ink); }
+.cs-item-main small { font: 400 10px/1.3 var(--f-body); color: var(--jh-ink-3); }
+.cs-item-gram { flex-shrink: 0; font: 600 15px/1 var(--f-serif); color: var(--jh-clay); }
 
 .cs-form { display: grid; gap: 12px; margin: 0 0 16px; }
 .cs-field { display: grid; gap: 6px; }
-.cs-field > span { font: 400 11px/1.4 "PingFang SC", sans-serif; color: var(--jh-ink-3); }
+.cs-field > span { font: 400 11px/1.4 var(--f-body); color: var(--jh-ink-3); }
 .cs-field input {
   width: 100%; padding: 11px 12px; box-sizing: border-box;
   border: 1px solid var(--jh-line); border-radius: 11px; background: var(--jh-card);
-  font: 400 13px/1.4 "PingFang SC", sans-serif; color: var(--jh-ink);
+  font: 400 13px/1.4 var(--f-body); color: var(--jh-ink);
 }
 .cs-field input:focus { outline: none; border-color: var(--jh-clay); }
 .cs-actions { display: flex; gap: 10px; }
@@ -3725,15 +3738,15 @@ footer {
 .cs-settle {
   width: 100%; padding: 14px; margin: 0 0 14px;
   border: 1px solid var(--jh-clay); border-radius: 13px; background: var(--jh-card);
-  font: 500 13px/1 "PingFang SC", sans-serif; color: var(--jh-clay); cursor: pointer;
+  font: 500 13px/1 var(--f-body); color: var(--jh-clay); cursor: pointer;
   transition: background .18s ease, transform .22s cubic-bezier(.34, 1.56, .64, 1);
 }
 .cs-settle:hover { background: var(--jh-card-2); transform: translateY(-1px); }
 .cs-settle:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-.cs-foot { margin: 0 0 10px; font: 400 10.5px/1.8 "PingFang SC", sans-serif; color: var(--jh-ink-3); }
+.cs-foot { margin: 0 0 10px; font: 400 10.5px/1.8 var(--f-body); color: var(--jh-ink-3); }
 
 .charity-note { margin: 26px 20px 0; padding: 15px 16px; border-radius: 13px; background: rgba(228, 198, 168, .14); }
-.charity-note p { margin: 0 0 9px; font: 400 11px/1.8 "PingFang SC", sans-serif; color: var(--text-sub); }
+.charity-note p { margin: 0 0 9px; font: 400 11px/1.8 var(--f-body); color: var(--text-sub); }
 .charity-note p:last-child { margin-bottom: 0; }
 .charity-note b { color: var(--text-main); }
 .charity-note-dim { opacity: .72; }
@@ -3759,10 +3772,10 @@ footer {
   background: rgba(255, 255, 255, .82);
   color: var(--clay);
 }
-.donate-head-copy b { display: block; margin-bottom: 2px; font: 500 13px/1.3 "PingFang SC", sans-serif; }
-.donate-head-copy small { display: block; font: 400 10px/1.45 "PingFang SC", sans-serif; color: var(--text-sub); }
+.donate-head-copy b { display: block; margin-bottom: 2px; font: 500 13px/1.3 var(--f-body); }
+.donate-head-copy small { display: block; font: 400 10px/1.45 var(--f-body); color: var(--text-sub); }
 
-.donate-amount { margin: 0 0 12px; font: 400 11.5px/1.65 "PingFang SC", sans-serif; color: var(--text-sub); }
+.donate-amount { margin: 0 0 12px; font: 400 11.5px/1.65 var(--f-body); color: var(--text-sub); }
 .donate-amount b { color: var(--clay); font-weight: 700; }
 
 .donate-presets { display: flex; gap: 7px; margin-bottom: 12px; }
@@ -3772,7 +3785,7 @@ footer {
   border: 1px solid rgba(159, 127, 95, .2);
   border-radius: 9px;
   background: rgba(255, 255, 255, .68);
-  font: 500 11.5px/1 "PingFang SC", sans-serif;
+  font: 500 11.5px/1 var(--f-body);
   color: var(--text-sub);
   transition: background .18s, color .18s, border-color .18s;
 }
@@ -3781,21 +3794,21 @@ footer {
 .donate-slider { width: 100%; margin: 2px 0 13px; accent-color: var(--clay); }
 
 .donate-preview { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
-.donate-preview > span:first-child { font: 500 14px/1.2 "PingFang SC", sans-serif; }
+.donate-preview > span:first-child { font: 500 14px/1.2 var(--f-body); }
 .donate-preview b { color: var(--clay); font-weight: 700; }
-.donate-preview-sub { font: 400 10px/1.3 "PingFang SC", sans-serif; color: var(--text-sub); text-align: right; }
+.donate-preview-sub { font: 400 10px/1.3 var(--f-body); color: var(--text-sub); text-align: right; }
 
 .donate-actions { display: flex; gap: 8px; }
 .donate-actions .ghost-button { flex: 1; }
 .donate-actions .primary-button { flex: 1.5; }
 
-.donate-done { margin: 0 0 5px; font: 500 15px/1.4 "PingFang SC", sans-serif; }
+.donate-done { margin: 0 0 5px; font: 500 15px/1.4 var(--f-body); }
 .donate-done b { color: var(--clay); font-weight: 700; }
 .donate-done.is-skip { color: var(--text-sub); }
-.donate-done-sub { margin: 0 0 11px; font: 400 10.5px/1.55 "PingFang SC", sans-serif; color: var(--text-sub); }
+.donate-done-sub { margin: 0 0 11px; font: 400 10.5px/1.55 var(--f-body); color: var(--text-sub); }
 .donate-link {
   padding: 0;
-  font: 500 11.5px/1 "PingFang SC", sans-serif;
+  font: 500 11.5px/1 var(--f-body);
   color: var(--clay);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -4102,7 +4115,7 @@ footer {
 .pc-wave { width: 64px; height: 14px; margin: 0 8px; color: var(--world-hex); opacity: .55; }
 .pc-addr {
   margin-left: auto;
-  font-family: Kaiti SC, STKaiti, KaiTi, serif;
+  font-family: var(--f-hand);
   font-size: 15px; color: #8D867C; opacity: .9;
   transform: rotate(-2deg);
 }
@@ -4146,7 +4159,7 @@ footer {
 .rescue-strip-copy b {
   display: block;
   margin-bottom: 2px;
-  font: 500 14px/1.3 "PingFang SC", sans-serif;
+  font: 500 14px/1.3 var(--f-body);
   color: var(--text-main);
 }
 .rescue-strip-copy b em {
@@ -4158,7 +4171,7 @@ footer {
 }
 .rescue-strip-copy small {
   display: block;
-  font: 400 11px/1.4 "PingFang SC", sans-serif;
+  font: 400 11px/1.4 var(--f-body);
   color: var(--text-sub);
   white-space: nowrap;
   overflow: hidden;
@@ -4203,7 +4216,7 @@ footer {
 }
 .rescue-sign h1 {
   margin: 0 0 10px;
-  font: 500 27px/1.16 "Cormorant Garamond", "PingFang SC", serif;
+  font: 500 27px/1.16 var(--f-serif), "PingFang SC", serif;
   letter-spacing: .01em;
   color: #302c28;
 }
@@ -4227,7 +4240,7 @@ footer {
   background: rgba(255, 255, 255, .55);
 }
 .rescue-tally b {
-  font: 500 22px/1 "Cormorant Garamond", serif;
+  font: 500 22px/1 var(--f-serif), serif;
   color: var(--caramel);
 }
 .rescue-tally small { font-size: 10px; color: var(--text-sub); }
@@ -4273,19 +4286,19 @@ footer {
   border-radius: 6px;
   background: rgba(194, 138, 112, .16);
   color: #A5664A;
-  font: 600 11px/1 "Nunito", sans-serif;
+  font: 600 11px/1 var(--f-mono);
   letter-spacing: .02em;
 }
 .shelf-from { font-size: 10px; letter-spacing: .05em; color: var(--text-sub); }
 
 .shelf-info h3 {
   margin: 0 0 2px;
-  font: 500 15px/1.3 "PingFang SC", sans-serif;
+  font: 500 15px/1.3 var(--f-body);
   color: var(--text-main);
 }
 .shelf-en {
   margin: 0 0 5px;
-  font: 500 10px/1.3 "Cormorant Garamond", serif;
+  font: 500 10px/1.3 var(--f-serif), serif;
   letter-spacing: .09em;
   text-transform: uppercase;
   color: var(--text-sub);
@@ -4302,7 +4315,7 @@ footer {
 }
 
 .shelf-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; }
-.shelf-price { font: 600 16px/1 "Nunito", sans-serif; color: var(--text-main); }
+.shelf-price { font: 600 16px/1 var(--f-mono); color: var(--text-main); }
 .shelf-was { font-size: 11px; color: var(--text-sub); text-decoration: line-through; }
 .shelf-foot .add-button { margin-left: auto; }
 
@@ -4326,7 +4339,7 @@ footer {
 .rescue-ledger h2 {
   margin: 0 0 18px;
   color: #302c28;
-  font: 500 25px/1 "Cormorant Garamond", Georgia, serif;
+  font: 500 25px/1 var(--f-serif);
   letter-spacing: .035em;
   text-align: center;
 }
@@ -4347,7 +4360,7 @@ footer {
   background: var(--surface);
   text-align: center;
 }
-.ledger-stat b { font: 500 23px/1 "Cormorant Garamond", serif; color: var(--text-main); }
+.ledger-stat b { font: 500 23px/1 var(--f-serif), serif; color: var(--text-main); }
 .ledger-stat small { font-size: 10px; letter-spacing: .03em; color: var(--text-sub); }
 .ledger-stat.is-primary { background: rgba(232, 216, 168, .28); }
 .ledger-stat.is-primary b { color: var(--caramel); }
@@ -4386,7 +4399,7 @@ footer {
   border-radius: 5px;
   background: rgba(194, 138, 112, .14);
   color: #A5664A;
-  font: 500 10px/1.4 "PingFang SC", sans-serif;
+  font: 500 10px/1.4 var(--f-body);
   letter-spacing: .03em;
 }
 
@@ -4401,8 +4414,8 @@ footer {
   background: rgba(232, 216, 168, .20);
 }
 .rescue-recap-eyebrow { margin: 0 0 6px; font-size: 11px; letter-spacing: .06em; color: var(--caramel); }
-.rescue-recap-title { margin: 0 0 6px; font: 500 14px/1.45 "PingFang SC", sans-serif; color: var(--text-main); }
-.rescue-recap-title strong { font: 600 17px/1 "Cormorant Garamond", serif; color: #A5664A; }
+.rescue-recap-title { margin: 0 0 6px; font: 500 14px/1.45 var(--f-body); color: var(--text-main); }
+.rescue-recap-title strong { font: 600 17px/1 var(--f-serif), serif; color: #A5664A; }
 .rescue-recap-body { margin: 0; font-size: 11.5px; line-height: 1.65; color: var(--text-sub); }
 
 /* 兜底：新加的图片容器也要有定位上下文（见文件末尾约定） */
@@ -4440,7 +4453,7 @@ footer {
   border: 0;
   background: transparent;
   outline: none;
-  font: 500 13px/1 "PingFang SC", sans-serif;
+  font: 500 13px/1 var(--f-body);
   color: var(--text-main);
 }
 .search-field input::placeholder { color: rgba(141, 134, 124, .7); }
@@ -4506,15 +4519,15 @@ footer {
 .find-thumb img,
 .find-thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .find-info { flex: 1; min-width: 0; }
-.find-info h3 { margin: 0 0 2px; font: 500 14px/1.3 "PingFang SC", sans-serif; }
+.find-info h3 { margin: 0 0 2px; font: 500 14px/1.3 var(--f-body); }
 .find-en {
   margin: 0 0 6px;
-  font: 500 8.5px/1.2 "Nunito", sans-serif;
+  font: 500 8.5px/1.2 var(--f-mono);
   letter-spacing: .1em;
   color: rgba(141, 134, 124, .72);
 }
 .find-foot { display: flex; align-items: center; gap: 9px; }
-.find-price { font: 600 17px/1 "Cormorant Garamond", Georgia, serif; color: var(--clay); }
+.find-price { font: 600 17px/1 var(--f-serif); color: var(--clay); }
 .find-source { font-size: 10.5px; letter-spacing: .02em; color: var(--text-sub); }
 .find-source:hover { color: var(--caramel); }
 
@@ -4552,15 +4565,15 @@ footer {
 .wish-thumb img,
 .wish-thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .wish-info { flex: 1; min-width: 0; }
-.wish-info h3 { margin: 0 0 2px; font: 500 14.5px/1.3 "PingFang SC", sans-serif; }
+.wish-info h3 { margin: 0 0 2px; font: 500 14.5px/1.3 var(--f-body); }
 .wish-en {
   margin: 0 0 5px;
-  font: 500 8.5px/1.2 "Nunito", sans-serif;
+  font: 500 8.5px/1.2 var(--f-mono);
   letter-spacing: .1em;
   color: rgba(141, 134, 124, .72);
 }
 .wish-from { margin: 0 0 9px; font-size: 11px; color: var(--text-sub); }
-.wish-from b { font: 600 16px/1 "Cormorant Garamond", Georgia, serif; color: var(--clay); }
+.wish-from b { font: 600 16px/1 var(--f-serif); color: var(--clay); }
 .wish-actions { display: flex; align-items: center; gap: 8px; }
 .wish-add {
   display: inline-flex;
@@ -4804,7 +4817,7 @@ footer {
   border-radius: 5px;
   background: rgba(194, 138, 112, .16);
   color: #A5664A;
-  font: 600 10px/1 "Nunito", sans-serif;
+  font: 600 10px/1 var(--f-mono);
 }
 .co-price { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; }
 .co-was { color: var(--text-sub); font-size: 11px; text-decoration: line-through; }
@@ -4933,7 +4946,7 @@ footer {
 /* ===== 陪等的方式：三选一，随时可换 ===== */
 .wait-modes { margin: 4px 16px 12px; }
 .wait-modes-lead {
-  margin: 0 0 8px; font: 400 11px/1.4 "PingFang SC", sans-serif;
+  margin: 0 0 8px; font: 400 11px/1.4 var(--f-body);
   letter-spacing: .1em; color: var(--text-sub);
 }
 .wait-mode-list { display: flex; gap: 7px; }
@@ -4943,8 +4956,8 @@ footer {
   background: var(--surface); text-align: center; cursor: pointer;
   transition: background .18s, border-color .18s, transform .18s;
 }
-.wait-mode b { font: 500 11.5px/1.3 "PingFang SC", sans-serif; color: var(--text-main); }
-.wait-mode small { font: 400 9.5px/1.35 "PingFang SC", sans-serif; color: var(--text-sub); }
+.wait-mode b { font: 500 11.5px/1.3 var(--f-body); color: var(--text-main); }
+.wait-mode small { font: 400 9.5px/1.35 var(--f-body); color: var(--text-sub); }
 .wait-mode:hover { border-color: rgba(159, 127, 95, .4); }
 .wait-mode.is-on { background: rgba(228, 198, 168, .34); border-color: var(--caramel); }
 .wait-mode.is-on b { color: var(--text-main); }
@@ -4980,7 +4993,7 @@ footer {
 .rh-item i { display: block; width: 24px; height: 9px; border-radius: 5px; }
 .rh-item em {
   position: absolute; left: 50%; top: -13px; transform: translateX(-50%);
-  font: 400 9px/1 "PingFang SC", sans-serif; font-style: normal;
+  font: 400 9px/1 var(--f-body); font-style: normal;
   color: var(--text-sub); white-space: nowrap;
 }
 .rh-item.is-puddle i { background: #a8c6d8; }
@@ -5011,18 +5024,18 @@ footer {
 .fold-step {
   display: block; width: 100%; padding: 10px; border: 1px solid rgba(159, 127, 95, .3);
   border-radius: 999px; background: rgba(228, 198, 168, .3);
-  font: 500 12px/1.2 "PingFang SC", sans-serif; color: var(--text-main); cursor: pointer;
+  font: 500 12px/1.2 var(--f-body); color: var(--text-main); cursor: pointer;
   transition: background .18s, transform .18s;
 }
 .fold-step:hover { background: rgba(228, 198, 168, .45); }
 .fold-step:active { transform: scale(.98); }
 .fold-foot { margin: 8px 0 0; font-size: 10.5px; color: var(--text-sub); text-align: center; }
 .fold-box { display: block; width: 118px; height: auto; margin: 4px auto 6px; }
-.fold-done-title { margin: 0; font: 500 12.5px/1.4 "PingFang SC", sans-serif; text-align: center; color: var(--text-main); }
-.fold-done-body { margin: 6px 0 0; font: 400 11.5px/1.6 "Songti SC", serif; text-align: center; color: var(--text-sub); }
+.fold-done-title { margin: 0; font: 500 12.5px/1.4 var(--f-body); text-align: center; color: var(--text-main); }
+.fold-done-body { margin: 6px 0 0; font: 400 11.5px/1.6 var(--f-cn-serif); text-align: center; color: var(--text-sub); }
 .fold-done-go {
   margin: 9px 0 0; padding-top: 8px; border-top: 1px dashed rgba(159, 127, 95, .22);
-  font: 400 11.5px/1.65 "Songti SC", serif; text-align: center; color: var(--caramel);
+  font: 400 11.5px/1.65 var(--f-cn-serif); text-align: center; color: var(--caramel);
 }
 @media (prefers-reduced-motion: reduce) {
   .rw-rider, .rw-line-fill, .rw-land { transition: none; }
@@ -5077,7 +5090,7 @@ footer {
   --jh-clay: #C4703F;
   --jh-gold: #A88454;
   --jh-moss: #8A9A6B;
-  --jh-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --jh-mono: var(--f-mono);
 }
 
 .jh {
@@ -5554,7 +5567,7 @@ footer {
   --hm-ink-2: #6B6459;
   --hm-ink-3: #9C9488;
   --hm-clay: #C4703F;
-  --hm-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --hm-mono: var(--f-mono);
   background: var(--hm-paper);
   color: var(--hm-ink);
 }
