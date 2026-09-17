@@ -237,9 +237,13 @@ export default function ArchiveScreen({ onBack, initialView }) {
               {wall.length === 0 && (
                 // 示例图**不再当上传按钮用** —— 那是「想看图却弹出文件选择器」的根源。
                 // 现在点它就是看大图，上传走下面那颗明确的按钮。
+                // 2026-09-17：大海报缩成一枚小示例条 —— 整屏的大图喧宾夺主，跟米纸页面也不搭。
                 <button className="archive-example" onClick={() => setPreview({ mode: 'example' })}>
-                  <img src={archiveExample} alt="抹茶拿铁食物存档示例" />
-                  <span>示例：真实照片与纸本食物插画（点开看大图）</span>
+                  <img src={archiveExample} alt="示例：抹茶拿铁" />
+                  <span className="archive-example-txt">
+                    <b>先看一眼示例</b>
+                    <i>抹茶拿铁 —— 拍下的照片会配一张纸本小记（点开看大图）</i>
+                  </span>
                 </button>
               )}
               <button className="upload-zone compact" onClick={() => inputRef.current?.click()} disabled={busy}>

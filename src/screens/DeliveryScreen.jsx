@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ArrowLeft, Bike, Check, FastForward, Home, Package, ShoppingBag, Truck, X } from 'lucide-react'
 import {
   OFFLINE_TASKS,
@@ -136,7 +137,7 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
   const isWaiting = phase === 'waiting'
 
   return (
-    <div className="shop-page" style={{ filter: weather.filter }}>
+    <div className={`shop-page delivery-page${isWaiting ? ' is-waiting' : ''}`} style={{ filter: weather.filter }}>
       <header className="topbar compact">
         <button className="icon-button menu-button" aria-label="返回首页" onClick={() => onNavigate('home')}>
           <ArrowLeft size={25} strokeWidth={1.4} />
@@ -277,8 +278,10 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
         </section>
       )}
 
-      {/* 催单卡：不是跳过，是有来有回 */}
-      {exchangeOpen && (
+      {/* 催单卡：不是跳过，是有来有回。
+          ⚠️ 必须 portal 到 body：根元素挂着天气 filter，CSS 里 filter 祖先会让
+          position:fixed 退化成相对整页定位 —— 卡片会被排到整页最底部（视口外）。 */}
+      {exchangeOpen && createPortal(
         <div className="exchange-backdrop" role="dialog" aria-label="跟骑手说一句" onClick={() => setExchangeOpen(false)}>
           <div className="exchange-card" onClick={(e) => e.stopPropagation()}>
             <button className="exchange-close" aria-label="关闭" onClick={() => setExchangeOpen(false)}>
@@ -296,15 +299,17 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
             </div>
             <p className="exchange-foot">不说也行 —— 陪他走完这一段，路上会多留一份纪念。</p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* 骑手回话 */}
-      {exchangeDone && (
+      {/* 骑手回话（同样 portal —— 同一个 filter 坑） */}
+      {exchangeDone && createPortal(
         <div className="exchange-reply" role="status">
           <i aria-hidden="true">{exchangeDone.label}</i>
           <p>{exchangeDone.reply}</p>
-        </div>
+        </div>,
+        document.body
       )}
 
       {weather.key !== 'sunny' && <div className="rain-overlay" aria-hidden="true" />}

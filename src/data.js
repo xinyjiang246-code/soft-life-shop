@@ -954,7 +954,7 @@ export function pickOne(arr, seed) {
 }
 
 // ===== 公益：慢活猫粮计划 =====
-// 现在规模还小，所以换算比例定得保守：¥1 = 10g 猫粮。
+// 换算比例按市面猫粮价格折算：¥1 = 100g 猫粮（10kg 装 ¥100 上下）。
 // 默认档位只占 30%，不鼓励一次全捐 —— 慢一点，但每一克都记着。
 // ⚠️ 措辞红线：这里一律说「记下 / 记」，不说「捐」。
 //    App 没有后端，钱一直在用户手上 —— 记下的是一笔打算，不是一次转账。
@@ -962,7 +962,7 @@ export function pickOne(arr, seed) {
 export const CHARITY = {
   name: '慢活猫粮计划',
   short: '猫粮',
-  gramsPerYuan: 10,      // ¥1 = 10g
+  gramsPerYuan: 100,     // ¥1 = 100g（2026-09-17 用户定：原 10g 太保守）
   gramPerCatDay: 60,     // 一只成年猫一天约 60g
   defaultRatio: 30,      // 默认记订单金额的 30%
   presets: [10, 30, 50, 100],

@@ -139,7 +139,7 @@ export function saveMood(today, mood) {
 // ===== 公益档案：猫粮记录 =====
 // ⚠️ 措辞红线：这里记的是「打算捐、还没捐」的账 —— 不是已捐。
 //    「已捐了多少」要等真捐闭环做出来才有（用户自己转账后自己盖的章）。
-// 没有后端，是本地记账 —— 但数字是认真算的（¥1 = 10g）
+// 没有后端，是本地记账 —— 但数字是认真算的（¥1 = 100g）
 const KEY_CHARITY = 'soft-life-charity-v1'
 
 export const DEFAULT_CHARITY = {

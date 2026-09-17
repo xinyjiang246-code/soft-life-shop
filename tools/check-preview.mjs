@@ -90,7 +90,28 @@ try {
     if (step.assert) assert.ok(await evaluate(step.assert), step.label || step.assert)
   }
   await evaluate('document.fonts.ready.then(() => true)')
-  await waitFor('Array.from(document.images).every(i => i.complete)')
+  // ⚠️ 磁贴图是 loading="lazy"，headless Chrome 里程序化滚动**经常不触发**懒加载
+  // （实测：charity 加载了、archive/myshop 反复扫十遍也不加载）——
+  // 所以「图坏没坏」不能靠 naturalWidth 碰运气：给两轮滚动机会之后，
+  // 直接 fetch 每个 src 验 HTTP 200，这才是要断言的东西。
+  await evaluate(`(async () => {
+    const sweep = () => new Promise((resolve) => {
+      let y = 0; const step = () => {
+        y += 600; window.scrollTo(0, y);
+        if (y < document.body.scrollHeight) setTimeout(step, 60);
+        else { window.scrollTo(0, 0); setTimeout(resolve, 150); }
+      }; step();
+    })
+    await sweep(); await sweep()
+    return true
+  })()`)
+  // 坏图 = fetch 不回来的图（懒加载没触发 ≠ 坏 —— 别拿 naturalWidth 误报）
+  const imgSrcs = await evaluate(`Array.from(document.images).map(i => i.src).filter(Boolean)`)
+  const brokenImages = []
+  for (const src of imgSrcs) {
+    try { const r = await fetch(src); if (!r.ok) brokenImages.push(src) }
+    catch { brokenImages.push(src) }
+  }
   const snapshot = await evaluate(`({
     url: location.href,
     title: document.title,
@@ -99,7 +120,7 @@ try {
       tag: el.tagName, text: el.innerText?.trim(), label: el.getAttribute('aria-label'),
       class: el.className, placeholder: el.getAttribute('placeholder'), disabled: !!el.disabled
     })),
-    brokenImages: Array.from(document.images).filter(i => !i.naturalWidth).map(i => i.src),
+    brokenImages: ${JSON.stringify(brokenImages)},
     overflow: document.documentElement.scrollWidth > innerWidth
   })`)
   console.log(JSON.stringify({ snapshot, errors, failedResponses }, null, 2))

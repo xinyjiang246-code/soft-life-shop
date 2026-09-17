@@ -50,6 +50,22 @@ img { max-width: 100%; display: block; }
   padding-bottom: 96px;
 }
 
+/* 配送等待页：水彩街景背景（用户 2026-09-17 定的方向）。
+   图锚在底部（街道在画面下沿），宽随栏；页比图长时上段露米色渐变，正好是留白。
+   预演页白纱重（只透一点街景 + 白→米渐变），等待页白纱减淡让街景透出来。 */
+.delivery-page {
+  background:
+    linear-gradient(180deg, rgba(253, 252, 249, .96) 0%, rgba(252, 251, 247, .82) 45%, rgba(250, 244, 232, .45) 100%),
+    url('./assets/delivery-street.webp') bottom center / 100% auto no-repeat,
+    linear-gradient(180deg, #fdfcf9, #f7efe1);
+}
+.delivery-page.is-waiting {
+  background:
+    linear-gradient(180deg, rgba(253, 252, 249, .92) 0%, rgba(252, 251, 247, .58) 42%, rgba(250, 244, 232, .2) 100%),
+    url('./assets/delivery-street.webp') bottom center / 100% auto no-repeat,
+    linear-gradient(180deg, #fdfcf9, #f7efe1);
+}
+
 .shop-page.center-content {
   display: flex;
   flex-direction: column;
@@ -1224,7 +1240,10 @@ img { max-width: 100%; display: block; }
   width: calc(100% - 40px);
   max-width: 420px;
   padding: 22px 20px 20px;
-  background: var(--surface);
+  /* 催单卡也铺同一张水彩街景（用户 2026-09-17）：白纱压住保证文字可读 */
+  background:
+    linear-gradient(180deg, rgba(253, 252, 249, .95), rgba(250, 244, 233, .9)),
+    url('./assets/delivery-street.webp') center bottom / 160% auto no-repeat;
   border-radius: 20px;
   box-shadow: 0 12px 40px rgba(74, 69, 64, .18);
   animation: cardUp .3s cubic-bezier(.2, .8, .3, 1) both;
@@ -1550,9 +1569,12 @@ img { max-width: 100%; display: block; }
 .secondary-action { display: inline-flex; align-items: center; gap: 6px; padding: 11px 16px; border-radius: 999px; border: 1px solid var(--caramel); background: transparent; color: var(--caramel); font-size: 13px; }
 .archive-actions .primary-action { display: inline-flex; align-items: center; gap: 6px; padding: 11px 18px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 13px; }
 .archive-note { margin: 0 28px 24px; color: var(--text-sub); font-size: 11px; line-height: 1.6; text-align: center; }
-.archive-example { display: block; width: min(292px, calc(100% - 64px)); padding: 0; margin: 0 auto 17px; border: 0; background: transparent; }
-.archive-example img { display: block; width: 100%; aspect-ratio: 3/4; object-fit: cover; box-shadow: 0 8px 24px rgba(74, 69, 64, .1); }
-.archive-example span { display: block; margin-top: 9px; color: var(--text-sub); font-size: 10px; text-align: center; }
+/* 示例条：缩略图 + 两行说明，不再是一整屏海报（用户原话「放的太大、很突兀」） */
+.archive-example { display: flex; align-items: center; gap: 14px; width: calc(100% - 40px); max-width: 330px; padding: 11px 13px 11px 11px; margin: 0 auto 14px; border: 1px solid var(--divider); border-radius: 12px; background: rgba(252, 251, 247, .58); text-align: left; }
+.archive-example img { flex: 0 0 96px; width: 96px; aspect-ratio: 3/4; object-fit: cover; border-radius: 9px; box-shadow: 0 3px 10px rgba(74, 69, 64, .14); }
+.archive-example-txt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.archive-example-txt b { font: 500 13px/1.3 "Cormorant Garamond", "PingFang SC", serif; color: var(--text-main); }
+.archive-example-txt i { font: 400 10.5px/1.55 "PingFang SC", sans-serif; font-style: normal; color: var(--text-sub); }
 .upload-zone.compact { min-height: 98px; margin: 0 20px 20px; padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--caramel); border-radius: 12px; background: rgba(252, 251, 247, .58); color: var(--text-main); }
 .upload-zone.compact strong { font: 500 16px/1 "Cormorant Garamond", "PingFang SC", serif; }
 .upload-zone.compact span { font-size: 11px; color: var(--text-sub); }
