@@ -99,6 +99,11 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
   return (
     <div className="shop-page center-content">
       <article className="ending-card" aria-label="订单结局">
+        {/* 印刷层那枚方章：这一单真的送到了才盖。压在卡片右上角、不占头部那一行的宽度 ——
+            早先放在 .ending-header 里，长注释「YOUR ORDER HAS ARRIVED」+ 42px 的章
+            会把整行挤过 292px，左边的 END · 01 / 02 被迫折成两行。 */}
+        <span className="print-seal is-sm is-corner" aria-hidden="true">已送达</span>
+
         <header className="ending-header">
           <p className="ending-number">END · {ending.key === 'warm' ? '01' : '02'} / 02</p>
           <p className="eyebrow">{ending.eyebrow}</p>

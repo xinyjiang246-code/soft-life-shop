@@ -28,6 +28,15 @@
   --f-body: "PingFang SC", "Microsoft YaHei", sans-serif;        /* 正文 */
   --f-cn-serif: "Songti SC", "STSong", serif;                    /* 中文衬线（有温度的长句） */
   --f-hand: "Kaiti SC", "STKaiti", KaiTi, serif;                 /* 手写感（少量） */
+  /* —— 印刷层 token（2026-09-17 参考 Paper Press demo 引入）——
+     手段只有四样：颗粒纸面 · 硬阴影（偏移实色）· 1px 实线 · 印章。
+     刻意不做大圆角柔和阴影那一套（那是另一路审美，混在一起会互相抵消）。 */
+  --seal: #B4552D;                              /* 印章砖红（比 --clay 更实，才像盖上去的） */
+  --ink-print: rgba(46, 42, 37, .92);           /* 印刷黑：硬阴影与实线用 */
+  --line-strong: rgba(74, 69, 64, .32);         /* 1px 实线（比 --divider 明显） */
+  --shadow-hard: 3px 3px 0 var(--ink-print);
+  --shadow-hard-sm: 2px 2px 0 var(--ink-print);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .09 0 0 0 0 .08 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
   /* Cormorant Garamond 默认是旧式数字：1 长得像 I、3/4/5 带长尾，读价格和统计容易看错。
      全局换成等高数字（lining）—— 只改数字形态，不动字体和排版。 */
   font-family: var(--f-body);
@@ -5777,3 +5786,81 @@ footer {
   font-variant-numeric: lining-nums;
 }
 
+
+/* ============================================================================
+   印刷层（2026-09-17 · 参考用户给的 Paper Press demo）
+   手段只有四样：颗粒纸面 · 硬阴影（偏移实色）· 1px 实线 · 印章。
+   刻意**不**给整页大卡片加硬阴影 —— 那会把纸面压沉；硬阴影只给"能按下去"的东西。
+   ============================================================================ */
+
+/* ① 颗粒：叠在原有纸纹之上（原来是两点 + 斜纹，现在多一层噪点） */
+.page-shell {
+  background-image:
+    var(--grain),
+    radial-gradient(rgba(74, 69, 64, .025) .65px, transparent .8px),
+    repeating-linear-gradient(94deg, rgba(159, 127, 95, .018) 0 1px, transparent 1px 7px);
+  background-size: 120px 120px, 6px 6px, 11px 11px;
+}
+
+/* ② 硬阴影：只给按钮/贴纸，按下去会真的"陷"进去 */
+.skip-wait-button,
+.surprise-button,
+.exchange-option,
+.fold-step,
+.add-button,
+.wait-mode.is-on,
+.rw-moment-opt {
+  box-shadow: var(--shadow-hard-sm);
+  transition: transform .14s, box-shadow .14s, background-color .18s;
+}
+.skip-wait-button:active,
+.surprise-button:active,
+.exchange-option:active,
+.fold-step:active,
+.add-button:active,
+.wait-mode.is-on:active,
+.rw-moment-opt:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+/* 已经"陷进去"的确认态（额度不够 / 禁用）就别再顶着阴影 */
+.skip-wait-button:disabled { box-shadow: none; }
+
+/* ③ 1px 实线：给那些本来只有虚线的"抬头行"换成印刷实线 */
+.rw-head,
+.rh-head,
+.fold-head,
+.patience-head,
+.rider-letters-head {
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+/* ④ 印章：盖上去的方章（斜一点、边缘双层，像真盖的） */
+.print-seal {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 54px; height: 54px; flex: 0 0 auto;
+  border: 2px solid var(--seal); border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgba(180, 85, 45, .5);
+  color: var(--seal); font: 600 13px/1.15 var(--f-cn-serif);
+  letter-spacing: .08em; text-align: center;
+  transform: rotate(-7deg); opacity: .9;
+  -webkit-font-smoothing: antialiased;
+}
+.print-seal.is-sm { width: 42px; height: 42px; font-size: 11px; }
+
+/* 结局页头部：编号在左、英文小标在右 —— 回到印刷层之前的几何。
+   印章**不**在这条 flex 行里（它一进来就会把行挤超宽），改成绝对定位压在卡片右上角。 */
+.ending-number { white-space: nowrap; }
+.ending-header .eyebrow { white-space: nowrap; }
+
+/* 角上的章：压在卡片右上角、探出边 10px 左右，像贴上去的。
+   ⚠️ top 不能只按 40px 算 —— `transform: rotate(-7deg)` 会把**外接矩形**撑大
+   （40px 的方章转 7° 后 bbox 是 44.6px，四边各多 2.3px）。
+   第一版写 top:-10px，章底 bbox 落在 y=103.6，而 eyebrow 顶在 101.3 → 压住 2.3px。
+   量准后抬到 -17px，bbox 底 ≈ 96.6，给 eyebrow 留 ~4.7px。 */
+.print-seal.is-corner {
+  position: absolute; top: -17px; right: -9px;
+  width: 40px; height: 40px; font-size: 10px;
+  white-space: nowrap;
+}
