@@ -47,11 +47,26 @@ await send('Page.navigate', { url: 'http://127.0.0.1:8080/' })
 await sleep(2000)
 
 // ---- 进到等待页 ----
-await js(`document.querySelectorAll('.shop-row')[0].click()`); await sleep(900)
-await js(`[...document.querySelectorAll('.add-button')].slice(0,2).forEach(b=>b.click())`); await sleep(500)
-await js(`document.querySelector('.cart-button').click()`); await sleep(800)
-await js(`(()=>{const b=[...document.querySelectorAll('button')].find(x=>/去结账|结算|下单/.test(x.textContent)); b&&b.click()})()`); await sleep(900)
-await js(`(()=>{const b=[...document.querySelectorAll('button')].find(x=>/确认|下单|提交/.test(x.textContent)); b&&b.click()})()`); await sleep(1200)
+// ⚠️ 每一步都要**先等元素出现再点**：原来是「点完 sleep(900) 再点下一个」，
+//    冷启动（禁用缓存 + 正在下 Fraunces 变量字体）时页面还没渲染完，
+//    那一下点空 → 后面一直等不到 .skip-wait-button，脚本报「等不到」——
+//    这是假警报（2026-09-18 实际误报过一次），排查成本比修它高得多。
+const clickWhen = async (sel, ms = 20000) => {
+  await waitFor(`document.querySelector(${JSON.stringify(sel)})`, ms)
+  await js(`document.querySelector(${JSON.stringify(sel)}).click()`)
+}
+const clickTextWhen = async (re, ms = 20000) => {
+  await waitFor(`[...document.querySelectorAll('button')].some(x=>${re}.test(x.textContent))`, ms)
+  await js(`(()=>{const b=[...document.querySelectorAll('button')].find(x=>${re}.test(x.textContent)); b&&b.click()})()`)
+}
+await waitFor(`document.querySelectorAll('.shop-row').length > 0`, 20000)
+await clickWhen('.shop-row')
+await waitFor(`document.querySelectorAll('.add-button').length > 0`, 20000)
+await js(`[...document.querySelectorAll('.add-button')].slice(0,2).forEach(b=>b.click())`)
+await sleep(400)
+await clickWhen('.cart-button')
+await clickTextWhen('/去结账|结算|下单/')
+await clickTextWhen('/确认|下单|提交/')
 await waitFor(`document.querySelector('.skip-wait-button')`, 30000)
 console.log('\n[1] 进到等待页')
 

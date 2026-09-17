@@ -370,17 +370,17 @@ export default function DishArt({
 
       {/* 手写体菜名 */}
       <g className="da-text">
-        <text x="20" y="34" fontSize="10" letterSpacing="1.6" fill={shade(hex, 0.5)} opacity=".72" fontFamily="Nunito, Verdana, sans-serif">
+        <text x="20" y="34" fontSize="10" letterSpacing="1.6" fill={shade(hex, 0.5)} opacity=".72" fontFamily="&quot;Space Mono&quot;, &quot;SF Mono&quot;, monospace">
           {cityEn}
         </text>
-        <text x="280" y="34" fontSize="10" textAnchor="end" letterSpacing="1.2" fill={shade(hex, 0.5)} opacity=".6" fontFamily="Nunito, Verdana, sans-serif">
+        <text x="280" y="34" fontSize="10" textAnchor="end" letterSpacing="1.2" fill={shade(hex, 0.5)} opacity=".6" fontFamily="&quot;Space Mono&quot;, &quot;SF Mono&quot;, monospace">
           {code}
         </text>
         <path d="M20,252 L280,252" stroke={shade(hex, 0.45)} strokeWidth="1" opacity=".2" />
         <text x="150" y="276" fontSize="21" textAnchor="middle" fill="#3D3832" fontFamily="Kaiti SC, STKaiti, KaiTi, PingFang SC, serif">
           {label}
         </text>
-        <text x="150" y="291" fontSize="8.5" textAnchor="middle" letterSpacing="1.1" fill={shade(hex, 0.45)} opacity=".7" fontFamily="Nunito, Verdana, sans-serif">
+        <text x="150" y="291" fontSize="8.5" textAnchor="middle" letterSpacing="1.1" fill={shade(hex, 0.45)} opacity=".7" fontFamily="&quot;Space Mono&quot;, &quot;SF Mono&quot;, monospace">
           {en}
         </text>
       </g>

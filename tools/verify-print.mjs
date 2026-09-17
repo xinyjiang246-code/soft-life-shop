@@ -29,6 +29,12 @@ const js = async (e) => { const o = await send('Runtime.evaluate', { expression:
 const ok = (l, v) => console.log('  ✓', l, v ?? '')
 const shot = async (n) => { const rr = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(`/tmp/${tag}-${n}.png`, Buffer.from(rr.data, 'base64')); return `${tag}-${n}` }
 const clickText = (re) => `(()=>{const b=[...document.querySelectorAll('button,a')].find(x=>${re}.test(x.textContent)); if(!b) return false; b.click(); return true})()`
+// 点之前先等它出现 —— 「点空」的代价是后面等不到下一个元素，报出来是假警报
+const waitFor = async (expr, ms = 20000) => {
+  const t0 = Date.now()
+  while (Date.now() - t0 < ms) { if (await js(`!!(${expr})`)) return true; await sleep(250) }
+  throw new Error('等不到: ' + expr)
+}
 
 await send('Page.enable'); await send('Runtime.enable')
 await send('Network.enable'); await send('Network.setCacheDisabled', { cacheDisabled: true })
@@ -55,12 +61,17 @@ assert.ok(home.颗粒是SVG, '颗粒层没上 —— .page-shell 的 background-
 await shot('1-home')
 
 console.log('\n[2] 菜单 → 加购 → 结算 → 等待页')
-await js(`document.querySelectorAll('.shop-row')[0].click()`); await sleep(1400)
+await waitFor(`document.querySelectorAll('.shop-row').length > 0`)
+await js(`document.querySelector('.shop-row').click()`); await sleep(1400)
 await shot('2-menu')
 await js(`window.scrollTo(0,0)`); await sleep(300)
+await waitFor(`document.querySelectorAll('.add-button').length > 0`)
 await js(`[...document.querySelectorAll('.add-button')].slice(0,1).forEach(b=>b.click())`); await sleep(500)
+await waitFor(`document.querySelector('.cart-button')`)
 await js(`document.querySelector('.cart-button').click()`); await sleep(900)
+await waitFor(`[...document.querySelectorAll('button')].some(x=>/去结账|结算|下单/.test(x.textContent))`)
 await js(clickText('/去结账|结算|下单/')); await sleep(900)
+await waitFor(`[...document.querySelectorAll('button')].some(x=>/确认|下单|提交/.test(x.textContent))`)
 await js(clickText('/确认|下单|提交/')); await sleep(1200)
 for (let t = 0; t < 30000; t += 600) { if (await js(`!!document.querySelector('.skip-wait-button')`)) break; await sleep(600) }
 
@@ -124,6 +135,35 @@ assert.ok(end.印章探出像素 <= 16, `印章探出卡片 ${end.印章探出�
 assert.ok(end.章底到eyebrow顶 >= 3, `印章离 eyebrow 只有 ${end.章底到eyebrow顶}px，太挤`)
 assert.ok(/2px 2px 0px/.test(end.硬阴影), `硬阴影应是偏移实色（2px 2px 0），实际 ${end.硬阴影}`)
 await shot('4-ending')
+
+console.log('\n[4b] 结局页的字阶：标题不许留孤字行 · 英文小语必须在重音声部上')
+// 「今天你把自己照顾得很好」11 字 × 28px = 308px，而卡片内宽只有 292px ——
+// 断成 10+1 时「好」会孤零零占一行。均衡断行（text-wrap: balance）切成 6+5 就没事，
+// 但这类「断得难看」在缩略图里几乎看不出，必须量行盒。
+const voice = JSON.parse(await js(`JSON.stringify((()=>{
+  const t = document.querySelector('.ending-title')
+  const rg = document.createRange(); rg.selectNodeContents(t)
+  const lines = [...rg.getClientRects()].map(r => Math.round(r.width))
+  const fs = parseFloat(getComputedStyle(t).fontSize)
+  const a = document.querySelector('.ending-aside')
+  const cs = a ? getComputedStyle(a) : null
+  return {
+    标题行宽: lines, 标题字号: fs,
+    孤字行: lines.length > 1 && Math.min(...lines) < fs * 2,
+    小语: a ? a.innerText : null,
+    小语字体: cs ? cs.fontFamily.split(',')[0].replace(/["']/g, '') : null,
+    小语重: cs ? +cs.fontWeight : 0, 小语斜: cs ? cs.fontStyle : null,
+    小语轴: cs ? cs.fontVariationSettings : null,
+  }
+})())`))
+ok('标题行盒', `${voice.标题行宽.join(' + ')}px（字号 ${voice.标题字号}px）`)
+ok('英文小语', `${voice.小语} → ${voice.小语字体} ${voice.小语重}${voice.小语斜 === 'italic' ? 'i' : ''}`)
+assert.ok(!voice.孤字行, `结局标题出现孤字行：行宽 ${voice.标题行宽.join(' / ')}（字号 ${voice.标题字号}px）`)
+assert.ok(voice.小语, '结局页没有英文小语那一行（.ending-aside）—— 重音声部在这一页就落空了')
+assert.ok(/Fraunces/.test(voice.小语字体 || ''), `英文小语没走 Fraunces，实际 ${voice.小语字体}`)
+assert.equal(voice.小语斜, 'italic', '英文小语不是斜体')
+assert.ok(voice.小语重 >= 700, `英文小语只有 ${voice.小语重} —— 不够重，压不住正文`)
+assert.ok(/WONK/.test(voice.小语轴 || ''), '英文小语没开 WONK 轴')
 
 console.log('\n[5] 全页体检')
 const health = JSON.parse(await js(`JSON.stringify((()=>{

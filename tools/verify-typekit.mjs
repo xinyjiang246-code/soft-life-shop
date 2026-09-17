@@ -37,7 +37,7 @@ const vars = await js(`JSON.stringify((() => {
   const cs = getComputedStyle(document.documentElement)
   // 只查 :root 上的角色变量 —— --jh-mono / --hm-mono 是手账/档案页的**作用域**变量，
   // 挂在 .jh / .archive-page 上，根节点读当然是空的（别把它们写进这里）
-  const names = ['--f-serif', '--f-mono', '--f-body', '--f-cn-serif', '--f-hand']
+  const names = ['--f-serif', '--f-mono', '--f-body', '--f-cn-serif', '--f-hand', '--f-display']
   const out = {}
   names.forEach((n) => { out[n] = cs.getPropertyValue(n).trim() })
   return out
@@ -87,6 +87,50 @@ const bad = await js(`JSON.stringify((() => {
 ok('16px 元素', bad)
 assert.equal(JSON.parse(bad).length, 0, '有元素回落到默认 16px —— 某条 font 声明被丢弃了')
 
-console.log('\n✅ 字型层全绿：变量有值 · 三支字体到位 · 没有回落')
+console.log('\n[4] 声部：重音层是不是真的重，且没有膨胀')
+// 2026-09-18 加了字阶层（斜衬线 800 做重音）。两条不变量：
+//   ① 重音层的元素必须**真的**拿到 italic + 700 以上（否则就是有个后来的规则把它压回去了，
+//      或者浏览器在拿伪斜体糊弄 —— Fraunces 的 ital 轴只有请求到才会是真斜体）；
+//   ② 重音层数量要有上限。它的全部意义就是「少」——不设上限的话，下一个人顺手加几处，
+//      就又回到「所有字都一样」的老问题。
+const VOICE = '.brand,.section-title,.product-section h1,.ending-aside'
+const voice = await js(`JSON.stringify([...document.querySelectorAll(${JSON.stringify(VOICE)})].map((el) => {
+  const cs = getComputedStyle(el)
+  return { 类: String(el.className).slice(0, 24), 文本: (el.innerText || '').replace(/\\s+/g, ' ').slice(0, 20),
+           字体: cs.fontFamily.split(',')[0].replace(/["']/g, ''), 重: +cs.fontWeight, 斜: cs.fontStyle, vf: cs.fontVariationSettings }
+}))`)
+const vs = JSON.parse(voice)
+ok(`重音层元素 ${vs.length} 个`, vs.map((x) => `${x.类}·${x.重}${x.斜 === 'italic' ? 'i' : ''}`).join(' | '))
+for (const x of vs) {
+  assert.ok(/Fraunces/.test(x.字体), `重音层「${x.文本}」没走 Fraunces：${x.字体}`)
+  assert.equal(x.斜, 'italic', `重音层「${x.文本}」不是斜体`)
+  assert.ok(x.重 >= 700, `重音层「${x.文本}」只有 ${x.重} —— 不够重，主次拉不开`)
+  assert.ok(/WONK/.test(x.vf), `重音层「${x.文本}」没开 WONK 轴`)
+}
+assert.ok(vs.length <= 5, `重音层膨胀到 ${vs.length} 个（上限 5）—— 它靠「少」成立，多了就等于没有声部`)
+
+console.log('\n[5] 最窄屏（320px）顶栏店招不许折行')
+// 重音层的店招换成斜体 800 之后自然宽从 134px 长到 146px，
+// 而 320px 顶栏中间只剩下 146px —— 正好卡在边界上，390px 上看不出任何问题。
+// 只测 390px 的守卫永远抓不到这类「最窄屏专属」的折行，所以这里必须再量一遍 320px。
+await send('Emulation.setDeviceMetricsOverride', { width: 320, height: 800, deviceScaleFactor: 2, mobile: true })
+await send('Page.navigate', { url }); await sleep(2400)
+await js(`document.fonts.ready.then(() => true)`)
+const narrow = JSON.parse(await js(`JSON.stringify((()=>{
+  const b = document.querySelector('.brand')
+  const rg = document.createRange(); rg.selectNodeContents(b)
+  const menu = document.querySelector('.menu-button')
+  return {
+    行数: rg.getClientRects().length,
+    文本: b.innerText.replace(/\\s+/g, ' '),
+    左: Math.round(b.getBoundingClientRect().left), 右: Math.round(b.getBoundingClientRect().right),
+    菜单右: menu ? Math.round(menu.getBoundingClientRect().right) : null,
+  }
+})())`))
+ok('320px 店招', `「${narrow.文本}」${narrow.行数} 行 · x ${narrow.左}~${narrow.右}（菜单止于 ${narrow.菜单右}）`)
+assert.equal(narrow.行数, 1, `店招在 320px 折成 ${narrow.行数} 行 —— 斜体比正体宽，窄屏要降一号字`)
+assert.ok(narrow.左 > narrow.菜单右, '店招和左上角菜单按钮压住了')
+
+console.log('\n✅ 字型层全绿：变量有值 · 三支字体到位 · 没有回落 · 重音层克制 · 窄屏不折行')
 ws.close()
 process.exit(0)

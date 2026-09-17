@@ -7,7 +7,9 @@ const ENDINGS = [
   {
     key: 'warm',
     title: '今天你把自己照顾得很好',
-    body: '不必真的吃，也能完整拥有「我在好好生活」的满足感。\nthat\'s the soft life 🤍',
+    body: '不必真的吃，也能完整拥有「我在好好生活」的满足感。',
+    // 这句英文独立成行：它是小铺的「声音」，走重音声部（斜衬线 800），不跟正文混在一起
+    aside: "that's the soft life 🤍",
     eyebrow: 'YOUR ORDER HAS ARRIVED',
   },
   {
@@ -113,6 +115,7 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
 
         <h1 className="ending-title">{ending.title}</h1>
         <p className="ending-body">{ending.body}</p>
+        {ending.aside && <p className="ending-aside">{ending.aside}</p>}
 
         {houseName && (
           <p className="ending-house">

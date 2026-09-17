@@ -1,8 +1,11 @@
 /* 字体：Fraunces（英文标题/衬线，编辑感）+ Space Mono（数字与微标签）+ PingFang/Songti 兜中文。
    2026-09-17 参考用户给的 Paper Press demo 统一字型：
    原来 Cormorant 偏古典纤细、Nunito 是圆润无衬线，两套气质打架；
-   现在英文走一套编辑感衬线，微标签统一打字机 mono —— 中文保持宋体/苹方不变。*/
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Space+Mono:wght@400;700&display=swap');
+   现在英文走一套编辑感衬线，微标签统一打字机 mono —— 中文保持宋体/苹方不变。
+   2026-09-18 用户给了参考图（斜体黑衬线）并要求「字体不能所有的都一样，需要有些突出」：
+   统一之后声部被压平了，所以把 Fraunces 的**轴**打开 ——
+   wght 提到 400..900、ital 两支都要，重音层才能拿到真正的 800 斜体（不是浏览器伪斜体）。*/
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
   --bg-base: #F6F1E8;
@@ -24,6 +27,7 @@
      把 family 值换成对这个变量自身的引用（自引用 = 变量失效 → font 简写整条被丢弃 → 文字回落到 16px）。
      改这里的字体，用「先替换、后补定义」的顺序，或者干脆手改。 */
   --f-serif: "Fraunces", "Songti SC", "STSong", Georgia, serif;  /* 英文衬线标题 / 大数字（中文落宋体） */
+  --f-display: "Fraunces", "Songti SC", Georgia, serif;          /* 重音：斜体 800（栏目名 / 结局那句话） */
   --f-mono: "Space Mono", "SF Mono", ui-monospace, monospace;    /* 微标签 / 数据行 / 编号 */
   --f-body: "PingFang SC", "Microsoft YaHei", sans-serif;        /* 正文 */
   --f-cn-serif: "Songti SC", "STSong", serif;                    /* 中文衬线（有温度的长句） */
@@ -450,7 +454,7 @@ img { max-width: 100%; display: block; }
   border-radius: 999px;
   background: rgba(159, 127, 95, .12);
   color: var(--caramel);
-  font: 500 10px/1 "Nunito", var(--f-body);
+  font: 500 10px/1 var(--f-body);
 }
 
 .counter-meta {
@@ -1716,7 +1720,7 @@ footer {
 }
 
 .pet-says-eyebrow {
-  font: 600 10px/1 \"Quicksand\", system-ui, sans-serif;
+  font: 600 10px/1 var(--f-mono);
   letter-spacing: .15em;
 }
 
@@ -1728,7 +1732,7 @@ footer {
 
 .pet-says-line {
   margin: 0 0 10px;
-  font: 400 17px/1.55 \"Cormorant Garamond\", \"PingFang SC\", serif;
+  font: 400 17px/1.55 var(--f-cn-serif);
   color: #4A453D;
   letter-spacing: .02em;
 }
@@ -1737,7 +1741,7 @@ footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font: 500 10px/1 \"Quicksand\", sans-serif;
+  font: 500 10px/1 var(--f-mono);
   letter-spacing: .08em;
   color: var(--text-sub);
 }
@@ -1750,7 +1754,7 @@ footer {
   border-radius: 100px;
   background: rgba(255, 255, 255, .55);
   border: 1px solid rgba(159, 127, 95, .2);
-  font: 500 10px/1 \"Quicksand\", sans-serif;
+  font: 500 10px/1 var(--f-mono);
   letter-spacing: .08em;
   color: var(--clay);
   cursor: pointer;
@@ -1779,13 +1783,13 @@ footer {
 }
 
 .ai-section-tag {
-  font: 600 10px/1 \"Quicksand\", sans-serif;
+  font: 600 10px/1 var(--f-mono);
   letter-spacing: .15em;
   color: var(--clay);
 }
 
 .ai-section-sub {
-  font: 500 9px/1 \"Quicksand\", sans-serif;
+  font: 500 9px/1 var(--f-mono);
   letter-spacing: .12em;
   color: var(--text-sub);
   opacity: .7;
@@ -1809,7 +1813,7 @@ footer {
 
 .ai-note {
   margin: 4px 0 0;
-  font: 400 16px/1.6 \"Cormorant Garamond\", \"PingFang SC\", serif;
+  font: 400 16px/1.6 var(--f-cn-serif);
   color: var(--text);
   letter-spacing: .02em;
 }
@@ -1831,7 +1835,7 @@ footer {
 }
 
 .ai-palette-chip span {
-  font: 500 8px/1 \"Quicksand\", sans-serif;
+  font: 500 8px/1 var(--f-mono);
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, .4);
   letter-spacing: 0;
@@ -1839,7 +1843,7 @@ footer {
 
 .ai-palette-caption {
   margin: 8px 0 0;
-  font: 500 10px/1.4 \"Quicksand\", sans-serif;
+  font: 500 10px/1.4 var(--f-mono);
   letter-spacing: .12em;
   color: var(--text-sub);
 }
@@ -1881,7 +1885,7 @@ footer {
 }
 
 .ai-recommendation-info em {
-  font: 600 13px/1 \"Quicksand\", sans-serif;
+  font: 600 13px/1 var(--f-body);
   font-style: normal;
   color: var(--clay);
 }
@@ -2283,7 +2287,7 @@ footer {
   display: flex;
   align-items: center;
   gap: 7px;
-  font: 600 11px/1 "Quicksand", var(--f-body);
+  font: 600 11px/1 var(--f-body);
   letter-spacing: .12em;
   color: var(--clay);
 }
@@ -2442,13 +2446,13 @@ footer {
   padding: 4px 10px;
   border-radius: 100px;
   background: rgba(255, 255, 255, .7);
-  font: 600 10px/1 "Quicksand", sans-serif;
+  font: 600 10px/1 var(--f-mono);
   letter-spacing: .12em;
   color: var(--clay);
 }
 
 .special-day {
-  font: 600 10px/1 "Quicksand", sans-serif;
+  font: 600 10px/1 var(--f-mono);
   letter-spacing: .16em;
   color: var(--text-sub);
   opacity: .65;
@@ -2479,7 +2483,7 @@ footer {
 
 .special-en {
   margin: 0 0 8px;
-  font: 500 9px/1 "Quicksand", sans-serif;
+  font: 500 9px/1 var(--f-mono);
   letter-spacing: .16em;
   color: var(--caramel);
 }
@@ -2502,7 +2506,7 @@ footer {
 }
 
 .special-price {
-  font: 600 19px/1 "Quicksand", sans-serif;
+  font: 600 19px/1 var(--f-serif);
   color: var(--clay);
 }
 
@@ -2644,7 +2648,7 @@ footer {
 
 .myshop-code {
   margin: 0 0 5px;
-  font: 500 8px/1 "Quicksand", sans-serif;
+  font: 500 8px/1 var(--f-mono);
   letter-spacing: .14em;
   color: var(--caramel);
 }
@@ -2657,7 +2661,7 @@ footer {
 
 .myshop-en {
   margin: 0 0 5px;
-  font: 500 8px/1 "Quicksand", sans-serif;
+  font: 500 8px/1 var(--f-mono);
   letter-spacing: .1em;
   color: var(--text-sub);
 }
@@ -2675,7 +2679,7 @@ footer {
 }
 
 .myshop-foot span {
-  font: 600 14px/1 "Quicksand", sans-serif;
+  font: 600 14px/1 var(--f-mono);
   color: var(--clay);
 }
 
@@ -2722,7 +2726,7 @@ footer {
   padding: 4px 10px;
   border-radius: 100px;
   background: rgba(184, 198, 172, .3);
-  font: 600 10px/1 "Quicksand", var(--f-body);
+  font: 600 10px/1 var(--f-body);
   letter-spacing: .1em;
   color: #5D6B52;
 }
@@ -2776,7 +2780,7 @@ footer {
 
 .draft-palette-caption {
   margin-left: 4px;
-  font: 500 10px/1 "Quicksand", var(--f-body);
+  font: 500 10px/1 var(--f-body);
   letter-spacing: .08em;
   color: var(--text-sub);
 }
@@ -2789,7 +2793,7 @@ footer {
 .draft-field > span {
   display: block;
   margin-bottom: 5px;
-  font: 500 10px/1 "Quicksand", var(--f-body);
+  font: 500 10px/1 var(--f-body);
   letter-spacing: .12em;
   color: var(--clay);
 }
@@ -2896,7 +2900,7 @@ footer {
   border-radius: 999px;
   background: rgba(255, 255, 255, .74);
   color: #8a7a66;
-  font: 500 8px/1.4 "Nunito", var(--f-body);
+  font: 500 8px/1.4 var(--f-mono);
   letter-spacing: .1em;
 }
 
@@ -3048,7 +3052,7 @@ footer {
   box-shadow: inset 0 -1px 2px rgba(120, 100, 80, .12);
 }
 .pet-color-name {
-  font: 500 10px/1 "Nunito", var(--f-body);
+  font: 500 10px/1 var(--f-body);
   letter-spacing: .04em;
   color: var(--text-sub);
 }
@@ -3424,7 +3428,7 @@ footer {
   border-radius: 5px;
   background: rgba(194, 138, 112, .92);
   color: #fff;
-  font: 600 9px/1.3 "Nunito", var(--f-body);
+  font: 600 9px/1.3 var(--f-mono);
 }
 
 .shop-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -5863,4 +5867,95 @@ footer {
   position: absolute; top: -17px; right: -9px;
   width: 40px; height: 40px; font-size: 10px;
   white-space: nowrap;
+}
+
+
+/* ============================================================================
+   字阶层 · 三声部（2026-09-18）
+
+   用户给了一张参考图（斜体黑衬线）说：「这个英文字体比较好看，就是字体不能所有的
+   都一样，需要有些突出之类的」。
+
+   问题不在字体，在**声部**：上一版（1fae84d）把全站收敛进五支角色字体做对了，
+   但顺手把层级也压平了 —— 51 处 var(--f-serif) 里 45 处都是 w500，
+   中文标题也全是 w500，于是「标题」和「小标」只差字号，读起来一条直线。
+
+   这一层**不引入新字体**，只在同一支 Fraunces 之内开三个声部：
+
+     ① 重音  display  斜衬线 800 + WONK 1   —— 栏目名 / 结局那句话 / 店招（全站 4 处）
+     ② 标题  headline 正体 600              —— 价格与大数字
+     ③ 中文标题                             —— 苹方 Medium → Semibold
+
+   红线：① 只有列出来的这几处。再加一处，就又变回「全都一样」。
+   另外 WONK 是 Fraunces 的俏皮字轴（斜体版的 g/y 会歪一下），
+   opsz 不写死 —— 留给 font-optical-sizing 自动跟字号，否则小字号会拿到大字的骨架。
+   ============================================================================ */
+
+/* ① 重音：斜体 + 加重。 */
+.brand,
+.section-title,
+.product-section h1,
+.ending-aside {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 800;
+  font-variation-settings: "SOFT" 0, "WONK" 1;
+}
+
+/* 斜体比正体宽，店招原来 -1.6px 的字距会把「Soft Life」压叠，回收到 -0.8px */
+.brand { letter-spacing: -.8px; }
+
+/* ⚠️ 斜体 800 的店招在 320px 窄屏会被挤折成两行（实测：正体 500 自然宽 134px，
+   斜体 800 是 146px，而 320px 下顶栏中间只剩 146px）。390px 上完全看不出来 ——
+   这种「只在最窄屏出现」的折行必须靠量。窄屏降一号字，宽度回到 ~131px。 */
+@media (max-width: 350px) {
+  .brand { font-size: 34px; }
+}
+
+/* 栏目名后面那个计数/中文要**退回去**：一行里配一个安静的小标，落差才出得来。
+   这条不能省 —— em 会继承 800，结果整行一样响。 */
+.section-title em,
+.product-section h1 em {
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* 结局页那句英文小语（that's the soft life）—— 之前混在正文里，现在单独一行做重音 */
+.ending-aside {
+  margin: 0 0 24px;
+  font-size: 19px;
+  line-height: 1.3;
+  color: var(--caramel);
+}
+
+/* ② 标题：同一个 Fraunces 的正体，从 500 提到 600。价格与大数字走这个声部。 */
+.bottom-price,
+.cart-price,
+.archive-bar span,
+.pet-stat-num,
+.ledger-stat b,
+.rescue-tally b,
+.charity-hero-num {
+  font-weight: 600;
+}
+
+/* ③ 中文大标题：每页最响的那句中文，苹方/宋体 Medium → Semibold（差一档就够，再多会发闷）。
+   text-wrap: balance 是顺手治一个老毛病：结局页「今天你把自己照顾得很好」11 字 ×28px = 308px，
+   卡片内宽只有 292px → 断成「…得很」+「好」，「好」孤零零一个字占一行。
+   均衡断行会切成 6+5，读起来像个标题块；不支持这条属性的浏览器就退回普通断行，不会更糟。*/
+.hero-copy h1,
+.simple-hero h1,
+.counter-hero-copy h1,
+.delivery-hero h1,
+.store-head h1,
+.world-hero-copy h1,
+.myshop-intro h1,
+.rescue-sign h1,
+.rescue-ledger h2,
+.archive-intro h1,
+.pet-hero h1,
+.ending-title,
+.ritual-title {
+  font-weight: 600;
+  text-wrap: balance;
 }
