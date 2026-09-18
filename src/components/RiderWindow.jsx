@@ -33,8 +33,6 @@ const LANDMARKS = [
 
 export default function RiderWindow({
   progress = 0,
-  secondsLeft = 0,
-  totalSeconds = 120,
   choices = {},
   onChoose,
   mode = 'walk',
@@ -42,8 +40,6 @@ export default function RiderWindow({
   const p = Math.min(1, Math.max(0, progress))
   const passed = LANDMARKS.filter((l) => p >= l.at)
   const current = passed[passed.length - 1]
-  const elapsed = Math.max(0, Math.floor((totalSeconds - secondsLeft) / 60))
-  const remain = Math.max(0, Math.ceil(secondsLeft / 60))
 
   // 路上一件件事：只处理「已经骑到的」那些，取**最新一个还没答的**
   // （取最新而不是最早 —— 骑手已经骑过那个水坑了，再问一遍很怪）
@@ -56,12 +52,7 @@ export default function RiderWindow({
   const helped = answered.length
 
   return (
-    <section className="rider-window" aria-label="骑手骑到哪了">
-      <div className="rw-head">
-        <span className="rw-badge"><Bike size={13} strokeWidth={1.7} />骑手骑到哪了</span>
-        <span className="rw-time">已骑 {elapsed} 分 · 还有约 {remain} 分</span>
-      </div>
-
+    <section className="rider-window" aria-label="陪他走">
       <div className="rw-track" aria-hidden="true">
         <div className="rw-line" />
         <div className="rw-line-fill" style={{ width: `${p * 100}%` }} />

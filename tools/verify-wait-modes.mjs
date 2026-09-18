@@ -82,9 +82,23 @@ ok('三选一', modes)
 assert.equal(modes.个数, 3, '应该是三种陪等方式')
 assert.equal(modes.默认选中的, '陪他走', '默认应该是「陪他走」')
 
+// 三个标签必须等高、副标题必须都是单行 —— 一高一矮、一行两行混着，
+// 整排看起来就像没收拾过（2026-09-18 用户：「视觉糙」）。
+// 副标题宽只有约 98px（tab 114px 减内边距），字号 9.5px → 超过 10 个字必折行。
+const tabs = JSON.parse(await js(`JSON.stringify([...document.querySelectorAll('.wait-mode')].map(c => {
+  const s = c.querySelector('small')
+  const rg = document.createRange(); rg.selectNodeContents(s)
+  return { 高: Math.round(c.getBoundingClientRect().height), 副标题行数: rg.getClientRects().length, 副标题: s.textContent }
+}))`))
+ok('三个标签', tabs)
+assert.equal(new Set(tabs.map(t => t.高)).size, 1, '三个标签必须等高，实际 ' + JSON.stringify(tabs.map(t => t.高)))
+assert.ok(tabs.every(t => t.副标题行数 === 1), '三个副标题必须都是单行（太长就会折行）: ' + JSON.stringify(tabs))
+
 // ---- [2] walk：路上遇事，替他选一下 ----
 console.log('\n[2] 陪他走')
 await waitFor(`document.querySelector('.rw-moment')`, 45000)
+// 抬头行必须跟着模式走（这是「切换生效了没有」的第一眼凭据）
+assert.equal(await js(`document.querySelector('.wd-badge').textContent.trim()`), '陪他走', '抬头行该显示当前方式')
 const ask = await js(`(() => {
   const m = document.querySelector('.rw-moment')
   return { 问: m.querySelector('.rw-moment-ask').textContent, 选项数: m.querySelectorAll('.rw-moment-opt').length, 底注: m.querySelector('.rw-moment-foot').textContent }
@@ -98,15 +112,35 @@ const reply = await js(`document.querySelector('.rw-reply').textContent`)
 ok('他回话了', reply.slice(0, 30))
 
 // ---- [3] road：帮他看路 ----
+// ⚠️ 这里最重要的一条：三种方式是**互斥**的（选中即替换）。
+//    第一版是「一张常驻的骑手进度窗 + 往下追加玩法模块」—— 于是选了「帮他看路」之后，
+//    第一屏里根本没有它，要往下滑才看得见自己选的东西（用户 2026-09-18：「选了没变化」）。
+//    下面这条断言盯死它：切过去之后，另外两个主块必须不在 DOM 里。
 console.log('\n[3] 帮他看路')
+const blocks = () => js(`JSON.stringify(['.rider-window','.rider-hop','.fold-ritual'].filter(s=>document.querySelector(s)))`)
 await js(`[...document.querySelectorAll('.wait-mode')].find(c=>c.textContent.includes('帮他看路')).click()`)
 await waitFor(`document.querySelector('.rider-hop')`, 5000)
-const swapped = await js(`JSON.stringify({ 还有moment: !!document.querySelector('.rw-moment'), 有跑酷窗: !!document.querySelector('.rider-hop') })`)
-ok('切过去', swapped)
-assert.ok(!/true/.test(JSON.parse(swapped).还有moment.toString()), '切走后不该再弹「路上遇事」')
+const onlyRoad = await blocks()
+ok('切过去', onlyRoad)
+assert.equal(onlyRoad, JSON.stringify(['.rider-hop']), '选中即替换：此时页面上只该有 .rider-hop')
+assert.equal(await js(`document.querySelector('.wd-badge').textContent.trim()`), '帮他看路', '抬头行要跟着模式换 —— 否则用户看不出切换生效')
+assert.ok(!(await js(`!!document.querySelector('.rw-moment')`)), '切走后不该再弹「路上遇事」')
+
+// 障碍必须是真图形，不再是「圆角色块 + 头顶一行文字标签」
+const obstacle = await js(`(() => {
+  const it = document.querySelector('.rh-item')
+  if (!it) return null
+  return { 有图形: !!it.querySelector('svg'), 还有文字标签: !!it.querySelector('em') }
+})()`)
+if (obstacle) {
+  ok('障碍', obstacle)
+  assert.ok(obstacle.有图形, '障碍应该是画出来的图形')
+  assert.ok(!obstacle.还有文字标签, '障碍不该再有「一滩水」那样的文字标签')
+}
+
 await js(`document.querySelector('.rh-lane').click()`)
 await sleep(400)
-const hopped = await js(`document.querySelector('.rh-hint').textContent`)
+const hopped = await js(`document.querySelector('.rh-tally')?.textContent || '(没渲染计数)'`)
 ok('点了一下', hopped)
 assert.ok(/提醒了他 1 次/.test(hopped), '点一下要算一次提醒，实际: ' + hopped)
 // ⚠️ 别去匹配 rh-line 的文案内容 —— 占位句里也有「跳过去」三个字，
@@ -121,14 +155,44 @@ assert.ok(/不计分|不会输/.test(foot), '必须写明不计分不会输，�
 console.log('\n[4] 先下线')
 await js(`[...document.querySelectorAll('.wait-mode')].find(c=>c.textContent.includes('先下线')).click()`)
 await waitFor(`document.querySelector('.fold-ritual')`, 5000)
-for (let i = 0; i < 3; i++) { await js(`document.querySelector('.fold-step').click()`); await sleep(260) }
-await waitFor(`document.querySelector('.fold-done')`, 4000)
+const onlyFold = await blocks()
+ok('切过去', onlyFold)
+assert.equal(onlyFold, JSON.stringify(['.fold-ritual']), '选中即替换：此时页面上只该有 .fold-ritual')
+
+// 折纸必须**真的在折**：第一版的「折纸」其实是按三下按钮、纸一动不动。
+// 现在两折分别对应纸的两次形变，而且第二折必须让纸真的变矮。
+const foldState = () => js(`JSON.stringify({
+  左右折过: !!document.querySelector('.fp-sheet.is-x'),
+  上下折过: !!document.querySelector('.fp-wrap.is-y'),
+})`)
+assert.equal(await foldState(), JSON.stringify({ 左右折过: false, 上下折过: false }), '一开始纸应该是平的')
+
+const h1 = await js(`Math.round(document.querySelector('.fp-sheet').getBoundingClientRect().height)`)
+await js(`document.querySelector('.fold-step').click()`); await sleep(700)
+assert.equal(await foldState(), JSON.stringify({ 左右折过: true, 上下折过: false }), '第 1 折只该发生左右对折')
+ok('第 1 折', '纸对折了')
+
+// ⚠️ 第 2 折只写 rotateX(180deg) 是**假折**：那只是把纸镜像一下，占位高度没变，
+//    截图上第 1 折和第 2 折一模一样（2026-09-18 实际踩到）。这里量实在的像素高度。
+await js(`document.querySelector('.fold-step').click()`); await sleep(750)
+const h2 = await js(`Math.round(document.querySelector('.fp-sheet').getBoundingClientRect().height)`)
+ok('第 2 折', `${h1}px → ${h2}px`)
+assert.ok(h2 < h1 * .75, `上下对折后纸该明显变矮，实际 ${h1} → ${h2} —— 多半是只写了 rotateX 没写 scaleY`)
+
+await js(`document.querySelector('.fold-step').click()`); await sleep(750)
+await waitFor(`document.querySelector('.fold-boxwrap.is-on')`, 4000)
 const folded = await js(`(() => {
   const d = document.querySelector('.fold-done')
-  return { 标题: d.querySelector('.fold-done-title').textContent, 收尾: d.querySelector('.fold-done-go').textContent, 有盒子: !!d.querySelector('svg.fold-box') }
+  return {
+    标题: d.querySelector('.fold-done-title').textContent,
+    收尾: d.querySelector('.fold-done-go').textContent,
+    盒子亮起: !!document.querySelector('.fold-boxwrap.is-on'),
+    盒子路径数: document.querySelectorAll('svg.fold-box path').length,
+  }
 })()`)
 ok('折好了', folded)
-assert.ok(folded.有盒子, '折完该出现那个小纸盒')
+assert.ok(folded.盒子亮起, '折完该出现那个小纸盒')
+assert.ok(folded.盒子路径数 >= 3, '盒子应该是有几个面的（盒口 + 左右两壁），实际只有 ' + folded.盒子路径数 + ' 条路径')
 assert.ok(/放下/.test(folded.收尾), '折完必须催人放下手机，实际: ' + folded.收尾)
 
 // ---- [5] 记住上次挑的 ----

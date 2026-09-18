@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, Bike, Check, FastForward, Home, Package, ShoppingBag, Truck, X } from 'lucide-react'
+import { ArrowLeft, Bike, Check, FastForward, Hand, Home, Package, Scissors, ShoppingBag, Truck, X } from 'lucide-react'
 import {
   OFFLINE_TASKS,
   PATIENCE_NOTE,
@@ -27,6 +27,9 @@ const STEPS = [
 
 // 前 4 步快速「预演」：每步 3 秒，让用户先看到完整流程
 const STEP_DURATION = 3000
+
+// 每个陪等方式配一个图标 —— 换方式时抬头一起换，切换立刻看得见
+const WAIT_ICONS = { walk: Hand, road: Bike, offline: Scissors }
 
 const RITUAL_TEXT = {
   received: { active: '小铺已收到你的订单', done: '温柔订单已确认' },
@@ -120,6 +123,12 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
 
   const houseLabel = houseName ? `「${houseName}」` : '你家门口'
   const left = patienceLeft(patience)
+
+  // 抬头行：这一块三种方式共用（回答同一个问题 —— 还要多久）
+  const elapsedMin = Math.max(0, Math.floor((WAIT_SECONDS - secondsLeft) / 60))
+  const remainMin = Math.max(0, Math.ceil(secondsLeft / 60))
+  const activeMode = WAIT_MODES.find((m) => m.key === waitMode) || WAIT_MODES[0]
+  const ActiveIcon = WAIT_ICONS[activeMode.key] || Bike
 
   // 快进的花费：按「还没等的分钟数」算（不足 1 分钟按 1 分钟）
   const costMinutes = Math.max(1, Math.ceil(secondsLeft / 60))
@@ -225,25 +234,41 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
         </section>
       )}
 
-      {/* 等待阶段：骑手骑到哪了 —— 一扇进度窗 + 路上能搭把手（不计分、不理也行） */}
+      {/* 等待阶段：这一块就是「你选的那个陪等方式」本身。
+          ⚠️ 三个方式**互斥**：选中即替换。
+             第一版是「常驻的骑手进度窗 + 往下追加一个玩法模块」，
+             于是选了「帮他看路」之后，第一屏里根本没有它 —— 要往下滑才看得见
+             （2026-09-18 用户原话：「选了没变化」）。
+             现在抬头行随模式一起换（图标 + 模式名 + 还有多久），切换立刻可见；
+             三个模式的组件只出**主体**，不再各自带一行抬头。 */}
       {isWaiting && (
-        <RiderWindow
-          progress={progress}
-          secondsLeft={secondsLeft}
-          totalSeconds={WAIT_SECONDS}
-          mode={waitMode}
-          choices={roadChoices}
-          onChoose={(momentKey, optKey) =>
-            setRoadChoices((prev) => (prev[momentKey] ? prev : { ...prev, [momentKey]: optKey }))
-          }
-        />
+        <section className="wait-deck" aria-label={activeMode.label}>
+          <div className="wd-head">
+            <span className="wd-badge">
+              <ActiveIcon size={13} strokeWidth={1.7} />
+              {activeMode.label}
+            </span>
+            <span className="wd-time">已骑 {elapsedMin} 分 · 还有约 {remainMin} 分</span>
+          </div>
+
+          {waitMode === 'walk' && (
+            <RiderWindow
+              progress={progress}
+              mode={waitMode}
+              choices={roadChoices}
+              onChoose={(momentKey, optKey) =>
+                setRoadChoices((prev) => (prev[momentKey] ? prev : { ...prev, [momentKey]: optKey }))
+              }
+            />
+          )}
+
+          {/* 陪等方式 · 帮他看路（有点手感，但撞了也只是溅一裤腿水） */}
+          {waitMode === 'road' && <RiderHop active={isWaiting} />}
+
+          {/* 陪等方式 · 先下线（折完就让你放下手机） */}
+          {waitMode === 'offline' && <FoldRitual />}
+        </section>
       )}
-
-      {/* 陪等方式 · 帮他看路（有点手感，但撞了也只是溅一裤腿水） */}
-      {isWaiting && waitMode === 'road' && <RiderHop active={isWaiting} />}
-
-      {/* 陪等方式 · 先下线（折完就让你放下手机） */}
-      {isWaiting && waitMode === 'offline' && <FoldRitual />}
 
       {/* 等待阶段：骑手来信（等待不是空转） */}
       {isWaiting && (

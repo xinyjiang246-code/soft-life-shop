@@ -4869,24 +4869,12 @@ footer {
 .cart-stepper button:disabled { opacity: .35; cursor: default; }
 
 /* ============================================================
-   骑手骑到哪了（2026-09-16 改造：进度窗，不是小游戏）
-   这里**没有任何操作** —— 不能点、不能跳、不计分。
+   陪他走（2026-09-16 起：一扇进度窗；09-17 起，路上能搭把手）
    骑手在路上的位置 = 真实配送进度，你不看它它也照样在走。
+   路上遇事可以替他选一下，但三条底线不动：不计分 · 不会输 · 不理他也照样到。
+   卡片抬头与底由 .wait-deck 提供（2026-09-18 合并三种方式），这里只出**主体**。
    ============================================================ */
-.rider-window {
-  margin: 4px 16px 14px;
-  padding: 14px 14px 12px;
-  background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-}
-.rw-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 18px; }
-.rw-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; letter-spacing: .1em; color: var(--caramel);
-}
-.rw-time { font-size: 11px; color: var(--text-sub); letter-spacing: .03em; white-space: nowrap; }
+.rider-window { display: block; }
 
 /* 路：从「小铺」到「你家楼下」。走过的一段被填上，地标依次亮起。 */
 .rw-track { position: relative; height: 44px; margin: 0 4px; }
@@ -4901,14 +4889,16 @@ footer {
   background: var(--caramel); opacity: .5;
   transition: width .9s linear;
 }
+/* 没走到的地标原本是 opacity .2 + grayscale(1) + scale(.72) —— 灰到看不出是什么东西
+   （2026-09-18 用户：「视觉糙」）。现在留住"还没到"的灰，但让人认得出是什么。 */
 .rw-land {
   position: absolute; top: 50%; line-height: 1;
-  font-size: 13px; opacity: .2;
-  filter: grayscale(1);
-  transform: translate(-50%, -50%) scale(.72);
+  font-size: 13px; opacity: .55;
+  filter: grayscale(.72);
+  transform: translate(-50%, -50%) scale(.8);
   transition: opacity .5s ease, transform .5s ease, filter .5s ease;
 }
-.rw-land.is-passed { opacity: 1; filter: none; transform: translate(-50%, -50%) scale(1); }
+.rw-land.is-passed { opacity: 1; filter: none; transform: translate(-50%, -50%) scale(1.06); }
 .rw-rider {
   position: absolute; top: 50%;
   width: 32px; height: 32px; border-radius: 50%;
@@ -4976,18 +4966,27 @@ footer {
 .wait-mode.is-on b { color: var(--text-main); }
 .wait-mode:active { transform: scale(.98); }
 
-/* ===== 陪等方式 · 帮他看路 ===== */
-.rider-hop {
-  margin: 0 16px 14px; padding: 13px 14px 11px;
-  background: var(--surface); border: 1px solid var(--divider);
-  border-radius: 16px; box-shadow: var(--shadow);
+/* ===== 陪等方式的卡片外壳（2026-09-18）=====
+   三种方式共用**一张**卡：抬头行随模式一起换（图标 + 模式名 + 还有多久），主体互斥。
+   ⚠️ 别退回「一张常驻卡 + 往下追加玩法模块」—— 那样选完要滑下去才看得见自己选的东西，
+      页面上看着像没切换（2026-09-18 用户原话：「选了没变化」）。 */
+.wait-deck {
+  margin: 4px 16px 14px;
+  padding: 14px 14px 13px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
 }
-.rh-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-.rh-badge {
+.wd-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.wd-badge {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; letter-spacing: .1em; color: var(--caramel);
+  font-size: 11px; letter-spacing: .05em; color: var(--caramel);
 }
-.rh-hint { font-size: 10.5px; color: var(--text-sub); }
+.wd-time { font-size: 11px; color: var(--text-sub); letter-spacing: .03em; white-space: nowrap; }
+
+/* ===== 陪等方式 · 帮他看路 ===== */
+.rider-hop { display: block; }
 .rh-lane {
   position: relative; display: block; width: 100%; height: 84px;
   padding: 0; border: 0; border-radius: 12px; overflow: hidden; cursor: pointer;
@@ -4998,41 +4997,76 @@ footer {
   background: rgba(159, 127, 95, .1);
   border-top: 1px dashed rgba(159, 127, 95, .3);
 }
+/* 障碍：原来是一个 24×9 的圆角色块 + 头顶一行文字标签（「一滩水」…），
+   看着像调试占位。现在每个路况由 Obstacle 画成真图形，文字只在结果行里说。 */
 .rh-item {
-  position: absolute; bottom: 20px; left: 100%;
+  position: absolute; bottom: 2px; left: 100%;
   animation-name: rhSlide; animation-timing-function: linear; animation-fill-mode: forwards;
 }
 @keyframes rhSlide { from { left: 100%; } to { left: -16%; } }
-.rh-item i { display: block; width: 24px; height: 9px; border-radius: 5px; }
-.rh-item em {
-  position: absolute; left: 50%; top: -13px; transform: translateX(-50%);
-  font: 400 9px/1 var(--f-body); font-style: normal;
-  color: var(--text-sub); white-space: nowrap;
-}
-.rh-item.is-puddle i { background: #a8c6d8; }
-.rh-item.is-cat i { background: #d9c3a5; }
-.rh-item.is-cone i { background: #e0913f; }
-.rh-item.is-leaf i { background: #b9c48a; }
+.rh-item svg { display: block; }
 .rh-rider {
-  position: absolute; left: 15%; bottom: 18px; color: var(--caramel);
+  position: absolute; left: 15%; bottom: 10px; color: var(--caramel);
   transform: translateY(0); transition: transform .3s cubic-bezier(.3, .8, .4, 1);
 }
 .rh-rider.is-hop { transform: translateY(-24px); transition: transform .18s cubic-bezier(.3, 1.5, .5, 1); }
 .rh-line { margin: 9px 0 0; font-size: 12px; line-height: 1.55; color: var(--text-main); min-height: 18px; }
 .rh-foot { margin: 4px 0 0; font-size: 10.5px; color: var(--text-sub); }
+/* 「你提醒了他 N 次」原来在抬头的右侧，抬头合并进 .wait-deck 后落到这里 */
+.rh-tally { color: var(--caramel); }
 
-/* ===== 陪等方式 · 先下线（折个小盒子）===== */
-.fold-ritual {
-  margin: 0 16px 14px; padding: 13px 14px 12px;
-  background: var(--surface); border: 1px solid var(--divider);
-  border-radius: 16px; box-shadow: var(--shadow);
+/* ===== 陪等方式 · 先下线（折个小盒子）=====
+   2026-09-18 重做：第一版的「折纸」其实是**按三下按钮**，纸一动不动 —— 叫「折」却没有折的动作，
+   按完直接跳出一个静态盒子。现在纸真的折：一张纸分左右两片，右片绕中缝翻过去（左右对折），
+   整张再绕顶边翻一次（上下对折），第三次才撑开成盒。盒子也重画成斜上方视角的开口方盒。 */
+.fold-ritual { display: block; }
+
+.fold-stage {
+  position: relative; height: 112px; margin: 2px 0 10px;
+  display: grid; place-items: center;
+  perspective: 520px;
 }
-.fold-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-.fold-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; letter-spacing: .1em; color: var(--caramel);
+.fp-wrap {
+  transform-origin: center;
+  transform-style: preserve-3d;
+  transition: transform .5s cubic-bezier(.45, .05, .25, 1), opacity .3s ease;
 }
-.fold-hint { font-size: 10.5px; color: var(--text-sub); }
+/* 上下对折：绕中心翻面 + 高度真的减半。
+   ⚠️ 只写 rotateX(180deg) 是错的 —— 那只是把纸镜像一下，**占位高度没变**，
+      纸上看起来跟没折一样（2026-09-18 截图对比第 1 折与第 2 折，两张图一模一样）。
+      scaleY(.5) 才是"变矮"的那一下，rotateX 负责"翻"的过程感。 */
+.fp-wrap.is-y { transform: scaleY(.5) rotateX(180deg); }
+.fold-stage.is-done .fp-wrap { opacity: 0; }
+.fp-sheet { position: relative; width: 76px; height: 76px; transform-style: preserve-3d; }
+.fp-l, .fp-r { position: absolute; top: 0; width: 50%; height: 100%; border: 1px solid #c9a882; }
+.fp-l { left: 0; background: #f7ecdc; border-right: 0; border-radius: 3px 0 0 3px; }
+.fp-r {
+  left: 50%; background: #f2e4d0; border-radius: 0 3px 3px 0;
+  transform-origin: left center;
+  /* 平铺时中缝是**虚线**（「沿这里折」），折过之后才变成纸的硬边 */
+  border-left: 1px dashed rgba(159, 127, 95, .42);
+  transition: transform .5s cubic-bezier(.45, .05, .25, 1), border-left-color .3s ease;
+}
+.fp-sheet.is-x .fp-r { transform: rotateY(-180deg); border-left: 1px solid #c9a882; }
+
+/* 横折痕：未折时留一条虚线；左右折过之后只剩折后那一半宽；上下也折完就收掉 */
+.fp-crease-h { position: absolute; top: 50%; left: 0; width: 100%; border-top: 1px dashed rgba(159, 127, 95, .42); transition: width .35s ease, opacity .3s ease; pointer-events: none; }
+.fp-sheet.is-x .fp-crease-h { width: 50%; }
+.fp-wrap.is-y .fp-crease-h { opacity: 0; }
+.fold-boxwrap {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  opacity: 0; transform: scale(.55) translateY(10px);
+  transition: opacity .4s ease, transform .5s cubic-bezier(.3, 1.45, .5, 1);
+}
+.fold-boxwrap.is-on { opacity: 1; transform: none; }
+
+/* 折到第几步（原来在抬头的「第 1 / 3 步」，抬头合并进 .wait-deck 后挪到这里） */
+.fold-progress { display: flex; justify-content: center; gap: 5px; margin: 0 0 11px; padding: 0; list-style: none; }
+.fold-progress li { width: 5px; height: 5px; border-radius: 50%; background: rgba(159, 127, 95, .22); transition: background .3s, transform .3s; }
+.fold-progress li.is-now { background: rgba(159, 127, 95, .5); transform: scale(1.25); }
+.fold-progress li.is-done { background: var(--caramel); }
+
 .fold-say { margin: 0 0 10px; font-size: 12.5px; line-height: 1.6; color: var(--text-main); }
 .fold-step {
   display: block; width: 100%; padding: 10px; border: 1px solid rgba(159, 127, 95, .3);
@@ -5043,7 +5077,7 @@ footer {
 .fold-step:hover { background: rgba(228, 198, 168, .45); }
 .fold-step:active { transform: scale(.98); }
 .fold-foot { margin: 8px 0 0; font-size: 10.5px; color: var(--text-sub); text-align: center; }
-.fold-box { display: block; width: 118px; height: auto; margin: 4px auto 6px; }
+.fold-box { display: block; width: 118px; height: auto; }
 .fold-done-title { margin: 0; font: 500 12.5px/1.4 var(--f-body); text-align: center; color: var(--text-main); }
 .fold-done-body { margin: 6px 0 0; font: 400 11.5px/1.6 var(--f-cn-serif); text-align: center; color: var(--text-sub); }
 .fold-done-go {
@@ -5052,6 +5086,7 @@ footer {
 }
 @media (prefers-reduced-motion: reduce) {
   .rw-rider, .rw-line-fill, .rw-land { transition: none; }
+  .fp-r, .fp-wrap, .fold-boxwrap { transition: none; }
 }
 
 /* ============================================================

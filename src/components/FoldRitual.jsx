@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Scissors } from 'lucide-react'
 
 /**
  * FoldRitual —— 陪等方式「先下线」
@@ -10,6 +9,13 @@ import { Scissors } from 'lucide-react'
  *
  * 同样不计分：没有「折得快」这种说法，折完也没有奖励 ——
  * 唯一的产出是一句「等下给他装汤，不容易洒」。
+ *
+ * 2026-09-18 重做（用户：「这 3 个互动不行」）：
+ *   ① 第一版的「折纸」其实是**按三下按钮**，纸一动不动，按完直接跳出一个静态盒子 ——
+ *      叫「折」却没有折的动作。现在真的折：一张纸分左右两片，右片绕中缝翻过去（左右对折），
+ *      整张再绕顶边翻一次（上下对折），第三次才撑开成盒。
+ *   ② 盒子重画了。第一版是「梯形 + 两条线 + 两个朝上的三角」，从上面看像两个尖角，
+ *      不像盒子。现在按斜上方视角画一个**开口的方盒**：能看到盒口内侧，左右两面壁。
  */
 
 const STEPS = [
@@ -18,16 +24,39 @@ const STEPS = [
   { key: 'three', label: '撑开成盒', done: '成了。一个能站住的小盒子。' },
 ]
 
+/** 斜上方视角的开口方盒：盒口菱形 + 左右两面壁 */
 function PaperBox() {
-  // 一个折好的小纸盒：正面梯形 + 侧面 + 打开的两个耳朵
   return (
-    <svg viewBox="0 0 120 96" className="fold-box" aria-hidden="true">
-      <path d="M22 40 L98 40 L86 84 L34 84 Z" fill="#f3e6d4" stroke="#9f7f5f" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M22 40 L60 52 L98 40" fill="none" stroke="#9f7f5f" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M60 52 L60 84" fill="none" stroke="#c9a882" strokeWidth="1.3" />
-      <path d="M34 40 L28 22 L52 30 Z" fill="#f7ede0" stroke="#9f7f5f" strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M86 40 L92 22 L68 30 Z" fill="#f7ede0" stroke="#9f7f5f" strokeWidth="1.5" strokeLinejoin="round" />
+    <svg viewBox="0 0 120 100" className="fold-box" aria-hidden="true">
+      <path d="M16 32 L60 12 L104 32 L60 52 Z" fill="#e6d4bb" />
+      <path d="M16 32 L60 12 L104 32" fill="none" stroke="#b08f6a" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M16 32 L60 52 L60 86 L16 66 Z" fill="#f8eedf" stroke="#b08f6a" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M60 52 L104 32 L104 66 L60 86 Z" fill="#eee0c9" stroke="#b08f6a" strokeWidth="1.4" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+/** 折纸舞台：纸真的在折，不是按钮文字变一下 */
+function FoldStage({ step }) {
+  const done = step >= STEPS.length
+  const foldedX = step >= 1
+  const foldedY = step >= 2
+
+  return (
+    <div className={`fold-stage${done ? ' is-done' : ''}`} aria-hidden="true">
+      <div className={`fp-wrap${foldedY ? ' is-y' : ''}`}>
+        <div className={`fp-sheet${foldedX ? ' is-x' : ''}`}>
+          <span className="fp-l" />
+          <span className="fp-r" />
+          {/* 还没折的那道折痕留一条虚线 —— 否则「折」看不出发生了什么。
+              竖折痕由 .fp-r 的左边框承担（折过之后变实线）。 */}
+          <span className="fp-crease-h" />
+        </div>
+      </div>
+      <div className={`fold-boxwrap${done ? ' is-on' : ''}`}>
+        <PaperBox />
+      </div>
+    </div>
   )
 }
 
@@ -37,10 +66,13 @@ export default function FoldRitual() {
 
   return (
     <section className="fold-ritual" aria-label="先下线">
-      <div className="fold-head">
-        <span className="fold-badge"><Scissors size={13} strokeWidth={1.7} />先下线</span>
-        <span className="fold-hint">{done ? '折好了' : `第 ${step + 1} / ${STEPS.length} 步`}</span>
-      </div>
+      <FoldStage step={step} />
+
+      <ol className="fold-progress" aria-hidden="true">
+        {STEPS.map((s, i) => (
+          <li key={s.key} className={i < step ? 'is-done' : i === step ? 'is-now' : ''} />
+        ))}
+      </ol>
 
       {!done ? (
         <div className="fold-doing">
@@ -52,7 +84,6 @@ export default function FoldRitual() {
         </div>
       ) : (
         <div className="fold-done">
-          <PaperBox />
           <p className="fold-done-title">一个能站住的小盒子</p>
           <p className="fold-done-body">
             等他到了给他装汤，不容易洒。他会愣一下，说「还挺讲究」。
