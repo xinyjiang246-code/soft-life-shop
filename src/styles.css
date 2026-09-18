@@ -5994,3 +5994,165 @@ footer {
   font-weight: 600;
   text-wrap: balance;
 }
+
+
+/* ============================================================================
+   交互层（2026-09-18 · 用户：「然后我需要一些交互」）
+   三块：① 切页转场 ② 全局点击手感 ③ 加购 → 购物袋动线。
+   刻意**不动玩法、不动布局、不动配色** —— 全是"摸起来"的差别。
+   ============================================================================ */
+
+/* ---- ① 切页转场 -------------------------------------------------------------
+   走过的两条弯路（详见 main.jsx 的注释，别再走回去）：
+   · 「给页面套 transform 做滑入」→ `.bottom-bar` 是 position:fixed，
+     祖先带 transform 会把它的包含块换成那个祖先，动画期间底栏掉到内容底部。
+   · View Transitions → 视觉上没问题，但 **Chrome 在转场进行中不让实时内容参与
+     命中测试**：实测转场期间 elementFromPoint 一律返回 HTML、真实点击到不了新页面
+     （连点两次顶栏返回键都回不去），`::view-transition{pointer-events:none}`
+     也拦不住（computed 确认是 none）。等于每次切页有 ~260ms 全页点不动。
+
+   现在这条：给屏幕根节点的**子元素**加一段进场（opacity + translate），
+   把 `.bottom-bar` 排除在外（它在视口底部固定，本来就该纹丝不动、立刻可用）。
+   方向由 main.jsx 写在 <html data-nav> 上：前进从左推入、返回从右退回。
+   ⚠️ 只动「子元素」是因为：动根节点的话，它内部的 fixed 子元素会被一起换掉包含块。
+   ⚠️ 填充模式必须是 `backwards` 不是 `both`：关键帧的 `to` 里不写 translate 时，
+      Chrome 会把它解成 `translate: 0px`（实测），而 **`0px` 不是 `none`** ——
+      `both` 会让动画结束后这些元素**永久**挂着包含块，把里面的 `.jh-detail`（手账详情）、
+      `.modal-backdrop`、`.exchange-backdrop` 全弄坏。`backwards` 结束后交还给自然值（none）。
+   ---------------------------------------------------------------------------- */
+.page-shell > *:not(.toast) > *:not(.bottom-bar) {
+  animation: screenInFwd .26s cubic-bezier(.22, .8, .3, 1) backwards;
+}
+html[data-nav="back"] .page-shell > *:not(.toast) > *:not(.bottom-bar) {
+  animation-name: screenInBack;
+}
+@keyframes screenInFwd {
+  from { opacity: 0; translate: 10px 0; }
+  to   { opacity: 1; }
+}
+@keyframes screenInBack {
+  from { opacity: 0; translate: -10px 0; }
+  to   { opacity: 1; }
+}
+
+/* ---- ② 全局点击手感 ---------------------------------------------------------
+   原来全站只有 8 处写了 :active（.add-button / .primary-button / .skip-wait-button…），
+   另外几十个 chip / 磁贴 / 图标按钮按下去毫无反应 —— 这就是"缺交互"的主要来源。
+
+   两个要点：
+   · 用**独立的 scale / translate 属性**，不用 transform。独立属性和既有 transform
+     是相乘关系，不会互相覆盖 —— 本项目踩过「同一元素两个 transform 只有一个生效」。
+   · transition 写在 `button:not(:disabled)` 上（选择器权重 0-1-1，压过各页面里的
+     类规则 0-1-0），这样全站按钮共用同一条回弹曲线；缺的属性这里都补齐了，
+     不会把谁原有的 background / box-shadow 过渡弄丢。
+   ---------------------------------------------------------------------------- */
+button {
+  -webkit-tap-highlight-color: transparent;   /* 去掉移动端那一下灰色高亮 */
+  touch-action: manipulation;                 /* 去掉移动端 300ms 点击延迟 */
+  -webkit-user-select: none;
+  user-select: none;
+}
+button:not(:disabled) {
+  transition:
+    scale .18s cubic-bezier(.34, 1.56, .64, 1),
+    transform .18s cubic-bezier(.34, 1.56, .64, 1),
+    translate .18s cubic-bezier(.34, 1.56, .64, 1),
+    box-shadow .2s ease, background .2s ease, background-color .2s ease,
+    border-color .2s ease, color .2s ease, opacity .22s ease;
+}
+/* 按下用手指按住的那一下要快，松开才用回弹曲线 —— 所以按下时把时长压短 */
+button:active:not(:disabled) {
+  transition-duration: .07s, .07s, .07s, .2s, .2s, .2s, .2s, .2s, .2s;
+}
+/* 兜底幅度：没被下面分组点到的按钮都有反应。
+   ⚠️ 这里的 `:not()` 必须包 `:where()`：`:not(.flip-toggle)` 会把权重加到
+   (0,3,1)，比下面分组写的 `.icon-button:active:not(:disabled)` (0,3,0) **还高** ——
+   于是所有分组幅度全部失效、全站一律缩 0.97（2026-09-18 实测踩到，
+   靠 tools/verify-interactions.mjs 量出来才发现）。`:where()` 权重是 0，
+   兜底规则回到 (0,1,1)，分组才管得住。
+   .flip-toggle 例外 —— 它是翻面卡片，按下去缩会跟 3D 翻面打架。 */
+button:active:not(:where(:disabled, .flip-toggle)) { scale: .97; }
+
+/* 小图标 / 小按钮：缩得明显一点才看得出来 */
+.icon-button:active:not(:disabled),
+.hint-close:active,
+.cart-remove:active,
+.wish-toggle:active,
+.cart-stepper button:active:not(:disabled) { scale: .86; }
+
+/* chip / 页签：中幅度 */
+.kind-chip:active,
+.mood-chip:active,
+.category-tab:active { scale: .93; }
+
+/* 大块可点面（整条入口 / 磁贴）：只压一点点 —— 缩多了四边会露出纸底 */
+.rescue-strip:active,
+.world-entry:active,
+.counter-card:active { scale: .994; }
+.corner-tile:active { scale: .985; translate: 0 1px; }
+
+/* 键盘操作时的焦点环：全站统一，别让 Tab 用户失去位置感 */
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--caramel);
+  outline-offset: 2px;
+}
+
+/* ---- ③ 加购 → 购物袋动线 ----------------------------------------------------
+   起点是「最后一次按下的位置」（见 src/flyToBag.js），落点是顶栏 .bag-button。
+   飞行轨迹写在 JS 的 Web Animations 里（要按落点算弧高），这里只管长相。 */
+.fly-token {
+  position: fixed;
+  z-index: 90;
+  width: 13px; height: 13px;
+  border-radius: 999px;
+  background: var(--matcha);
+  box-shadow: 0 0 0 3px rgba(184, 198, 172, .3), 0 2px 6px rgba(74, 69, 64, .18);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* 到位：袋子晃一下（头一歪、回正） */
+.bag-button.is-bumped { animation: bagBump .46s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes bagBump {
+  0%   { scale: 1;    rotate: 0deg; }
+  30%  { scale: 1.22; rotate: -8deg; }
+  62%  { scale: .94;  rotate: 6deg; }
+  100% { scale: 1;    rotate: 0deg; }
+}
+
+/* 角标弹一下 —— 数字本身 React 会重渲染，但不重播动画，所以这里靠 class 重放 */
+.cart-count.is-popped { animation: countPop .52s cubic-bezier(.3, 1.5, .5, 1); }
+@keyframes countPop {
+  0%   { scale: 1; }
+  28%  { scale: 1.6; }
+  58%  { scale: .88; }
+  100% { scale: 1; }
+}
+
+/* ---- ④ 数字变了要看得出来 ---------------------------------------------------
+   购物袋里的加减、合计金额：数字原地换掉是"看不见"的，
+   给一个极短的上移淡入，让人确认"我这一下算数了"。
+   组件侧靠 key 变化重挂元素来重播（见 CartScreen / CheckoutScreen）。 */
+.qty-num,
+.num-bump { animation: numPop .26s cubic-bezier(.3, 1.5, .5, 1); }
+@keyframes numPop {
+  from { opacity: .4; translate: 0 -3px; }
+  to   { opacity: 1;  translate: 0 0; }
+}
+
+/* ---- ⑤ 减弱动态效果 ---------------------------------------------------------
+   JS 侧已经跳过转场与飞行（见 main.jsx / flyToBag.js），这里再兜一道：
+   用户可能在打开着页面的时候改系统设置。 */
+@media (prefers-reduced-motion: reduce) {
+  .page-shell > *:not(.toast) > *:not(.bottom-bar) { animation: none; }
+  button:not(:disabled) { transition: none; }
+  .fly-token { display: none; }
+  .bag-button.is-bumped,
+  .cart-count.is-popped,
+  .qty-num,
+  .num-bump { animation: none; }
+}

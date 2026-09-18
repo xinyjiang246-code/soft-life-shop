@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Sparkles } from 'lucide-react'
 import './styles.css'
+import { flyToBag, rememberPointer } from './flyToBag.js'
 import { RESCUE, buildRescueShelf, dateSeed, getItem, getTodaySpecial, levelForMeals, setCustomItems, setRescueItems, setRuntimeItems, setWorldItems, stickerPool, toItemFromSpecial } from './data.js'
 import { forgeMenu, getKitchen, getTodayKitchen } from './dishForge.js'
 import { loadCart, loadCharity, loadCustomItems, loadHouseName, loadPet, loadRescue, loadWishes, loadWorld, logJournalOrder, saveCart, saveCharity, saveCustomItems, savePet, saveRescue, saveWishes, saveWorld } from './storage.js'
@@ -51,6 +52,10 @@ function App() {
     setCustomItems(customItems)
   }, [customItems])
 
+  // 记住最后一次按下的屏幕坐标：加购动效从那儿起飞。
+  // 这样不用给 8 个页面的 onAdd 都加一个「你按在哪儿」的参数。
+  useEffect(() => rememberPointer(), [])
+
   useEffect(() => {
     const special = getTodaySpecial()
     setRuntimeItems([toItemFromSpecial(special)])
@@ -71,18 +76,37 @@ function App() {
 
   const cartCount = useMemo(() => Object.values(cart).reduce((sum, qty) => sum + qty, 0), [cart])
 
-  const navigate = useCallback((nextScreen, nextParams = {}) => {
+  const navigate = useCallback((nextScreen, nextParams = {}, dir = 'fwd') => {
+    // ---- 切页转场（2026-09-18）----
+    // 先说两条**被实测否掉**的路，别再走回去：
+    //  ① 「给页面套一层 transform 做滑入」——`.bottom-bar` 是 position:fixed，
+    //     祖先一旦带 transform，它的包含块就从视口变成那个祖先，动画期间底栏会被
+    //     钉到内容底部（购物袋/结算页比视口高 → 底栏消失再蹦回来）。
+    //  ② View Transitions（startViewTransition）——视觉上完全没问题，固定元素也安全，
+    //     但 **Chrome 在转场进行中不让实时内容参与命中测试**：实测转场期间
+    //     `elementFromPoint` 一律返回 HTML，真实点击也到不了新页面
+    //     （连点两次顶栏返回键都回不去），`::view-transition{pointer-events:none}`
+    //     设了也没用（computed 确实是 none，照样拦）。
+    //     等于每次切页有 ~260ms 全页点不动 —— 对一个"用手点"的 App 来说不可接受。
+    // 所以现在走的是最朴素也最安全的一条：**给屏幕根节点的子元素加一段进场动画**，
+    // 只动 opacity + translate，并把 .bottom-bar 排除在外（见 styles.css）。
+    // opacity 与「已结束的 translate」都不产生包含块，命中也完全不受影响。
+    document.documentElement.dataset.nav = dir
     setParams(nextParams)
     setScreen(nextScreen)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // 复位滚动要**立刻**：否则新页面一边淡入一边还在滚，看着像卡了一下。
+    // ⚠️ CSS 里有 `html { scroll-behavior: smooth }`，写 `scrollTo(0,0)` 仍然会被
+    //    它接管成平滑滚动 —— 必须显式 behavior:'instant' 才真的瞬间归位。
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [])
 
   const goBack = useCallback(() => {
+    // 返回一律走 back 方向（转场反着播）
     // 店铺页可能从首页进来，也可能从「全部店铺」进来 —— 按来路回去
-    if (screen === 'counter') navigate(params.from === 'counters' ? 'counters' : 'home')
-    else if (screen === 'counters' || screen === 'cart' || screen === 'archive' || screen === 'charity' || screen === 'rescue' || screen === 'search' || screen === 'wishlist') navigate('home')
-    else if (screen === 'checkout') navigate('cart')
-    else navigate('home')
+    if (screen === 'counter') navigate(params.from === 'counters' ? 'counters' : 'home', {}, 'back')
+    else if (screen === 'counters' || screen === 'cart' || screen === 'archive' || screen === 'charity' || screen === 'rescue' || screen === 'search' || screen === 'wishlist') navigate('home', {}, 'back')
+    else if (screen === 'checkout') navigate('cart', {}, 'back')
+    else navigate('home', {}, 'back')
   }, [screen, navigate, params.from])
 
   // 加进袋子。惜食柜的东西有份数上限 —— 柜上就剩那么几份，
@@ -100,6 +124,9 @@ function App() {
       saveCart(next)
       return next
     })
+    // 加购动线：一个小点从按下处飞进顶栏的购物袋，到位后袋子晃一下、角标弹一下。
+    // 纯视觉，失败也不影响加购本身 —— 所以不 await、不 try 之外的任何编排。
+    flyToBag()
     setToast({ key: Date.now(), message: `已加入购物篮 · ${item.cn}` })
   }, [cart])
 

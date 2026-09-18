@@ -162,7 +162,7 @@ function TopBar({ count, wishCount, onOpenMenu, onNavigate }) {
           <Heart size={22} strokeWidth={1.45} />
           {wishCount > 0 && <span className="cart-count wish-count">{wishCount}</span>}
         </button>
-        <button className="icon-button cart-button" aria-label={`购物袋，${count} 件商品`} onClick={() => onNavigate('cart')}>
+        <button className="icon-button cart-button bag-button" aria-label={`购物袋，${count} 件商品`} onClick={() => onNavigate('cart')}>
           <ShoppingBag size={21} strokeWidth={1.45} />
           {count > 0 && <span className="cart-count">{count}</span>}
         </button>

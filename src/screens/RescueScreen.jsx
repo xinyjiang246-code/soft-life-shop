@@ -64,7 +64,7 @@ export default function RescueScreen({ shelf = [], rescue, cart = {}, cartCount 
           <ArrowLeft size={25} strokeWidth={1.4} />
         </button>
         <span className="topbar-title serif">{RESCUE.name}</span>
-        <button className="icon-button cart-button" aria-label={`购物袋，${cartCount} 件商品`} onClick={() => onNavigate('cart')}>
+        <button className="icon-button cart-button bag-button" aria-label={`购物袋，${cartCount} 件商品`} onClick={() => onNavigate('cart')}>
           <ShoppingBag size={21} strokeWidth={1.45} />
           {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
         </button>

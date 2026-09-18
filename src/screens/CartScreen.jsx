@@ -68,7 +68,9 @@ export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
                 </div>
                 <div className="cart-stepper">
                   <button aria-label="减少" onClick={() => bump(item, -1)}><Minus size={16} strokeWidth={1.4} /></button>
-                  <span>{qty}</span>
+                  {/* key={qty} 是为了让数字变化时重挂元素、重播一次 .qty-num 的淡入 ——
+                      React 只改文本不会重播 CSS 动画，换 key 才会 */}
+                  <span key={qty} className="qty-num">{qty}</span>
                   <button
                     aria-label="增加"
                     onClick={() => bump(item, 1)}
@@ -125,7 +127,7 @@ export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
         <div className="bottom-bar">
           <div className="bottom-total">
             <span className="bottom-label">合计</span>
-            <span className="bottom-price">¥{total}</span>
+            <span key={total} className="bottom-price num-bump">¥{total}</span>
           </div>
           <button className="primary-button" onClick={() => onNavigate('checkout')}>
             去结算

@@ -1,6 +1,6 @@
 # 慢活小铺 · 项目长期约定
 
-> 只留「下一个人接着做必须知道」的决策与红线。**操作细节与 89 条坑点一律见 skill `soft-life-web-dev`**，用户原话见各日 `YYYY-MM-DD.md`。
+> 只留「下一个人接着做必须知道」的决策与红线。**操作细节与 95 条坑点一律见 skill `soft-life-web-dev`**，用户原话见各日 `YYYY-MM-DD.md`。
 
 ## 一、是什么 / 为什么
 
@@ -63,16 +63,33 @@
 - `.archive-card.has-ai` 让卡片随内容长（修过 AI 面板被裁 394px）；A/B 只需切这个类名。
 - 验收集成素材：`tools/seedPhoto.mjs` 用项目真照片（matcha 拿铁）——**交付图里的测试素材必须一眼认得出是食物**；断言阈值从素材推导（别写死 2000 字符/1200px，换素材会假红）。
 
-## 九、技术 / 验证（只留最贵，细节见 skill 89 条坑点）
+## 九、技术 / 验证（只留最贵，细节见 skill 95 条坑点）
 
 - 预览：`python3 -m http.server 8080 --bind 127.0.0.1`（cwd=dist/）；别让用户开 `file://`（白屏）；`base:'./'` 不能动。
 - **购物袋金额只有一处实现**：`cartBreakdown(cart)`；对账 effect（角标与真实内容一致），新增每日商品来源要挂上。
 - ⚠️ **build 绿 ≠ 接线对**（esbuild 不查作用域）：改回调 prop 后 grep 定义 + 真机走到那页。
 - ⚠️ **假警报比漏报更贵**：断言失败先怀疑探针，用第二种手段复核，最后才改产品。`waitFor` 条件选「只有成功才出现」的；探针用明确类名；截图前等动画播完（别用 `getAnimations().finished`）；`captureScreenshot` clip 是页面坐标；注入字符串里的正则转义会被 Node 先吃一遍。
+- ⚠️ **CDP 截图抓不到动画中间帧**（会等合成器稳定）→ `pause()` + 设 `currentTime` 冻住再截；**记录坐标与截图生效差 ~300ms**，交付图上的指示圈会漂。
 - ⚠️ 超几十 KB 不进 localStorage（`storage.js` 写满**静默失败**）；盖层必须不透明（量 alpha）；「状态写了没人渲染」按数据问题查（它从哪进来？在哪被读出去？）。
-- 搜中文用 `Grep` 工具（BSD grep 静默失配）；改完 `.mjs` 先 `node --check`。
+- 搜中文用 `Grep` 工具（BSD grep 静默失配，`\|` 交替也一样静默失配）；改完 `.mjs` 先 `node --check`。
+- **同一文件不要在一次消息里发两个 Edit** —— 会互相覆盖，两边都报成功但只有一处落盘。
 
 ## 十、并行 · 版本保护
 
 - git 已建基线；每完成一段就提交；并行前 `git status`；动手前后 `ls -lat src/**` 核查归属（多 agent 同改）；接手前摸清半成品边界。覆盖性命令别写成一条长链（可能重跑两次）。
 - `clipboard-images/` 全局共享，新截图别默认是本项目。
+
+## 十一、交互层（2026-09-18，用户「然后我需要一些交互」）
+
+三件事，**都没动玩法 / 布局 / 配色**，全是"摸起来"的差别。
+
+- **① 切页进场**：屏幕根节点的**子元素**做 `opacity` + `translate` 进场（前进从右 10px、返回从左，方向在 `<html data-nav>`），`.bottom-bar` 排除在外。动画 260ms。
+  - **两条被实测否掉的路，别走回去**：① 给页面套 transform → `.bottom-bar` 是 fixed，祖先带 transform 会换掉它的包含块，动画期间底栏掉到内容底部；② **View Transitions**（视觉完美、fixed 也安全）但 Chrome 在转场中不让实时内容参与命中测试 → 每次切页 ~260ms **全页点不动**（`pointer-events:none` 也拦不住）。就是它把 `verify-pet-pat` 打红的。
+  - 填充必须 `backwards`：`to` 里不写 translate 时 Chrome 解成 `translate: 0px`，而 **`0px` ≠ `none`**，`both` 会永久挂包含块 → 弄坏 `.jh-detail` / `.modal-backdrop` / `.exchange-backdrop`。
+  - `html { scroll-behavior: smooth }` 会让 `scrollTo(0,0)` 也变平滑 → 切页要写 `behavior:'instant'`。
+- **② 全局点击手感**：`button:not(:disabled)` 统一 transition（权重 (0,1,1) 压得住各页类规则）+ `:active` 时长压到 .07s 回弹曲线；幅度分组：小图标 .86 / chip .93 / 大块面 .994 / 兜底 .97；`.add-button` 仍是印刷层的「硬阴影陷进去」。**用独立 `scale`/`translate` 属性，不用 transform**（和既有 transform 相乘不覆盖）。`.flip-toggle` 例外（会和 3D 翻面打架）。另加统一 `:focus-visible` 环 + `touch-action: manipulation`。
+- **③ 加购动线**：`src/flyToBag.js` —— 记住最后一次按下点（真机取指针坐标，脚本点击退化成被点元素中心）→ 一个小圆点走上抛弧飞进顶栏袋子 → 到位后袋子晃一下 + 角标弹一下。**纯视觉，不参与业务**；开了减弱动态效果就只做袋子/角标反馈。
+  - 顺手修旧债：购物袋按钮补唯一类名 `.bag-button`（原来和心愿单共用 `.cart-button`，飞点认不出袋子）；`.cart-button` 保留，旧脚本照旧。
+  - 购物袋里加减数量 / 合计金额变化都要看得见：`key={qty}` / `key={total}` 重挂元素来重播 `numPop`（React 只改文本不重播 CSS 动画）。
+- **守卫 `tools/verify-interactions.mjs`**（7 段）：进场中途 opacity 必须真的在涨（只看 animationName 不算数）/ 结束态 `translate` 必须是 `none` / **进场动画还在跑时真实鼠标点击必须有效**（最贵的一条）/ 转场全程 `.bottom-bar` 的 `rect.bottom` 恒等于视口高 / `CSS.forcePseudoState` 量按下幅度 / 飞点真位移 + 袋子晃 + 角标弹 / prefers-reduced-motion 下全不发生但功能照常。
+- 交付图：`预览截图/交互_转场与加购动线.png`、`预览截图/交互_点击手感.png`。

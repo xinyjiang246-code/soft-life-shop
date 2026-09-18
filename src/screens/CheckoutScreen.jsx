@@ -106,7 +106,7 @@ export default function CheckoutScreen({ cart, houseName, setHouseName, onNaviga
       <div className="bottom-bar">
         <div className="bottom-total">
           <span className="bottom-label">{count} 件商品</span>
-          <span className="bottom-price">合计 ¥{total}</span>
+          <span key={total} className="bottom-price num-bump">合计 ¥{total}</span>
         </div>
         <button className="primary-button" onClick={handleSubmit}>
           确认下单
