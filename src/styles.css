@@ -43,6 +43,11 @@
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .09 0 0 0 0 .08 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
   /* Cormorant Garamond 默认是旧式数字：1 长得像 I、3/4/5 带长尾，读价格和统计容易看错。
      全局换成等高数字（lining）—— 只改数字形态，不动字体和排版。 */
+  /* —— 安全区（2026-09-20）——
+     iPhone 的 home indicator / 刘海。⚠️ 不写 viewport-fit=cover 时 env() 恒为 0，
+     所以 index.html 的 viewport 和下面这两个变量必须一起改，单改一边等于没改。 */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
   font-family: var(--f-body);
   color: var(--text-main);
   background: var(--bg-base);
@@ -55,8 +60,15 @@ button { color: inherit; font: inherit; cursor: pointer; background: transparent
 img { max-width: 100%; display: block; }
 
 .page-shell {
-  min-height: 100vh;
+  /* ⚠️ 只能用 dvh，不能写 100vh：iOS Safari 的 100vh 算的是「带浏览器工具栏的高度」，
+     页面会多出一截假滚动。
+     ⚠️ 也别想着「写两行做兜底」（100vh 一行、100dvh 一行）—— 构建时的压缩器会把
+     同属性的前一行直接删掉，兜底根本发不出去（2026-09-20 实测：源码里两行，产物里只剩一行）。
+     dvh 要 iOS 15.4+ / Chrome 108+，2026 年这个门槛可以接受。
+     守卫 tools/verify-publish-ready.mjs [3] 断这条。 */
+  min-height: 100dvh;
   padding: 0;
+  padding-top: var(--safe-t);
   background-color: var(--bg-base);
   background-image:
     radial-gradient(rgba(74, 69, 64, .025) .65px, transparent .8px),
@@ -67,13 +79,16 @@ img { max-width: 100%; display: block; }
 .shop-page {
   width: 100%;
   max-width: 430px;
-  min-height: 100vh;
+  min-height: 100dvh;   /* 同上：不能是 100vh，也别写两行兜底 */
+
   margin: 0 auto;
   background: rgba(252, 251, 247, .48);
   border-inline: 1px solid rgba(159, 127, 95, .1);
   overflow: hidden;
   position: relative;
-  padding-bottom: 96px;
+  /* 96px 是给固定底栏留的位置。安全区会把底栏顶高，这里必须同步加，
+     否则最后一行的按钮会被底栏盖住。 */
+  padding-bottom: calc(96px + var(--safe-b));
 }
 
 /* 配送等待页：水彩街景背景（用户 2026-09-17 定的方向）。
@@ -97,7 +112,7 @@ img { max-width: 100%; display: block; }
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding-bottom: 0;
+  padding-bottom: var(--safe-b);
 }
 
 /* Topbar */
@@ -805,7 +820,8 @@ img { max-width: 100%; display: block; }
   transform: translateX(-50%);
   width: 100%;
   max-width: 430px;
-  padding: 14px 20px 24px;
+  /* 24px 给人手留的；安全区再叠一层，否则 home indicator 压在按钮上 */
+  padding: 14px 20px calc(24px + var(--safe-b));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1658,7 +1674,7 @@ footer {
 /* Toast */
 .toast {
   position: fixed;
-  bottom: 110px;
+  bottom: calc(110px + var(--safe-b));
   left: 50%;
   transform: translateX(-50%);
   display: inline-flex;

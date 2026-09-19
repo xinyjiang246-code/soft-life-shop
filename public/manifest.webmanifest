@@ -1,0 +1,17 @@
+{
+  "name": "慢活小铺 · Soft Life",
+  "short_name": "慢活小铺",
+  "description": "一份不会真的送来的外卖 —— 食物不被消耗，钱流向猫粮。等满了，你会拿到一张等待凭证。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6F1E8",
+  "theme_color": "#F6F1E8",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

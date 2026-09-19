@@ -2,3 +2,6 @@ node_modules/
 dist/
 .DS_Store
 *.log
+soft-life-app/
+美国法律导论.pdf
+published-site/
