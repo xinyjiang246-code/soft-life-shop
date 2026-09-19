@@ -27,6 +27,15 @@ paper-press-ui-demo-*/
 soft-life-app/
 generated-images/
 
+# ── ⚠️ src 底下也藏着「不可复现的生图原件」（2026-09-20 补）──────
+# 差点当成「死图」清掉：它们不被任何代码 import（产品用的是同名的 .webp），
+# 但它们是那些 webp 的**源**——AI 生图不可复现，删了就无法重做/重裁商品图。
+#   src/assets/products/*.png  = 商品图原件（含 americano.png ＝ 还没上架的「自创咖啡」）
+#   src/assets/dishes-raw/     = 拉面 / 点心的生图原始（assets/dishes/*.webp 的来源）
+# 只挡在仓库外，文件必须留在本地。
+src/assets/products/*.png
+src/assets/dishes-raw/
+
 # ── 完整性快照（tools/snapshot.mjs 生成）─────────────────────
 # 里面有 40MB 压缩包，是「删东西之前的底」，本机保险用，不进仓库。
 源码快照/
