@@ -3901,6 +3901,35 @@ footer {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12px; color: var(--text-sub); letter-spacing: .03em;
 }
+/* 「今天」—— 氛围条那张卡的下半部分（2026-09-19）。
+   起因：每日心情 / 今日特调 / 惜食柜 / 慢活额度 / 手账 / 世界菜单**全是「每日」的**，
+   但没有一处把它们串成「今天」，于是第二天回来看到的和昨天一模一样。
+   它不可点、没有箭头 —— 是记录牌，不是入口（可点就会变栏目，而它不该有内容页）。
+   ⚠️ 标签走 mono 微标签（同 .about-label），不挂 .section-title：
+      那是重音声部，同一页有数量上限（verify-typekit 盯着）。 */
+.amb-today {
+  position: relative;
+  z-index: 2;
+  margin-top: 11px;
+  padding-top: 10px;
+  /* 不用 --divider(#E8E1D4)：它叠在氛围条那层浅色渐变上几乎看不见，
+     而这条线的职责是把「此刻的环境」和「今天的记录」分开，得看得见。 */
+  border-top: 1px solid rgba(74, 69, 64, .2);
+}
+
+.amb-today-label {
+  margin: 0 0 7px;
+  font: 400 9.5px/1 var(--f-mono);
+  letter-spacing: .1em;
+  color: var(--text-sub);
+}
+
+.amb-today-line {
+  margin: 0;
+  font: 400 12.5px/1.7 var(--f-body);
+  color: var(--text-main);
+}
+
 /* 小雨：几条会落的细线 */
 .amb-rain { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .amb-rain span {

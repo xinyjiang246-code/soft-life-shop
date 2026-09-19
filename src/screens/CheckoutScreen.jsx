@@ -85,7 +85,9 @@ export default function CheckoutScreen({ cart, houseName, setHouseName, onNaviga
       {entries.length > 0 && (
         <section className="checkout-order" aria-label="这一单">
           <div className="section-rule"><span /></div>
-          <h2 className="section-title">这一单 <em>{String(count).padStart(2, '0')}</em></h2>
+          {/* 这里的数字是**件数**，不是订单号 —— 原来写成补零的「02」，
+              摆在紧邻「这一单」的位置会被读成编号。加单位、去掉补零。 */}
+          <h2 className="section-title">这一单 <em>{count} 件</em></h2>
 
           <ul className="co-lines">
             {entries.map(({ item, qty }) => (

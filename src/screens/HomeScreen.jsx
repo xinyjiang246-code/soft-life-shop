@@ -8,6 +8,7 @@ import DishArt from '../components/DishArt.jsx'
 import SoftPet, { moodFromEmoji, neighborArtUrl } from '../components/SoftPet.jsx'
 import PetPops, { spawnPops } from '../components/PetPops.jsx'
 import { MOOD_BY_ZONE, patLine, playPatReaction, zoneFromPoint } from '../petTouch.js'
+import { getTodaySnapshot, todayDoneLines, todayOfferLines } from '../today.js'
 import ShopRow from '../components/ShopRow.jsx'
 import matchaLatteDraw from '../assets/products/matcha-latte-draw.webp'
 import matchaLatteReal from '../assets/products/matcha-latte-real.webp'
@@ -51,10 +52,18 @@ function getWeather(phase) {
   return WEATHERS[hashSeed(`${dateSeed()}:wx`) % WEATHERS.length]
 }
 
-function AmbienceStrip({ isFirstVisit }) {
+function AmbienceStrip({ isFirstVisit, rescueCount = 0, worldCity = '' }) {
   const phase = getPhase()
   const weather = getWeather(phase)
   const WIcon = weather.Icon
+  // 「今天」（2026-09-19）：把散在各处的每日状态串成一天。
+  // 并进这张卡、而不是另起一张 —— 它和问候同性质，都是「小铺开口说的第一句话」。
+  // 它**不可点、没有箭头**：一可点就会变成「栏目」，而这块东西不该有内容页。
+  const snap = useMemo(
+    () => getTodaySnapshot({ rescueCount, worldCity }),
+    [rescueCount, worldCity]
+  )
+  const lines = snap.hasToday ? todayDoneLines(snap) : todayOfferLines(snap)
   return (
     <div className={`home-ambience is-${phase.id} ${weather.id === 'rain' ? 'has-rain' : ''} ${weather.id === 'night' ? 'has-stars' : ''}`} role="status">
       {weather.id === 'rain' && (
@@ -68,6 +77,12 @@ function AmbienceStrip({ isFirstVisit }) {
         <b>{isFirstVisit ? `${phase.greet}。第一次来？` : `${phase.greet}，欢迎回来`}</b>
         <span><WIcon size={14} strokeWidth={1.6} />{weather.label} · {weather.line}</span>
       </p>
+      {lines.length > 0 && (
+        <div className="amb-today">
+          <p className="amb-today-label">TODAY · {snap.label}</p>
+          {lines.map((t) => <p key={t} className="amb-today-line">{t}</p>)}
+        </div>
+      )}
     </div>
   )
 }
@@ -352,7 +367,7 @@ export default function HomeScreen({
         </div>
       )}
 
-      <AmbienceStrip isFirstVisit={isFirstVisit} />
+      <AmbienceStrip isFirstVisit={isFirstVisit} rescueCount={rescueShelf.length} worldCity={worldKitchen?.city || ''} />
 
       <section className="hero pet-host" id="top" aria-label="慢活小铺">
         <div className="hero-copy">
