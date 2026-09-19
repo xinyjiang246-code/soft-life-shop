@@ -35,6 +35,35 @@ import custardBun from './assets/dishes/custard-bun.webp'
 import shumai from './assets/dishes/shumai.webp'
 import eggTart from './assets/dishes/egg-tart.webp'
 
+// 今日特调那 12 杯的图（2026-09-20 补齐，12 杯 × 实拍/油画棒 = 24 张）。
+// 12 杯都是**真实存在的饮料**，
+// 只是每天轮换 —— 它们不该跟「世界上并不存在」的世界菜单归一类，
+// 所以按招牌商品同一套做法配「实拍 + 油画棒」两张。
+import specialOsmanthusColdBrewDraw from './assets/specials/osmanthus-cold-brew-draw.webp'
+import specialOsmanthusColdBrewReal from './assets/specials/osmanthus-cold-brew-real.webp'
+import specialTorchedMilkCapDraw from './assets/specials/torched-milk-cap-draw.webp'
+import specialTorchedMilkCapReal from './assets/specials/torched-milk-cap-real.webp'
+import specialGrapeSodaAmericanoDraw from './assets/specials/grape-soda-americano-draw.webp'
+import specialGrapeSodaAmericanoReal from './assets/specials/grape-soda-americano-real.webp'
+import specialJasmineMilkGreenDraw from './assets/specials/jasmine-milk-green-draw.webp'
+import specialJasmineMilkGreenReal from './assets/specials/jasmine-milk-green-real.webp'
+import specialMochiBrownSugarDraw from './assets/specials/mochi-brown-sugar-draw.webp'
+import specialMochiBrownSugarReal from './assets/specials/mochi-brown-sugar-real.webp'
+import specialPeachOolongFizzDraw from './assets/specials/peach-oolong-fizz-draw.webp'
+import specialPeachOolongFizzReal from './assets/specials/peach-oolong-fizz-real.webp'
+import specialTangerineRedBeanDraw from './assets/specials/tangerine-red-bean-draw.webp'
+import specialTangerineRedBeanReal from './assets/specials/tangerine-red-bean-real.webp'
+import specialCoconutAshLatteDraw from './assets/specials/coconut-ash-latte-draw.webp'
+import specialCoconutAshLatteReal from './assets/specials/coconut-ash-latte-real.webp'
+import specialSaltedYolkCapDraw from './assets/specials/salted-yolk-cap-draw.webp'
+import specialSaltedYolkCapReal from './assets/specials/salted-yolk-cap-real.webp'
+import specialPlumGreenTeaDraw from './assets/specials/plum-green-tea-draw.webp'
+import specialPlumGreenTeaReal from './assets/specials/plum-green-tea-real.webp'
+import specialThickCocoaMilkDraw from './assets/specials/thick-cocoa-milk-draw.webp'
+import specialThickCocoaMilkReal from './assets/specials/thick-cocoa-milk-real.webp'
+import specialSakuraSaltSodaDraw from './assets/specials/sakura-salt-soda-draw.webp'
+import specialSakuraSaltSodaReal from './assets/specials/sakura-salt-soda-real.webp'
+
 // ===== 店铺（原「柜台」）=====
 // 结构对齐真外卖软件：店名 / 评分 / 月售 / 起送价 / 配送费 / 配送时长 / 距离 /
 // 营业时间 / 店内公告 / 满减。前端按「店铺列表 → 进店 → 店内菜单」呈现。
@@ -637,18 +666,66 @@ export const stickerPool = [
 
 // ===== 今日特调：每天自动换一款虚拟饮品 =====
 export const dailySpecials = [
-  { cn: '桂花乌龙冷萃', en: 'OSMANTHUS COLD BREW', price: 26, desc: '桂花落在冷萃上，秋天提前到了。', color: '#E8C87A', emoji: '🌼' },
-  { cn: '烤奶盖厚乳', en: 'TORCHED MILK CAP', price: 25, desc: '奶盖被烤出焦糖色，趁热喝掉。', color: '#D9A86C', emoji: '🔥' },
-  { cn: '青提气泡美式', en: 'GRAPE SODA AMERICANO', price: 23, desc: '气泡把困意顶出去，青提负责好喝。', color: '#A9C46C', emoji: '🍇' },
-  { cn: '茉莉奶绿', en: 'JASMINE MILK GREEN', price: 22, desc: '花香先飘过来，然后才是奶。', color: '#C8D6A8', emoji: '🌿' },
-  { cn: '黑糖麻薯奶茶', en: 'MOCHI BROWN SUGAR', price: 27, desc: '麻薯软到要用吸管追着吃。', color: '#B98A5E', emoji: '🧋' },
-  { cn: '白桃乌龙气泡', en: 'PEACH OOLONG FIZZ', price: 24, desc: '桃子的香，乌龙的回甘，气泡的凉。', color: '#F0B8A8', emoji: '🍑' },
-  { cn: '陈皮红豆沙', en: 'TANGERINE RED BEAN', price: 21, desc: '小时候奶奶煮的那个味道。', color: '#A85D4E', emoji: '🫘' },
-  { cn: '椰子灰拿铁', en: 'COCONUT ASH LATTE', price: 26, desc: '灰得很高级，喝着很温柔。', color: '#A8A29A', emoji: '🥥' },
-  { cn: '咸蛋黄奶盖', en: 'SALTED YOLK CAP', price: 28, desc: '咸甜打架，最后握手言和。', color: '#E4B860', emoji: '🌕' },
-  { cn: '梅子绿茶', en: 'PLUM GREEN TEA', price: 20, desc: '酸得让人清醒，适合下午三点。', color: '#B8C46C', emoji: '🫒' },
-  { cn: '厚可可鲜奶', en: 'THICK COCOA MILK', price: 25, desc: '苦和甜各退一步，刚刚好。', color: '#8A5A44', emoji: '🍫' },
-  { cn: '樱花盐渍气泡', en: 'SAKURA SALT SODA', price: 24, desc: '粉色的气泡往上跑，看着就开心。', color: '#F0C0C8', emoji: '🌸' },
+  {
+    cn: '桂花乌龙冷萃', en: 'OSMANTHUS COLD BREW', price: 26,
+    desc: '桂花落在冷萃上，秋天提前到了。', color: '#E8C87A', emoji: '🌼',
+    image: specialOsmanthusColdBrewDraw, imageReal: specialOsmanthusColdBrewReal,
+  },
+  {
+    cn: '烤奶盖厚乳', en: 'TORCHED MILK CAP', price: 25,
+    desc: '奶盖被烤出焦糖色，趁热喝掉。', color: '#D9A86C', emoji: '🔥',
+    image: specialTorchedMilkCapDraw, imageReal: specialTorchedMilkCapReal,
+  },
+  {
+    cn: '青提气泡美式', en: 'GRAPE SODA AMERICANO', price: 23,
+    desc: '气泡把困意顶出去，青提负责好喝。', color: '#A9C46C', emoji: '🍇',
+    image: specialGrapeSodaAmericanoDraw, imageReal: specialGrapeSodaAmericanoReal,
+  },
+  {
+    cn: '茉莉奶绿', en: 'JASMINE MILK GREEN', price: 22,
+    desc: '花香先飘过来，然后才是奶。', color: '#C8D6A8', emoji: '🌿',
+    image: specialJasmineMilkGreenDraw, imageReal: specialJasmineMilkGreenReal,
+  },
+  {
+    cn: '黑糖麻薯奶茶', en: 'MOCHI BROWN SUGAR', price: 27,
+    desc: '麻薯软到要用吸管追着吃。', color: '#B98A5E', emoji: '🧋',
+    image: specialMochiBrownSugarDraw, imageReal: specialMochiBrownSugarReal,
+  },
+  {
+    cn: '白桃乌龙气泡', en: 'PEACH OOLONG FIZZ', price: 24,
+    desc: '桃子的香，乌龙的回甘，气泡的凉。', color: '#F0B8A8', emoji: '🍑',
+    image: specialPeachOolongFizzDraw, imageReal: specialPeachOolongFizzReal,
+  },
+  {
+    cn: '陈皮红豆沙', en: 'TANGERINE RED BEAN', price: 21,
+    desc: '小时候奶奶煮的那个味道。', color: '#A85D4E', emoji: '🫘',
+    image: specialTangerineRedBeanDraw, imageReal: specialTangerineRedBeanReal,
+  },
+  {
+    cn: '椰子灰拿铁', en: 'COCONUT ASH LATTE', price: 26,
+    desc: '灰得很高级，喝着很温柔。', color: '#A8A29A', emoji: '🥥',
+    image: specialCoconutAshLatteDraw, imageReal: specialCoconutAshLatteReal,
+  },
+  {
+    cn: '咸蛋黄奶盖', en: 'SALTED YOLK CAP', price: 28,
+    desc: '咸甜打架，最后握手言和。', color: '#E4B860', emoji: '🌕',
+    image: specialSaltedYolkCapDraw, imageReal: specialSaltedYolkCapReal,
+  },
+  {
+    cn: '梅子绿茶', en: 'PLUM GREEN TEA', price: 20,
+    desc: '酸得让人清醒，适合下午三点。', color: '#B8C46C', emoji: '🫒',
+    image: specialPlumGreenTeaDraw, imageReal: specialPlumGreenTeaReal,
+  },
+  {
+    cn: '厚可可鲜奶', en: 'THICK COCOA MILK', price: 25,
+    desc: '苦和甜各退一步，刚刚好。', color: '#8A5A44', emoji: '🍫',
+    image: specialThickCocoaMilkDraw, imageReal: specialThickCocoaMilkReal,
+  },
+  {
+    cn: '樱花盐渍气泡', en: 'SAKURA SALT SODA', price: 24,
+    desc: '粉色的气泡往上跑，看着就开心。', color: '#F0C0C8', emoji: '🌸',
+    image: specialSakuraSaltSodaDraw, imageReal: specialSakuraSaltSodaReal,
+  },
 ]
 
 export function getTodaySpecial() {
@@ -749,7 +826,10 @@ export function toItemFromSpecial(special) {
     tags: ['ai'],
     emoji: special.emoji,
     description: special.desc,
-    // 特调也没有照片，走同一套手绘卡（颜色取自这杯的主色）
+    // 有真图的走翻面卡（和 13 款招牌商品同一套：实拍 ↔ 油画棒）；
+    // 还没配图的继续用手绘卡兜底 —— ItemArt 会按「有没有 image/imageReal」自己选。
+    image: special.image,
+    imageReal: special.imageReal,
     art: { kind: 'cup', hex: special.color, city: '慢活小铺', cityEn: 'SOFT LIFE' },
   }
 }

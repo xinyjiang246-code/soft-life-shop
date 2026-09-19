@@ -12,6 +12,8 @@ const out = process.argv[3] || '/tmp/shot.png'
 const click = process.argv[4] && !process.argv[4].startsWith('--') ? process.argv[4] : null
 const extraWait = Number((process.argv.find((a) => a.startsWith('--wait=')) || '--wait=400').split('=')[1])
 const scrollY = Number((process.argv.find((a) => a.startsWith('--scroll=')) || '--scroll=0').split('=')[1])
+// 滚到某个元素：--to=.选择器 （用它比猜 scrollY 靠谱 —— 页面高度会随内容变）
+const scrollTo = (process.argv.find((a) => a.startsWith('--to=')) || '').slice('--to='.length)
 
 const version = await fetch('http://127.0.0.1:9222/json/version').then((r) => r.json())
 const socket = new WebSocket(version.webSocketDebuggerUrl)
@@ -91,7 +93,16 @@ try {
   }
 
   await evaluate('document.fonts.ready.then(() => true)')
-  if (scrollY) {
+  if (scrollTo) {
+    // ⚠️ behavior 必须写死 'instant'：全局 html { scroll-behavior: smooth } 会让
+    //    默认的平滑滚动一直没到位，截图就截在半路上（老坑，见 skill）。
+    await evaluate(`(() => {
+      const el = document.querySelector(${JSON.stringify(scrollTo)})
+      if (!el) return false
+      el.scrollIntoView({ block: 'center', behavior: 'instant' })
+      return true
+    })()`)
+  } else if (scrollY) {
     await evaluate(`window.scrollTo(0, ${scrollY})`)
     await evaluate(`new Promise(r => setTimeout(r, 250))`)
   }

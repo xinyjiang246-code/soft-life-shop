@@ -17,11 +17,16 @@ published-site/
 # ⚠️ 宠物生图原始/ 与 图标生图原始/ 是 tools/petForge.py 与 tools/tileForge.py
 #    的输入源头（RAW_DIR）。删了就没法重新出图：AI 生图不可复现，
 #    同样的 prompt 也画不回同一张。
+# ⚠️ 特调生图原始/ 与 城市生图原始/ 同理 —— 它们是 src/assets/specials/ 与
+#    src/assets/cities/ 里那 34 张 webp 的源（tools/specialArt.py 去水印前的原件）。
+#    判据是「它是不是某张成品的源」，不是「有没有脚本读它」。
 # ⚠️ 参考图/ 是设计依据，代码注释里指路到这里。
 预览截图/
 宠物生图原始/
 图标生图原始/
 商品生图原始/
+特调生图原始/
+城市生图原始/
 参考图/
 paper-press-ui-demo-*/
 soft-life-app/

@@ -1,10 +1,10 @@
 import { ChevronRight, CloudRain, CloudSun, Globe, Heart, Menu, MoonStar, Plus, Refrigerator, Search, ShoppingBag, Sparkles, Sun, Wand2, X } from 'lucide-react'
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { CHARITY, counters, dateSeed, getTodayHint, getTodaySpecial, hashSeed, levelForMeals, menuItems, NEIGHBOR_NAME, PET_NAME, petStages, pickNeighborLine } from '../data.js'
+import { CHARITY, counters, dateSeed, getTodayHint, getTodaySpecial, hashSeed, levelForMeals, menuItems, NEIGHBOR_NAME, PET_NAME, petStages, pickNeighborLine, toItemFromSpecial } from '../data.js'
 import { WORLD_KITCHENS } from '../dishForge.js'
 import { hasVisited, loadMood, markVisited, saveMood } from '../storage.js'
 import FlipImage from '../components/FlipImage.jsx'
-import DishArt from '../components/DishArt.jsx'
+import ItemArt from '../components/ItemArt.jsx'
 import SoftPet, { moodFromEmoji, neighborArtUrl } from '../components/SoftPet.jsx'
 import PetPops, { spawnPops } from '../components/PetPops.jsx'
 import { MOOD_BY_ZONE, patLine, playPatReaction, zoneFromPoint } from '../petTouch.js'
@@ -308,6 +308,9 @@ export default function HomeScreen({
 }) {
   const stage = petStages[levelForMeals(pet.meals)]
   const todaySpecial = useMemo(() => getTodaySpecial(), [])
+  // 今日特调的商品对象（和茶饮铺菜单、购物袋里的是同一个）—— 图从这儿出，
+  // 不再各页各画一份，避免「首页是手绘、菜单是实拍」这种对不上
+  const todayItem = useMemo(() => toItemFromSpecial(getTodaySpecial()), [])
   // 这台设备上从没来过 —— 只用来区分首次/回访的问候语，以及那句「这里是干什么的」。
   // 一进首页就落标记，所以它只会在「第一次那一次」为真。
   const [isFirstVisit] = useState(() => !hasVisited())
@@ -450,17 +453,10 @@ export default function HomeScreen({
           <span className="special-day">DAY {String(dateSeed() % 365).padStart(3, '0')}</span>
         </div>
         <div className="special-body">
-          <div className="special-art" aria-hidden="true">
-            <DishArt
-              kind="cup"
-              hex={todaySpecial.color}
-              city="慢活小铺"
-              cityEn="SOFT LIFE"
-              code="TODAY"
-              label={todaySpecial.cn}
-              en={todaySpecial.en}
-              compact
-            />
+          {/* 走统一出口 ItemArt：配了图的这杯给「实拍 ↔ 油画棒」翻面卡，
+              还没配图的会自动退回原来那张手绘卡，不用在这里分情况。 */}
+          <div className="special-art">
+            <ItemArt item={todayItem} size="sm" prefer="real" />
           </div>
           <div className="special-info">
             <h3>{todaySpecial.cn}</h3>
@@ -480,8 +476,15 @@ export default function HomeScreen({
 
       {/* 世界菜单入口（今天飞哪座城） */}
       <button className="world-entry" onClick={() => onNavigate('world')}>
-        <span className="world-entry-flag" style={{ background: worldKitchen?.hex || 'var(--sage)' }} aria-hidden="true">
-          <Globe size={18} strokeWidth={1.6} />
+        {/* 换成今天那座城市的「空运来信」图（拿不到图时退回原来的小地球） */}
+        <span
+          className="world-entry-flag"
+          style={{ '--world-flag-hex': worldKitchen?.hex || 'var(--sage)' }}
+          aria-hidden="true"
+        >
+          {worldKitchen?.image
+            ? <img src={worldKitchen.image} alt="" loading="lazy" />
+            : <Globe size={18} strokeWidth={1.6} />}
         </span>
         <span className="world-entry-copy">
           <b>世界菜单 · 今日空运自{worldKitchen?.city || '远方'}</b>

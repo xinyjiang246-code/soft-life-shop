@@ -56,6 +56,11 @@ export default function WorldMenuScreen({
       {/* 航空明信片：今天这一桌从哪座城市寄来 */}
       <section className="world-postcard" aria-label="今天的城市">
         <div className="pc-airmail" aria-hidden="true" />
+        {/* 这一桌菜从哪座城市寄来 —— 菜本身是 AI 现编的（手绘卡），
+            但「空运来信」这张照片是真的，第一眼就能看出是哪儿的桌子。 */}
+        <figure className="pc-photo">
+          <img src={kitchen.image} alt="" loading="lazy" />
+        </figure>
         <div className="pc-main">
           <div className="pc-copy">
             <p className="eyebrow">PAR AVION · 空运来信</p>

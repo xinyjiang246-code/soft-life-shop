@@ -11,6 +11,19 @@
 //  所以商品 id 稳定，购物车/刷新都不会错位。
 // ============================================================
 
+// 每座城市的「空运来信」图（2026-09-20 补）—— 菜品是 AI 每天现编的，配不了固定照片，
+// 所以给「城市」配图：明信片页头、首页入口用它交代「这桌菜从哪来」。
+import cityKyoto from './assets/cities/kyoto-city.webp'
+import citySeoul from './assets/cities/seoul-city.webp'
+import cityBangkok from './assets/cities/bangkok-city.webp'
+import cityHanoi from './assets/cities/hanoi-city.webp'
+import cityTaipei from './assets/cities/taipei-city.webp'
+import cityChaoshan from './assets/cities/chaoshan-city.webp'
+import cityIstanbul from './assets/cities/istanbul-city.webp'
+import cityLisbon from './assets/cities/lisbon-city.webp'
+import cityMexico from './assets/cities/mexico-city.webp'
+import cityNaples from './assets/cities/naples-city.webp'
+
 // ---------- 颜色小工具（手绘卡片与页面配色共用） ----------
 function toRgb(hex) {
   const s = (hex || '').replace('#', '')
@@ -73,7 +86,7 @@ export const KIND_ORDER = ['cup', 'cup', 'bowl', 'bowl', 'plate', 'plate', 'cake
 // 城市的厨房：一座城市 = 一套主料 + 一套手法 + 一套味道形容
 export const WORLD_KITCHENS = [
   {
-    id: 'kyoto', city: '京都', cityEn: 'KYOTO', hex: '#A9B98F',
+    id: 'kyoto', city: '京都', cityEn: 'KYOTO', hex: '#A9B98F', image: cityKyoto,
     blurb: '寺门口的风，和一杯还没凉透的茶。',
     drinks: [['抹茶', 'MATCHA'], ['焙茶', 'HOJICHA'], ['黑芝麻', 'BLACK SESAME'], ['玄米', 'GENMAI'], ['柚子', 'YUZU']],
     eats: [['红豆', 'AZUKI'], ['味噌', 'MISO'], ['山椒', 'SANSHO'], ['汤豆腐', 'YU TOFU'], ['柴鱼', 'KATSUO']],
@@ -82,7 +95,7 @@ export const WORLD_KITCHENS = [
     senses: ['甜里带一点草地的凉', '像寺门口吹过来的风', '安静得像下午三点', '会让人想坐久一点'],
   },
   {
-    id: 'seoul', city: '首尔', cityEn: 'SEOUL', hex: '#D08C7A',
+    id: 'seoul', city: '首尔', cityEn: 'SEOUL', hex: '#D08C7A', image: citySeoul,
     blurb: '深夜塑料凳上的热气，比酒更暖。',
     drinks: [['柚子蜜', 'YUZU HONEY'], ['米酒', 'MAKGEOLLI'], ['五味子', 'OMIJA'], ['玉米须', 'CORN SILK']],
     eats: [['泡菜', 'KIMCHI'], ['年糕', 'RICE CAKE'], ['牛骨', 'OX BONE'], ['紫苏', 'PERILLA'], ['部队', 'ARMY STEW']],
@@ -91,7 +104,7 @@ export const WORLD_KITCHENS = [
     senses: ['辣完以后心里是暖的', '像路边摊那张塑料凳', '热气腾腾地直往上冒'],
   },
   {
-    id: 'bangkok', city: '曼谷', cityEn: 'BANGKOK', hex: '#C9A65C',
+    id: 'bangkok', city: '曼谷', cityEn: 'BANGKOK', hex: '#C9A65C', image: cityBangkok,
     blurb: '酸辣先到，雨水随后就来。',
     drinks: [['泰奶', 'THAI MILK TEA'], ['香茅', 'LEMONGRASS'], ['罗望子', 'TAMARIND'], ['椰青', 'COCONUT WATER']],
     eats: [['冬阴功', 'TOM YUM'], ['打抛', 'HOLY BASIL'], ['青咖喱', 'GREEN CURRY'], ['青木瓜', 'GREEN PAPAYA'], ['南姜', 'GALANGAL']],
@@ -100,7 +113,7 @@ export const WORLD_KITCHENS = [
     senses: ['一口就把人拽回雨季', '酸得清醒，辣得痛快', '像傍晚突然落下的那阵雨'],
   },
   {
-    id: 'hanoi', city: '河内', cityEn: 'HANOI', hex: '#9BB0A0',
+    id: 'hanoi', city: '河内', cityEn: 'HANOI', hex: '#9BB0A0', image: cityHanoi,
     blurb: '天还没亮，汤已经熬了四个钟头。',
     drinks: [['滴漏咖啡', 'PHIN COFFEE'], ['炼乳', 'CONDENSED MILK'], ['荷花茶', 'LOTUS TEA'], ['甘蔗', 'SUGARCANE']],
     eats: [['河粉', 'PHO'], ['春卷', 'SPRING ROLL'], ['法棍', 'BANH MI'], ['鱼露', 'FISH SAUCE'], ['香草', 'FRESH HERBS']],
@@ -109,7 +122,7 @@ export const WORLD_KITCHENS = [
     senses: ['清清淡淡却很有底气', '像老城区那条窄巷子', '天没亮就有味道飘出来了'],
   },
   {
-    id: 'taipei', city: '台北', cityEn: 'TAIPEI', hex: '#C79BA6',
+    id: 'taipei', city: '台北', cityEn: 'TAIPEI', hex: '#C79BA6', image: cityTaipei,
     blurb: '夜市里挪不动的脚步，和一杯手摇。',
     drinks: [['珍珠', 'BUBBLE'], ['冬瓜', 'DONG GUA'], ['芋圆', 'TARO BALL'], ['青草', 'GRASS JELLY']],
     eats: [['卤肉', 'BRAISED PORK'], ['牛肉面', 'BEEF NOODLE'], ['蚵仔', 'OYSTER'], ['麻油', 'SESAME OIL'], ['担仔', 'DANZAI']],
@@ -118,7 +131,7 @@ export const WORLD_KITCHENS = [
     senses: ['甜得不客气但很亲切', '像夜市里挪不动的脚步', '一个人吃也刚刚好'],
   },
   {
-    id: 'chaoshan', city: '潮汕', cityEn: 'CHAOSHAN', hex: '#A8B4C0',
+    id: 'chaoshan', city: '潮汕', cityEn: 'CHAOSHAN', hex: '#A8B4C0', image: cityChaoshan,
     blurb: '天光刚亮，案板上还在捶肉。',
     drinks: [['单丛', 'DANCONG'], ['老香黄', 'PRESERVED CITRUS'], ['杏仁', 'ALMOND'], ['擂茶', 'LEI CHA']],
     eats: [['牛肉丸', 'BEEF BALL'], ['沙茶', 'SATAY'], ['白粥', 'PLAIN CONGEE'], ['卤味', 'BRAISED'], ['粿条', 'KWAY TEOW']],
@@ -127,7 +140,7 @@ export const WORLD_KITCHENS = [
     senses: ['清淡里藏着很深的功夫', '像天光刚亮的早市', '越简单越舍不得吃完'],
   },
   {
-    id: 'istanbul', city: '伊斯坦布尔', cityEn: 'ISTANBUL', hex: '#B98A6A',
+    id: 'istanbul', city: '伊斯坦布尔', cityEn: 'ISTANBUL', hex: '#B98A6A', image: cityIstanbul,
     blurb: '香料一层一层地叠上来。',
     drinks: [['红茶', 'TURKISH TEA'], ['咖啡', 'TURKISH COFFEE'], ['石榴', 'POMEGRANATE'], ['酸奶', 'AYRAN']],
     eats: [['烤肉', 'KEBAB'], ['茄子', 'EGGPLANT'], ['鹰嘴豆', 'CHICKPEA'], ['番茄', 'TOMATO'], ['羊肉', 'LAMB']],
@@ -136,7 +149,7 @@ export const WORLD_KITCHENS = [
     senses: ['香料一层一层叠上来', '像渡轮上吹过来的风', '甜得毫不掩饰'],
   },
   {
-    id: 'lisbon', city: '里斯本', cityEn: 'LISBON', hex: '#C0A98C',
+    id: 'lisbon', city: '里斯本', cityEn: 'LISBON', hex: '#C0A98C', image: cityLisbon,
     blurb: '咸咸的，带一点海的味道。',
     drinks: [['波特', 'PORT'], ['咖啡', 'BIKA COFFEE'], ['青柠', 'LIME'], ['橙花', 'ORANGE BLOSSOM']],
     eats: [['鳕鱼', 'BACALHAU'], ['沙丁鱼', 'SARDINE'], ['章鱼', 'OCTOPUS'], ['鹰嘴豆', 'CHICKPEA'], ['番茄', 'TOMATO']],
@@ -145,7 +158,7 @@ export const WORLD_KITCHENS = [
     senses: ['咸咸的，带一点海的味道', '像傍晚山坡上那排黄灯', '吃完会想走到海边去'],
   },
   {
-    id: 'mexico', city: '墨西哥城', cityEn: 'MEXICO CITY', hex: '#D0824F',
+    id: 'mexico', city: '墨西哥城', cityEn: 'MEXICO CITY', hex: '#D0824F', image: cityMexico,
     blurb: '颜色比味道还热闹。',
     drinks: [['巧克力', 'CHOCOLATE'], ['青柠', 'LIME'], ['洛神', 'HIBISCUS'], ['玉米', 'CORN']],
     eats: [['玉米', 'CORN'], ['牛油果', 'AVOCADO'], ['黑豆', 'BLACK BEAN'], ['辣椒', 'CHILI'], ['猪肩', 'PORK SHOULDER']],
@@ -154,7 +167,7 @@ export const WORLD_KITCHENS = [
     senses: ['酸辣烟熏一起冲上来', '像午后墙上晒着的影子', '颜色比味道还要热闹'],
   },
   {
-    id: 'naples', city: '那不勒斯', cityEn: 'NAPLES', hex: '#C46A5A',
+    id: 'naples', city: '那不勒斯', cityEn: 'NAPLES', hex: '#C46A5A', image: cityNaples,
     blurb: '简单到只剩三样东西。',
     drinks: [['浓缩', 'ESPRESSO'], ['柠檬', 'LEMON'], ['杏仁', 'ALMOND'], ['血橙', 'BLOOD ORANGE']],
     eats: [['番茄', 'TOMATO'], ['罗勒', 'BASIL'], ['海鲜', 'SEAFOOD'], ['茄子', 'EGGPLANT'], ['玛格丽特', 'MARGHERITA']],
