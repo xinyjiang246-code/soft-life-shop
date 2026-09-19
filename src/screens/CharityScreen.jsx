@@ -119,6 +119,15 @@ export default function CharityScreen({ charity, onBack, onSettle }) {
         <p><b>这是怎么算的</b></p>
         <p>每完成一餐，我们会把你花掉的这笔钱按 ¥1 = {CHARITY.gramsPerYuan} g 换算成猫粮，你可以自己决定记多少比例。</p>
         <p><b>钱一直在你手上</b> —— 这本账只负责把它算清楚、记下来，转账那一步发生在 App 之外，由你自己的手完成。</p>
+        {/* 「我真去捐了」这个按钮以前只问你「捐了多少、捐给谁」，
+            却从来没说过这笔钱**可以往哪儿去** —— 全 App 唯一的提示是输入框里那句
+            placeholder「比如：北大猫协」。面向陌生人的产品，这恰恰是最该给的一句下一步。 */}
+        <p><b>可以捐给谁</b></p>
+        <p>
+          附近总能找到在收猫粮的地方：小区的固定投喂点、大学里的猫协、做救助的小店 ——
+          猫粮实物和小额转账一般都收。给谁、给多少、什么时候给，都由你定。
+        </p>
+        <p className="charity-note-dim">捐完了可以回来记一笔 —— 不记也没关系，这本账不会催你。</p>
         <p>{CHARITY.note}</p>
         <p className="charity-note-dim">这个 App 没有后端，所有数字都记在你自己的浏览器里。它是一本账，不是一次真实的转账 —— 捐不捐、什么时候捐、捐给谁，都你说了算。</p>
       </section>
@@ -195,7 +204,7 @@ export default function CharityScreen({ charity, onBack, onSettle }) {
                     <input
                       type="text"
                       value={draftTo}
-                      placeholder="比如：北大猫协"
+                      placeholder="比如：小区投喂点 / 北大猫协"
                       aria-label="捐给了谁"
                       onChange={(e) => setDraftTo(e.target.value)}
                     />

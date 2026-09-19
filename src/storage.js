@@ -6,6 +6,8 @@ const KEY_HOUSE = 'soft-life-house-v1'
 const KEY_ARCHIVES = 'soft-life-archives-v1'
 const KEY_PET = 'soft-life-pet-v1'
 const KEY_CUSTOM_ITEMS = 'soft-life-custom-items-v1'
+// 「来过没有」—— 只用来区分第一次和回头客，别拿它存任何业务数据
+const KEY_VISITED = 'soft-life-visited-v1'
 
 // 宠物默认初始状态（形象：小猫「软软」，2026-09-14 由用户敲定的猫咪设计替换原兔熊）
 export const DEFAULT_PET = {
@@ -42,6 +44,22 @@ export function loadHouseName() {
 export function saveHouseName(name) {
   try {
     localStorage.setItem(KEY_HOUSE, name)
+  } catch {}
+}
+
+// 「这台设备上有没有来过」—— 只服务于那句问候语和新人解释，不参与任何业务逻辑。
+// 读失败一律当「来过」：宁可少说一句欢迎，也别对着回头客说「第一次来吧」。
+export function hasVisited() {
+  try {
+    return localStorage.getItem(KEY_VISITED) === '1'
+  } catch {
+    return true
+  }
+}
+
+export function markVisited() {
+  try {
+    localStorage.setItem(KEY_VISITED, '1')
   } catch {}
 }
 

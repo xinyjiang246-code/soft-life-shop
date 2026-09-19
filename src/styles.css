@@ -6361,3 +6361,39 @@ select:focus-visible {
   font: 400 10.5px/1.5 var(--f-cn-serif);
   color: var(--text-sub);
 }
+
+
+/* ============================================================================
+   首页脚注 · 关于小铺（2026-09-19）
+
+   站内一直没有一处交代「我」是谁。语气一直是第一人称「我」，身份却从不出现 ——
+   而一个让你去喂猫的东西，连谁做的都不说，可疑度会翻倍。
+   位置选在首页最底部：陌生人滚到底会看到，回头客也不会被挡路。
+
+   样式直接沿用账本那块说明（.charity-note 的观感：浅茶底 + 小字），
+   不引入任何新的视觉手段。标题走 mono 小字（印刷层的既有做法），
+   **不挂 .section-title** —— 那是重音声部，加了会顶到 verify-typekit 的上限。
+   ============================================================================ */
+
+.about-shop {
+  margin: 30px 16px 0;
+  padding: 15px 16px;
+  border-radius: 13px;
+  background: rgba(228, 198, 168, .14);
+}
+
+.about-label {
+  display: block;
+  margin-bottom: 10px;
+  font: 400 9.5px/1 var(--f-mono);
+  letter-spacing: .1em;
+  color: var(--text-sub);
+}
+
+.about-shop p {
+  margin: 0 0 9px;
+  font: 400 11px/1.8 var(--f-body);
+  color: var(--text-sub);
+}
+
+.about-shop p:last-child { margin-bottom: 0; }

@@ -657,8 +657,13 @@ export function getTodaySpecial() {
 
 // ===== 反向 AI 推送：主动给用户一句话 =====
 // 基于「时间 + 购物车 + 宠物状态」组合生成，而不是纯随机
-export function getTodayHint({ hasCart = false, cartCount = 0, petMeals = 0, hour = new Date().getHours() }) {
-  // 优先级：购物车 > 时段 > 宠物进步 > 兜底
+export function getTodayHint({ hasCart = false, cartCount = 0, petMeals = 0, isFirstVisit = false, hour = new Date().getHours() }) {
+  // 优先级：初见 > 购物车 > 时段 > 宠物进步 > 兜底
+  // 「初见」排最前：第一次来的人最需要的不是问候，是**知道这里在干什么** ——
+  // 下面所有话都建立在他已经懂的前提上（2026-09-19 用户点的「修陌生人第一次的入口」）。
+  if (isFirstVisit) {
+    return { tone: 'intro', text: '先说清楚：这里的外卖不会真的送来。点一单试试，你会知道它换来了什么。' }
+  }
   if (hasCart && cartCount > 0) {
     return { tone: 'cart', text: `购物篮里还有 ${cartCount} 样东西，要现在下单吗？` }
   }

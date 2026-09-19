@@ -2,7 +2,7 @@ import { ChevronRight, CloudRain, CloudSun, Globe, Heart, Menu, MoonStar, Plus, 
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { CHARITY, counters, dateSeed, getTodayHint, getTodaySpecial, hashSeed, levelForMeals, menuItems, NEIGHBOR_NAME, PET_NAME, petStages, pickNeighborLine } from '../data.js'
 import { WORLD_KITCHENS } from '../dishForge.js'
-import { loadMood, saveMood } from '../storage.js'
+import { hasVisited, loadMood, markVisited, saveMood } from '../storage.js'
 import FlipImage from '../components/FlipImage.jsx'
 import DishArt from '../components/DishArt.jsx'
 import SoftPet, { moodFromEmoji, neighborArtUrl } from '../components/SoftPet.jsx'
@@ -51,7 +51,7 @@ function getWeather(phase) {
   return WEATHERS[hashSeed(`${dateSeed()}:wx`) % WEATHERS.length]
 }
 
-function AmbienceStrip() {
+function AmbienceStrip({ isFirstVisit }) {
   const phase = getPhase()
   const weather = getWeather(phase)
   const WIcon = weather.Icon
@@ -64,7 +64,8 @@ function AmbienceStrip() {
         <i className="amb-stars" aria-hidden="true"><span /><span /><span /><span /><span /><span /></i>
       )}
       <p className="amb-greet">
-        <b>{phase.greet}，欢迎回来</b>
+        {/* 第一句就说「欢迎回来」，是对一个从没来过的人撒谎 —— 首次来的要换一句 */}
+        <b>{isFirstVisit ? `${phase.greet}。第一次来？` : `${phase.greet}，欢迎回来`}</b>
         <span><WIcon size={14} strokeWidth={1.6} />{weather.label} · {weather.line}</span>
       </p>
     </div>
@@ -292,9 +293,15 @@ export default function HomeScreen({
 }) {
   const stage = petStages[levelForMeals(pet.meals)]
   const todaySpecial = useMemo(() => getTodaySpecial(), [])
+  // 这台设备上从没来过 —— 只用来区分首次/回访的问候语，以及那句「这里是干什么的」。
+  // 一进首页就落标记，所以它只会在「第一次那一次」为真。
+  const [isFirstVisit] = useState(() => !hasVisited())
+  useEffect(() => {
+    if (isFirstVisit) markVisited()
+  }, [isFirstVisit])
   const hint = useMemo(
-    () => getTodayHint({ hasCart: cartCount > 0, cartCount, petMeals: pet.meals }),
-    [cartCount, pet.meals]
+    () => getTodayHint({ hasCart: cartCount > 0, cartCount, petMeals: pet.meals, isFirstVisit }),
+    [cartCount, pet.meals, isFirstVisit]
   )
   const [hintOpen, setHintOpen] = useState(true)
   const [kind, setKind] = useState('all')
@@ -345,7 +352,7 @@ export default function HomeScreen({
         </div>
       )}
 
-      <AmbienceStrip />
+      <AmbienceStrip isFirstVisit={isFirstVisit} />
 
       <section className="hero pet-host" id="top" aria-label="慢活小铺">
         <div className="hero-copy">
@@ -506,6 +513,21 @@ export default function HomeScreen({
 
       {/* 软软在小铺里溜达：走来走去、偶尔跳一下，点它会蹭你 */}
       <HomeCat pet={pet} />
+
+      {/* 陌生人走到最底部该看到的：这铺子是谁开的、为什么会这样。
+          站内一直没有一处交代「我」是谁 —— 而一个让你去喂猫的东西，
+          连谁做的都不说，可疑度会翻倍（2026-09-19 用户点的「交代铺子是谁开的」）。 */}
+      <section className="about-shop" aria-labelledby="about-shop-heading">
+        <span className="about-label" id="about-shop-heading">ABOUT · 关于小铺</span>
+        <p>
+          这个铺子是一个人开的。起因是某个夜里，我不饿，却一遍遍打开外卖软件 ——
+          后来才想明白：那会儿想要的不是那顿饭，是「点一次」这件事本身。
+        </p>
+        <p>
+          所以这里的外卖不会真的送来。你省下了一顿真外卖，也省下了那笔钱；
+          小铺只把它换算成猫粮记下来 —— 钱一直在你手上，等你哪天路过一个投喂点，自己送出去。
+        </p>
+      </section>
 
       <footer>慢一点，也是一种很好的生活。</footer>
     </div>
