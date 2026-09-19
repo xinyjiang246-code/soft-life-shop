@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Gift, Heart, PawPrint, RotateCcw, Sparkles } from 'lucide-react'
-import { CHARITY, LEVEL_MEALS, PET_NAME, RIDER_MOMENTS, getCounter, getItem, gramsForAmount, levelForMeals, petStages, stickerPool } from '../data.js'
+import { CHARITY, LEVEL_MEALS, PET_NAME, RIDER_MOMENTS, dateSeed, getCounter, getItem, gramsForAmount, levelForMeals, petStages, stickerPool } from '../data.js'
 import SoftPet from '../components/SoftPet.jsx'
+import WaitReceipt from '../components/WaitReceipt.jsx'
+
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
 const ENDINGS = [
   {
@@ -88,6 +91,44 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
     setDonated({ grams, ratio })
   }
 
+  // ===== 等待凭证（2026-09-18）=====
+  // 这一个铺子唯一别人抄不走的东西是「等」——别家都在假装（假针、假外卖、假里程），
+  // 只有这里的时间是让人真的花掉的。所以这张纸**只在等满时开，快进买不到**：
+  // 不是惩罚，是它的全部意义 —— 能买到的就不叫凭证。
+  // DOM 那张纸和「存成图片」画出来的 PNG 共用这一份数据：看到什么，就存到什么。
+  const receipt = useMemo(() => {
+    if (!wait?.waited) return null
+    const d = new Date()
+    const seed = String(dateSeed())
+    const n = Math.max(1, Number(wait.waitedCount) || 1)
+    const minutes = Number(wait.eta) || 25
+    return {
+      no: `${seed.slice(0, 4)}-${seed.slice(4, 6)}-${seed.slice(6, 8)}-${String(n).padStart(2, '0')}`,
+      dateLine: `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 · 星期${WEEKDAYS[d.getDay()]}`,
+      minutes,
+      note: '你一秒没跳地等完了',
+      rows: [
+        { label: '收件', value: houseName ? `「${houseName}」` : '你家门口' },
+        { label: '这一单', value: `¥${orderTotal}` },
+        { label: '没变成', value: '一份没人吃的外卖' },
+        {
+          label: '记下的猫粮',
+          value: donated ? `${donated.grams.toLocaleString()} g` : skipped ? '这次没记' : '—',
+        },
+        { label: '今天等满', value: `第 ${n} 次` },
+      ],
+      // 红线：钱一直在用户手上，App 只记账。这一行就是那张纸上必须有的诚实。
+      fine: donated
+        ? '钱还在你手上 —— 记下的克数，等你真的去捐。'
+        : skipped
+          ? '钱还在你手上，你随时可以改主意。'
+          : '钱还在你手上 —— 记多少，你自己定。',
+      accent: 'the wait was real.',
+      quote: `「在一个不会送到的外卖 App 里，我等满了 ${minutes} 分钟。」`,
+      seal: '等满',
+    }
+  }, [wait, houseName, orderTotal, donated, skipped])
+
   const handleAgain = () => {
     onReset()
     onNavigate('home')
@@ -161,7 +202,7 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
                 <p className="road-recap-body">
                   {wait.letters} 句话，一句没落下。最后一条是「到你楼下了，不用下来接，我认得门牌。」
                 </p>
-                <p className="road-recap-foot">这一份耐心，会多留一枚贴纸给你。</p>
+                <p className="road-recap-foot">这一份耐心，会多留一枚贴纸给你 —— 和一张买不到的等待凭证。</p>
               </>
             ) : (
               <>
@@ -171,6 +212,10 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
                 </p>
                 <p className="road-recap-body">
                   不赶时间的话，下次可以听完 —— 他会讲讲路过的猫和花店。
+                </p>
+                {/* 说清「为什么这次没有凭证」：不是罚你，是这张纸只能用等换 */}
+                <p className="road-recap-foot">
+                  等待凭证只开给等满的那一份 —— 它买不到。下次想留一张，就陪他走完这一趟。
                 </p>
               </>
             )}
@@ -194,6 +239,10 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
             )}
           </section>
         )}
+
+        {/* 等待凭证：等满才开的那张纸。放在「路上的纪念」之后 ——
+            先讲路上发生了什么，再给凭证，别把票据压在故事前面。 */}
+        {receipt && <WaitReceipt data={receipt} />}
 
         <div className="ending-divider"><span /></div>
 

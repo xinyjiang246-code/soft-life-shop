@@ -93,7 +93,11 @@ console.log('\n[4] 声部：重音层是不是真的重，且没有膨胀')
 //      或者浏览器在拿伪斜体糊弄 —— Fraunces 的 ital 轴只有请求到才会是真斜体）；
 //   ② 重音层数量要有上限。它的全部意义就是「少」——不设上限的话，下一个人顺手加几处，
 //      就又回到「所有字都一样」的老问题。
-const VOICE = '.brand,.section-title,.product-section h1,.ending-aside'
+//   ⚠️ 全站现在是 4 个落点：店招 / 栏目名 / 结局那句英文 / 等待凭证那句（.wr-accent）。
+//      后两个只在特定页面出现 —— 这一项跑在首页，通常只数得到前两个。
+//      上限 5 是**同一页**的上限，加了第 4 个落点**不要**顺手把它抬上去。
+//      凭证那句由 tools/verify-wait-receipt.mjs 单独断言（它真的在重音声部上）。
+const VOICE = '.brand,.section-title,.product-section h1,.ending-aside,.wr-accent'
 const voice = await js(`JSON.stringify([...document.querySelectorAll(${JSON.stringify(VOICE)})].map((el) => {
   const cs = getComputedStyle(el)
   return { 类: String(el.className).slice(0, 24), 文本: (el.innerText || '').replace(/\\s+/g, ' ').slice(0, 20),

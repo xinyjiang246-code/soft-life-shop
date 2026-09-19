@@ -1133,8 +1133,10 @@ img { max-width: 100%; display: block; }
   z-index: 2;
 }
 
-.wait-pet-btn { flex: 0 0 auto; transition: transform .25s; }
+/* 摸它也要有反应，所以这里要当定位父级（.pat-pop-layer 是 absolute inset:0） */
+.wait-pet-btn { flex: 0 0 auto; position: relative; transition: transform .25s; }
 .wait-pet-btn:active { transform: scale(.94); }
+.wait-pet-btn:focus-visible { outline: 2px dashed var(--caramel); outline-offset: 5px; border-radius: 12px; }
 
 .wait-pet-text { min-width: 0; }
 .wait-pet-text b { font: 600 12px/1 var(--f-body); color: var(--caramel); }
@@ -5794,6 +5796,7 @@ footer {
 .exchange-card h3,
 .ending-title,
 .ending-house strong,
+.wr-big b,
 .ritual-title,
 .archive-bar span,
 .archive-intro h1,
@@ -5848,7 +5851,8 @@ footer {
 .fold-step,
 .add-button,
 .wait-mode.is-on,
-.rw-moment-opt {
+.rw-moment-opt,
+.wr-save {
   box-shadow: var(--shadow-hard-sm);
   transition: transform .14s, box-shadow .14s, background-color .18s;
 }
@@ -5858,7 +5862,8 @@ footer {
 .fold-step:active,
 .add-button:active,
 .wait-mode.is-on:active,
-.rw-moment-opt:active {
+.rw-moment-opt:active,
+.wr-save:active {
   transform: translate(2px, 2px);
   box-shadow: none;
 }
@@ -5917,7 +5922,7 @@ footer {
 
    这一层**不引入新字体**，只在同一支 Fraunces 之内开三个声部：
 
-     ① 重音  display  斜衬线 800 + WONK 1   —— 栏目名 / 结局那句话 / 店招（全站 4 处）
+     ① 重音  display  斜衬线 800 + WONK 1   —— 店招 / 栏目名 / 结局那句话 / 等待凭证那句（全站 4 处）
      ② 标题  headline 正体 600              —— 价格与大数字
      ③ 中文标题                             —— 苹方 Medium → Semibold
 
@@ -5930,7 +5935,8 @@ footer {
 .brand,
 .section-title,
 .product-section h1,
-.ending-aside {
+.ending-aside,
+.wr-accent {
   font-family: var(--f-display);
   font-style: italic;
   font-weight: 800;
@@ -6155,4 +6161,203 @@ select:focus-visible {
   .cart-count.is-popped,
   .qty-num,
   .num-bump { animation: none; }
+}
+
+
+/* ============================================================================
+   等待凭证（2026-09-18 · 用户：「可以的」—— 把「等待」物化成一张能拿给人看的纸）
+
+   为什么是这一张纸：别家都在假装（假针 / 假外卖 / 假里程），
+   只有「等」在这里是让人**真的**花掉的。所以凭证**只在等满时开，快进买不到**——
+   这是产品的护城河本身，不是奖励。排版上不引入任何新手段：
+   纸面 = 已有的颗粒 + 1px 实线；章 = 已有的 .print-seal；那一句英文 = 已有的重音声部。
+   ============================================================================ */
+
+.wait-receipt {
+  width: 100%;
+  margin: 18px 0 0;
+}
+
+.wr-paper {
+  position: relative;              /* 印章要压在角上，不能把 overflow 剪掉 */
+  /* 底边留厚一点：印章（42px + 旋转）就压在这条留白里。
+     ⚠️ 别把 padding-bottom 调回 16px —— 章会压住「我等满了 X 分钟」那一句，
+     而那一句正是这张纸最要紧的话（量出来过：quote 盒底 440 vs 章顶 428）。 */
+  padding: 15px 14px 46px;
+  text-align: left;
+  background-color: var(--surface);
+  background-image: var(--grain);
+  background-size: 120px 120px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+.wr-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wr-org,
+.wr-no {
+  font: 400 9.5px/1 var(--f-mono);
+  letter-spacing: .1em;
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+
+.wr-date {
+  margin: 6px 0 0;
+  font: 400 9.5px/1 var(--f-mono);
+  letter-spacing: .08em;
+  color: var(--text-sub);
+}
+
+/* 这一单等了多少 —— 大数字走「标题」声部（正体 600），不是重音：
+   重音在这张纸上只留给下面那**一句**。 */
+.wr-big {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.wr-big b {
+  font: 600 46px/1 var(--f-serif);
+  color: var(--text-main);
+  letter-spacing: -.01em;
+}
+
+.wr-big em {
+  font: 400 12px/1 var(--f-cn-serif);
+  font-style: normal;
+  color: var(--caramel);
+  letter-spacing: .06em;
+}
+
+.wr-note {
+  margin: 6px 0 0;
+  text-align: center;
+  font: 400 11.5px/1 var(--f-cn-serif);
+  color: var(--text-sub);
+}
+
+.wr-rows {
+  margin: 14px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.wr-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.wr-row dt {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: baseline;
+  font: 400 9.5px/1 var(--f-mono);
+  letter-spacing: .06em;
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+
+/* 引导点：把左右拉到一起才像一张单子（单子上本来就长这样） */
+.wr-row dt::after {
+  content: '';
+  flex: 1;
+  margin: 0 8px;
+  border-bottom: 1px dotted rgba(141, 134, 124, .55);
+  transform: translateY(-3px);
+}
+
+.wr-row dd {
+  margin: 0;
+  font: 400 12px/1.3 var(--f-body);
+  color: var(--text-main);
+}
+
+/* 诚实那一条：钱一直在用户手上。这张纸上不许出现「已替你捐」 */
+.wr-fine {
+  margin: 10px 0 0;
+  font: 400 10px/1.6 var(--f-cn-serif);
+  color: var(--text-sub);
+}
+
+/* 撕口：剪刀在线头，虚线从它右边开始。
+   ⚠️ 别把图标居中压在虚线上 —— 那样必须垫一块不透明底色去"切断"虚线，
+   而纸上那层颗粒会让色块露出来（实测：一块白补丁）。 */
+.wr-cut {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 15px 0 13px;
+  color: var(--text-sub);
+}
+
+.wr-cut svg { flex: 0 0 auto; opacity: .75; }
+
+.wr-cut span {
+  flex: 1;
+  border-top: 1px dashed rgba(74, 69, 64, .22);
+}
+
+/* 这一句是这张纸能被转述的那一句 —— 重音声部（斜体 800 + WONK）。
+   ⚠️ 只写字号/颜色，别用 font 简写：简写会把上面那条规则里的
+   font-style / font-weight / font-variation-settings 一起重置回正的。 */
+.wr-accent {
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--caramel);
+}
+
+/* 中文那句走「中文大标题」声部（宋体 600），跟英文重音一高一低 */
+.wr-quote {
+  margin: 7px 0 0;
+  text-align: center;
+  font: 600 14.5px/1.6 var(--f-cn-serif);
+  color: var(--text-main);
+  text-wrap: balance;
+}
+
+.wr-seal {
+  position: absolute;
+  right: -8px;
+  bottom: -12px;
+}
+
+.wr-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin: 22px 0 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  font: 600 12.5px/1 var(--f-body);
+  letter-spacing: .04em;
+  color: var(--text-main);
+}
+
+.wr-save:disabled { opacity: .6; cursor: wait; }
+
+.wr-save-note {
+  margin: 8px 0 0;
+  text-align: center;
+  font: 400 10.5px/1.5 var(--f-cn-serif);
+  color: var(--text-sub);
 }

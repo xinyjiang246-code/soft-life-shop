@@ -3,11 +3,9 @@ import { ArrowLeft, PawPrint, RefreshCw } from 'lucide-react'
 import { LEVEL_MEALS, PET_COLORWAYS, PET_NAME, PET_SPECIES, dateSeed, hashSeed, levelForMeals, petStages, petLinesByStage, stickerPool } from '../data.js'
 import SoftPet, { moodFromEmoji } from '../components/SoftPet.jsx'
 import PetPops, { spawnPops } from '../components/PetPops.jsx'
-import { FACE_HOLD, HEAT_WINDOW, ZONE_LINES, expressionFor, playPatReaction, zoneFromPoint } from '../petTouch.js'
+import { FACE_HOLD, HEAT_WINDOW, expressionFor, patLine, playPatReaction, zoneFromPoint } from '../petTouch.js'
 
-// 拍拍里程碑：摸够次数后专门说一句（3/8/15/25 是有讲究的，别改）
-const PAT_MILESTONES = { 3: '呼噜呼噜——它开始踩奶了。', 8: '翻出肚皮了，这是最高信任。', 15: '眯上眼睛了……别停。', 25: '（睡着了，尾巴还在轻轻晃）' }
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
+// 里程碑表与「这一下该说什么」都在 petTouch.js —— 三只猫（小屋 / 首页 / 陪你等）共用一份
 
 export default function PetScreen({ pet, onColorway, onBack }) {
   const level = levelForMeals(pet.meals)
@@ -50,6 +48,8 @@ export default function PetScreen({ pet, onColorway, onBack }) {
   const hitRef = useRef(null)
   const heatRef = useRef(0)
   const lastPatRef = useRef(0)
+  const streakRef = useRef(0)      // 同一部位连续摸了几下（里程碑按它算）
+  const lastZoneRef = useRef(null)
   const heatTimer = useRef(null)
   const bubbleTimer = useRef(null)
   const faceTimer = useRef(null)
@@ -72,6 +72,12 @@ export default function PetScreen({ pet, onColorway, onBack }) {
     clearTimeout(heatTimer.current)
     heatTimer.current = setTimeout(() => { heatRef.current = 0 }, HEAT_WINDOW)
 
+    // 里程碑按「同一部位连续摸」计数；换部位就从头算。
+    // 按累计点击数算的话，摸到第 3 下不管摸哪儿都说同一句，把部位台词顶掉。
+    const streak = zone === lastZoneRef.current ? streakRef.current + 1 : 1
+    lastZoneRef.current = zone
+    streakRef.current = streak
+
     playPatReaction(hitRef.current, zone, heat)
 
     const n = patTick + 1
@@ -85,7 +91,7 @@ export default function PetScreen({ pet, onColorway, onBack }) {
     setPops((ps) => [...ps.slice(-8), ...batch])
     setTimeout(() => setPops((ps) => ps.filter((p) => !batch.some((b) => b.id === p.id))), 1400)
 
-    setPatBubble(PAT_MILESTONES[n] || pick(ZONE_LINES[zone] || ZONE_LINES.tummy))
+    setPatBubble(patLine(zone, streak))
     clearTimeout(bubbleTimer.current)
     bubbleTimer.current = setTimeout(() => setPatBubble(null), 2200)
   }

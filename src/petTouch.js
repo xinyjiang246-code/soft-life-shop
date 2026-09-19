@@ -101,7 +101,7 @@ export const ZONE_LINES = {
   cheekL: ['侧脸贴过来了。', '被摸到腮帮子，眼睛眯了一下。'],
   cheekR: ['侧脸贴过来了。', '它把右边脸也递过来了。'],
   tummy: ['肚子软软的，它没躲。', '呼噜呼噜……', '（肚皮朝天翻了一点）'],
-  paw: ['爪子缩了一下。', '尾巴慢慢竖起来了。'],
+  paw: ['爪子缩回去了——这儿不太喜欢被碰。', '（尾巴尖甩了一下）它把爪子抽走了。'],
 }
 
 // 点不同部位 → 脸上换不同表情（见 components/PetFace.jsx）
@@ -158,3 +158,41 @@ export function playPatReaction(el, zone, heat = 0, reduced = prefersReducedMoti
 
 /** 连击：1.5 秒内接着点才算连击，停手后再点从头算 */
 export const HEAT_WINDOW = 1500
+
+/**
+ * 摸同一处摸够次数才有的里程碑（3/8/15/25 是有讲究的，别改）。
+ *
+ * ⚠️ 计数是「**同一部位连续**摸」的次数，换部位就从头算（2026-09-18 修）。
+ * 以前按「本次会话累计点击数」算，结果是摸到第 3 下时不管摸哪儿都说这句，
+ * 把部位台词整个顶掉 —— 连摸几个不同部位的人听到的是「说的都是同一句」，
+ * 「分部位」这件事就被吃掉了。
+ */
+export const PAT_MILESTONES = {
+  3: '呼噜呼噜——它开始踩奶了。',
+  8: '翻出肚皮了，这是最高信任。',
+  15: '眯上眼睛了……别停。',
+  25: '（睡着了，尾巴还在轻轻晃）',
+}
+
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
+
+/** 这一下该说什么：里程碑优先，否则按部位挑一句 */
+export function patLine(zone, streak = 1) {
+  return PAT_MILESTONES[streak] || pick(ZONE_LINES[zone] || ZONE_LINES.tummy)
+}
+
+/**
+ * 摸哪儿 → 心情角标（`SoftPet` 的 `MoodSticker`）。
+ *
+ * 为什么需要这张表：首页那只 58px、等待页那只 64px，
+ * 脸上真画表情的话眼睛只有 3px，形状根本读不出来（宠物页是 150px，眼睛约 7px 才成立）。
+ * 所以那两处改用「角标 + 部位台词 + 形变」表达差别 —— 角标的尺寸不跟着猫缩水。
+ */
+export const MOOD_BY_ZONE = {
+  ear: 'love',
+  head: 'love',
+  cheekL: 'love',
+  cheekR: 'love',
+  tummy: 'sparkle',
+  paw: 'angry', // 爪子是敏感处：缩回去 + 炸毛
+}

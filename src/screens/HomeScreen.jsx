@@ -7,7 +7,7 @@ import FlipImage from '../components/FlipImage.jsx'
 import DishArt from '../components/DishArt.jsx'
 import SoftPet, { moodFromEmoji, neighborArtUrl } from '../components/SoftPet.jsx'
 import PetPops, { spawnPops } from '../components/PetPops.jsx'
-import { playPatReaction, zoneFromPoint } from '../petTouch.js'
+import { MOOD_BY_ZONE, patLine, playPatReaction, zoneFromPoint } from '../petTouch.js'
 import ShopRow from '../components/ShopRow.jsx'
 import matchaLatteDraw from '../assets/products/matcha-latte-draw.webp'
 import matchaLatteReal from '../assets/products/matcha-latte-real.webp'
@@ -173,8 +173,6 @@ function TopBar({ count, wishCount, onOpenMenu, onNavigate }) {
 
 /* ---- 主页溜达猫：在页面底部走来走去、偶尔跳一下，点了会蹭你 ---- */
 
-const CAT_SAY = ['喵～', '咕噜咕噜……', '（蹭了一下你的裤脚）', '（尾巴绕住了你的手腕）', '喵呜——', '（就地翻了个身）']
-
 function HomeCat({ pet }) {
   const level = levelForMeals(pet.meals)
   const [pos, setPos] = useState({ x: 64, dir: -1 })
@@ -182,8 +180,11 @@ function HomeCat({ pet }) {
   const [jumping, setJumping] = useState(false)
   const [bubble, setBubble] = useState(null)
   const [loved, setLoved] = useState(false)
+  const [zone, setZone] = useState('tummy')
   const timer = useRef(null)
   const bubbleTimer = useRef(null)
+  const streakRef = useRef(0)     // 同一部位连续摸了几下（里程碑按它算，同宠物页）
+  const lastZoneRef = useRef(null)
 
   // 随机作息：散步 → 发呆 → 偶尔原地跳。prefers-reduced-motion 时只坐着
   useEffect(() => {
@@ -224,15 +225,22 @@ function HomeCat({ pet }) {
   const hitRef = useRef(null)
   const tapCat = (e) => {
     setLoved(true)
-    setBubble(CAT_SAY[Math.floor(Math.random() * CAT_SAY.length)])
     clearTimeout(bubbleTimer.current)
-    bubbleTimer.current = setTimeout(() => { setBubble(null); setLoved(false) }, 2100)
 
     // 摸它也要有身体反应（和宠物页同一套：分部位 + 形变 + 指尖小图）
     const btn = e.currentTarget
     const rect = btn.getBoundingClientRect()
     const hasPoint = !(e.clientX === 0 && e.clientY === 0)
     const zone = hasPoint ? zoneFromPoint(rect, e.clientX, e.clientY) : 'tummy'
+    // 摸哪儿说哪儿：台词也走部位（以前是随机 CAT_SAY，跟摸哪儿无关，
+    // 在这个尺寸上就成了「摸哪儿都一样」的主因之一）
+    const streak = zone === lastZoneRef.current ? streakRef.current + 1 : 1
+    lastZoneRef.current = zone
+    streakRef.current = streak
+    setZone(zone)
+    setBubble(patLine(zone, streak))
+    bubbleTimer.current = setTimeout(() => { setBubble(null); setLoved(false) }, 2100)
+
     playPatReaction(hitRef.current, zone, 0)
     const batch = spawnPops(
       hasPoint ? e.clientX - rect.left : rect.width / 2,
@@ -245,11 +253,22 @@ function HomeCat({ pet }) {
 
   return (
     <div className="home-cat" aria-label={`${PET_NAME}在小铺里溜达`}>
-      <button className="home-cat-btn" style={{ left: `${pos.x}%` }} onClick={tapCat} aria-label={`摸摸${PET_NAME}`}>
+      <button
+        className="home-cat-btn"
+        style={{ left: `${pos.x}%` }}
+        onClick={tapCat}
+        data-zone={zone}
+        aria-label={`摸摸${PET_NAME}——耳朵、肚子、爪子反应不一样`}
+      >
         <span className="home-cat-flip" style={{ transform: `scaleX(${pos.dir})` }}>
           <span className={`home-cat-body ${walking ? 'is-walking' : ''} ${jumping ? 'is-jumping' : ''}`}>
             <span className="home-cat-hit" ref={hitRef}>
-              <SoftPet stage={level} mood={loved ? 'love' : 'happy'} colorway={pet.colorway || 'cream'} size={58} />
+              <SoftPet
+                stage={level}
+                mood={loved ? MOOD_BY_ZONE[zone] || 'love' : 'happy'}
+                colorway={pet.colorway || 'cream'}
+                size={58}
+              />
             </span>
           </span>
         </span>

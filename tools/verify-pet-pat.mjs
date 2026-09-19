@@ -8,6 +8,8 @@
 // 用法：node tools/verify-pet-pat.mjs [url] [screenshot.png]
 import { writeFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
+// 台词池与里程碑都从源码里取，不在守卫里抄一遍 —— 改了文案这里不会悄悄失配
+import { PAT_MILESTONES, ZONE_LINES } from '../src/petTouch.js'
 
 const url = process.argv[2] || 'http://127.0.0.1:8080/'
 const screenshot = process.argv[3]
@@ -89,13 +91,24 @@ async function mouseTap(x, y) {
 }
 
 /** 猫身上某个部位对应的屏幕坐标（归一化 → 按钮矩形内） */
-async function pointOf(nx, ny) {
+async function pointOf(nx, ny, selector = '.pet-pat-btn') {
   const r = await evaluate(`(() => {
-    const b = document.querySelector('.pet-pat-btn').getBoundingClientRect();
+    const b = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
     return { left: b.left, top: b.top, w: b.width, h: b.height };
   })()`)
   return { x: r.left + r.w * nx, y: r.top + r.h * ny }
 }
+
+/**
+ * 心情角标读法：`SoftPet` 把 mood 写进了 role="img" 的 aria-label
+ * （`虚拟伙伴软软，love`）。比解 SVG 里的颜色常量稳，也不会因为换色板而假红。
+ */
+const moodOf = (selector) => `(() => {
+  const el = document.querySelector(${JSON.stringify(selector)}).querySelector('[role="img"]');
+  if (!el) return null;
+  const m = /，([a-z]+)$/.exec(el.getAttribute('aria-label') || '');
+  return m ? m[1] : null;
+})()`
 
 const results = []
 const ok = (label, value) => { results.push({ label, value }); console.log('  ✓', label, '=', JSON.stringify(value)) }
@@ -301,9 +314,111 @@ try {
   assert.equal(health.残留粒子, 0, '粒子应该自己收干净，不该堆在页面上')
   assert.equal(health.残留形变, 'none', '反应播完要回到原位，不能歪着不动')
 
+  console.log('\n[9] 等待页那只也要分部位 —— 等外卖时最想摸的偏偏是它')
+  // 以前这里点一下只是把旁边那句陪等的话换成下一句，猫一动不动（2026-09-18 补上）。
+  // 走一单到等待阶段：4 步 × 3000ms = 12 秒才进 waiting，别把 waitFor 设短了。
+  await waitFor(`document.querySelector('.shop-row')`, 20000)
+  await evaluate(`document.querySelector('.shop-row').click()`)
+  await waitFor(`document.querySelectorAll('.add-button').length > 0`)
+  await evaluate(`[...document.querySelectorAll('.add-button')].slice(0, 2).forEach((b) => b.click())`)
+  await waitFor(`document.querySelector('.bag-button')`)
+  await click('.bag-button')
+  await waitFor(`[...document.querySelectorAll('button')].some((x) => /去结账|结算|下单/.test(x.textContent))`)
+  await evaluate(`[...document.querySelectorAll('button')].find((x) => /去结账|结算|下单/.test(x.textContent)).click()`)
+  await waitFor(`[...document.querySelectorAll('button')].some((x) => /确认|下单|提交/.test(x.textContent))`)
+  await evaluate(`[...document.querySelectorAll('button')].find((x) => /确认|下单|提交/.test(x.textContent)).click()`)
+  await waitFor(`document.querySelector('.wait-pet-btn')`, 30000)
+  // 到等待页时页面停在顶部，猫可能在屏幕外（同 [7] 的坑）——先滚进视口再量坐标
+  await evaluate(`(() => { document.querySelector('.wait-pet').scrollIntoView({ block: 'center' }); return true; })()`)
+  await evaluate('new Promise((r) => setTimeout(r, 600))')
+
+  const W_ZONES = [
+    ['ear', 0.5, 0.1],
+    ['head', 0.5, 0.36],
+    ['cheekL', 0.15, 0.4],
+    ['cheekR', 0.85, 0.4],
+    ['tummy', 0.5, 0.7],
+    ['paw', 0.5, 0.93],
+  ]
+  // 台词池从源码里取，不在守卫里抄一遍 —— 免得改了文案这里悄悄失配
+  const pool = ZONE_LINES
+  const wSeen = {}
+  for (const [expect, nx, ny] of W_ZONES) {
+    const { x, y } = await pointOf(nx, ny, '.wait-pet-btn')
+    const hitTarget = await evaluate(`(!!document.elementFromPoint(${x}, ${y})?.closest('.wait-pet-btn'))`)
+    assert.ok(hitTarget, `等待页 (${x},${y}) 应该落在按钮上，否则真实点击根本到不了软软`)
+    await mouseTap(x, y)
+    const sample = await evaluate(`(async () => {
+      const el = document.querySelector('.wait-pet-btn .pet-hit');
+      const a = el.getAnimations();
+      await new Promise((r) => setTimeout(r, 140));
+      const t = getComputedStyle(el).transform;
+      const frames = a[0] ? a[0].effect.getKeyframes().map((k) => k.transform).filter(Boolean) : [];
+      const btn = document.querySelector('.wait-pet-btn');
+      return {
+        zone: btn.dataset.zone,
+        mood: ${moodOf('.wait-pet-btn')},
+        形变种类: frames.join(' | '),
+        中间形变: t,
+        粒子数: document.querySelectorAll('.pat-pop svg').length,
+        台词: document.querySelector('.wait-pet-text p').innerText,
+      };
+    })()`)
+    wSeen[expect] = sample
+    ok(`等待页点${expect}`, { 判定: sample.zone, 角标: sample.mood, 粒子: sample.粒子数, 台词: sample.台词 })
+    assert.equal(sample.zone, expect, `等待页点 (${nx}, ${ny}) 应该判成 ${expect}，实际 ${sample.zone}`)
+    assert.ok(sample.中间形变 !== 'none', `${expect}：等待页摸下去必须看到真实形变（不能像以前那样一动不动）`)
+    assert.ok(sample.粒子数 >= 3, `${expect}：等待页也该冒小图，实际 ${sample.粒子数}`)
+    assert.ok(
+      pool[expect].includes(sample.台词) || Object.values(PAT_MILESTONES).includes(sample.台词),
+      `${expect}：这句「${sample.台词}」不属于该部位的台词池 —— 说明被别的东西顶掉了`,
+    )
+    await evaluate('new Promise((r) => setTimeout(r, 700))')
+  }
+
+  console.log('\n[10] 换部位就换话：里程碑不再吞掉部位台词（2026-09-18 修的）')
+  // 老毛病：里程碑按「本次会话累计点击数」算，摸到第 3 下不管摸哪儿都说同一句，
+  // 连摸几个不同部位的人听到的是「说的都是同一句」——「分部位」这件事就被吃掉了。
+  const lineOf = (zone) => wSeen[zone].台词
+  assert.equal(new Set(W_ZONES.map((z) => lineOf(z[0]))).size >= 4, true, '六个部位摸下来，说的不该是同一句话')
+  const moods = Object.fromEntries(W_ZONES.map((z) => [z[0], wSeen[z[0]].mood]))
+  assert.equal(moods.tummy, 'sparkle', `摸肚子角标该是 sparkle，实际 ${moods.tummy}`)
+  assert.equal(moods.paw, 'angry', `摸爪子角标该是 angry（敏感处），实际 ${moods.paw}`)
+  assert.equal(moods.ear, 'love', `摸耳朵角标该是 love，实际 ${moods.ear}`)
+  // 连点同一个部位到第三下 → 该出里程碑；紧接着换一个部位 → 必须立刻回到那个部位的话
+  for (let i = 0; i < 3; i++) {
+    const { x, y } = await pointOf(0.5, 0.1, '.wait-pet-btn')
+    await mouseTap(x, y)
+    await evaluate('new Promise((r) => setTimeout(r, 160))')
+  }
+  const milestone = await evaluate(`document.querySelector('.wait-pet-text p').innerText`)
+  ok('连点耳朵第三下', milestone)
+  assert.ok(Object.values(PAT_MILESTONES).includes(milestone), `同一部位连点到第三下该出里程碑，实际「${milestone}」`)
+  await evaluate('new Promise((r) => setTimeout(r, 700))')
+  const { x: hx, y: hy } = await pointOf(0.5, 0.36, '.wait-pet-btn')
+  await mouseTap(hx, hy)
+  const afterSwitch = await evaluate(`(async () => { await new Promise((r) => setTimeout(r, 140)); return document.querySelector('.wait-pet-text p').innerText })()`)
+  ok('换成摸头', afterSwitch)
+  assert.ok(
+    pool.head.includes(afterSwitch),
+    `换部位后应该立刻说「头」的话，实际「${afterSwitch}」—— 说明里程碑把部位台词吞了`,
+  )
+
+  console.log('\n[11] 全页体检（含等待页）')
+  await evaluate('new Promise((r) => setTimeout(r, 2200))')
+  const wHealth = await evaluate(`(() => ({
+    坏图: Array.from(document.images).filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.src),
+    残留粒子: document.querySelectorAll('.pat-pop').length,
+    残留形变: getComputedStyle(document.querySelector('.wait-pet-btn .pet-hit')).transform,
+  }))()`)
+  ok('等待页体检', wHealth)
+  assert.equal(wHealth.坏图.length, 0, '等待页不能有破图')
+  assert.equal(wHealth.残留粒子, 0, '等待页的粒子也要自己收干净')
+  assert.equal(wHealth.残留形变, 'none', '等待页的反应播完要回到原位')
+
   assert.equal(errors.length, 0, `控制台不该有报错：${errors.join(' / ')}`)
   assert.equal(failedResponses.length, 0, `不该有失败请求：${JSON.stringify(failedResponses)}`)
-  console.log('\n全绿：坏图 0 / 报错 0 / 失败请求 0')
+  console.log('\n全绿：坏图 0 / 报错 0 / 失败请求 0（小屋 + 首页 + 等待页三处都验过）')
 } catch (error) {
   console.error('\n验收失败：', error.message)
   process.exitCode = 1

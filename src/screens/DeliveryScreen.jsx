@@ -14,6 +14,8 @@ import {
 } from '../data.js'
 import { DAILY_PATIENCE, loadPatience, loadWaitMode, patienceLeft, savePatience, saveWaitMode } from '../storage.js'
 import SoftPet from '../components/SoftPet.jsx'
+import PetPops, { spawnPops } from '../components/PetPops.jsx'
+import { MOOD_BY_ZONE, patLine, playPatReaction, zoneFromPoint } from '../petTouch.js'
 import RiderWindow from '../components/RiderWindow.jsx'
 import RiderHop from '../components/RiderHop.jsx'
 import FoldRitual from '../components/FoldRitual.jsx'
@@ -77,12 +79,50 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
   const [patience, setPatience] = useState(() => loadPatience())
   const [offlineDone, setOfflineDone] = useState(false)
   const [petLine, setPetLine] = useState(null)
+  // 摸软软：跟小屋 / 首页同一套（六部位形变 + 部位台词 + 指尖小图）
+  const [patZone, setPatZone] = useState('tummy')
+  const [patBubble, setPatBubble] = useState(null)
+  const [pops, setPops] = useState([])
+  const patHitRef = useRef(null)
+  const patBubbleTimer = useRef(null)
+  const streakRef = useRef(0)     // 同一部位连续摸了几下（里程碑按它算）
+  const lastZoneRef = useRef(null)
   // 陪骑手走：路上替他做的那些小决定（不计分，只是陪过）—— 会带进结局页的「路上的纪念」
   const [roadChoices, setRoadChoices] = useState({})
   // 陪等的方式：三选一，随时可换，记住上次挑的那个
   const [waitMode, setWaitMode] = useState(() => loadWaitMode())
   const offlineTask = useMemo(() => OFFLINE_TASKS[Math.floor(Math.random() * OFFLINE_TASKS.length)], [])
   const leaving = useRef(false)
+
+  // 摸它一下：判定落在哪个部位 → 形变 + 指尖小图 + 一句部位台词。
+  // 以前这里点一下只是把旁边那句陪等的话换成下一句，猫本身一动不动 ——
+  // 等外卖时最想摸的就是它，偏偏它最没反应（2026-09-18 补）。
+  const patCat = (e) => {
+    const btn = e.currentTarget
+    const rect = btn.getBoundingClientRect()
+    // 键盘 / 程序化点击没有真实坐标，按「摸肚子」兜底（同小屋）
+    const hasPoint = !(e.clientX === 0 && e.clientY === 0)
+    const zone = hasPoint ? zoneFromPoint(rect, e.clientX, e.clientY) : 'tummy'
+    const px = hasPoint ? e.clientX - rect.left : rect.width / 2
+    const py = hasPoint ? e.clientY - rect.top : rect.height / 2
+
+    const streak = zone === lastZoneRef.current ? streakRef.current + 1 : 1
+    lastZoneRef.current = zone
+    streakRef.current = streak
+
+    setPatZone(zone)
+    playPatReaction(patHitRef.current, zone, 0)
+    setPatBubble(patLine(zone, streak))
+    clearTimeout(patBubbleTimer.current)
+    patBubbleTimer.current = setTimeout(() => setPatBubble(null), 2200)
+
+    const batch = spawnPops(px, py, 4)
+    setPops((ps) => [...ps.slice(-8), ...batch])
+    setTimeout(() => setPops((ps) => ps.filter((p) => !batch.some((b) => b.id === p.id))), 1400)
+
+    // 旁边那句「陪你等」的话照旧往后走一句 —— 它现在是次要层，主反馈在猫身上
+    setPetLine((v) => (v === null ? 0 : (v + 1) % PET_WAIT_LINES.length))
+  }
 
   // 阶段一：快速走完「接单→备餐→取餐→配送中」4 步，展示完整流程
   useEffect(() => {
@@ -113,6 +153,9 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
         waitedSeconds: WAIT_SECONDS,
         letters: RIDER_LETTERS.length,
         road: roadChoices,
+        // 结局页要开「等待凭证」：单子上写的这段路（分钟）+ 今天第几次等满
+        eta: etaMinutes,
+        waitedCount: next.waited,
       })
     }
   }, [phase, secondsLeft, patience, onNavigate])
@@ -300,12 +343,28 @@ export default function DeliveryScreen({ houseName, onNavigate, order }) {
       {/* 等待阶段：软软陪你等 */}
       {isWaiting && (
         <section className="wait-pet" aria-label={`${PET_NAME}陪你等`}>
-          <button className="wait-pet-btn" onClick={() => setPetLine((v) => (v === null ? 0 : (v + 1) % PET_WAIT_LINES.length))}>
-            <SoftPet stage={2} mood={petLine === null ? 'happy' : 'love'} colorway="cream" size={64} />
+          <button
+            className="wait-pet-btn"
+            onClick={patCat}
+            data-zone={patZone}
+            aria-label={`拍拍${PET_NAME}——耳朵、肚子、爪子反应不一样`}
+          >
+            {/* 单独一层给 WAAPI 做形变：同一个元素上两份 transform 会互相覆盖 */}
+            <span className="pet-hit" ref={patHitRef}>
+              <SoftPet
+                stage={2}
+                mood={patBubble ? MOOD_BY_ZONE[patZone] || 'love' : petLine === null ? 'happy' : 'love'}
+                colorway="cream"
+                size={64}
+              />
+            </span>
+            <PetPops pops={pops} />
           </button>
           <div className="wait-pet-text">
             <b>{PET_NAME}</b>
-            <p>{petLine === null ? '它跑过来陪你一起等。点它试试。' : PET_WAIT_LINES[petLine]}</p>
+            {/* 摸它时这一行换成部位台词（2.2s），之后回到陪等的那句 —— 
+                不另做气泡：这张卡里没有留白，气泡会溢出到上一张卡上面去 */}
+            <p>{patBubble || (petLine === null ? '它跑过来陪你一起等。摸它试试。' : PET_WAIT_LINES[petLine])}</p>
           </div>
         </section>
       )}
