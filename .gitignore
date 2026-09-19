@@ -26,3 +26,7 @@ published-site/
 paper-press-ui-demo-*/
 soft-life-app/
 generated-images/
+
+# ── 完整性快照（tools/snapshot.mjs 生成）─────────────────────
+# 里面有 40MB 压缩包，是「删东西之前的底」，本机保险用，不进仓库。
+源码快照/
