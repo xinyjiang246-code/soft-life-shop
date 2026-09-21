@@ -22,7 +22,10 @@ from qrcode.constants import ERROR_CORRECT_H
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "发布"
-URL = "https://soft-life-shop.app.workbuddy.host/"
+# ⚠️ 2026-09-21 换了链接：旧链接（soft-life-shop.app.workbuddy.host）的运行环境
+#    平台没法复用，重新发布时只能新建应用 → 新域名多了一段数字。
+#    改链接时这里、MEMORY.md、skill 三处要一起改，改完**必须重跑本脚本 + 解码验一次**。
+URL = "https://soft-life-shop-18918.app.workbuddy.host/"
 
 PAPER = (246, 241, 232)          # --bg-base
 INK = (46, 42, 37)               # --ink-print

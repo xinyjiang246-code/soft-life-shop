@@ -19,7 +19,12 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "发布"
-URL = "https://soft-life-shop.app.workbuddy.host/"
+URL = "https://soft-life-shop-18918.app.workbuddy.host/"
+
+# ⚠️ 这个常量和 tools/makeQR.py 里的 URL **必须一致** —— 换链接时两处一起改。
+#    不一致的表现是「11 项全红、但解出来的链接看起来是对的」（2026-09-21 踩过）：
+#    断言是拿解码结果跟这里比，所以这里没改就等于在验旧链接。
+#    （不写成 import makeQR.URL：那个模块顶层就会重新生成图，import 会有副作用。）
 
 ok_n = 0
 bad_n = 0
