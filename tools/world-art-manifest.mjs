@@ -35,6 +35,9 @@ const POOLS = [
   ['sweets', '甜点'],
 ]
 
+// 生图标签的后缀 —— 必须和 tools/worldArt.py 的 POOL_SUFFIX 一致
+const POOL_SUFFIX = { drinks: 'drink', eats: 'dish', sweets: 'sweet' }
+
 const manifest = []
 for (const m of cityBlocks) {
   const block = m[0]
@@ -109,19 +112,49 @@ function subjectFor(it) {
   return `a small plate of ${en} dessert`
 }
 
+// 一条可以直接丢给 ImageGen 的 prompt。
+//
+// ⚠️ 开头那一段**必须是 collect 能认回来的标签**（`<城市英文> <食材英文> drink|dish|sweet`）：
+//    ImageGen 不传 output_dir 时，文件名 = prompt 前 ~29 字符 + 时间戳，
+//    collect 就是靠这段前缀把文件认回 key 的。所以标签放最前、后面才接画面描述。
+// ⚠️ 带 CITY 的城市（只有 MEXICO CITY）要**去掉 CITY** —— 文件名会截断，
+//    留着 CITY 的话前缀只能对上 8 个字符（2026-09-21 实测）。两份写法 collect 都认，
+//    但短的那份匹配度更高、更不容易撞。
+function labelFor(it) {
+  return `${it.cityEn.replace(' CITY', '')} ${it.en} ${POOL_SUFFIX[it.pool]}`
+}
+
+function promptFor(it, i) {
+  return [
+    `${labelFor(it)}.`,
+    `Photograph: ${subjectFor(it)}.`,
+    `${it.cityEn} home cooking — ${CITY_PROP[it.cityId]}.`,
+    `On a ${SURFACES[i % SURFACES.length]}, ${ANGLES[i % ANGLES.length]}.`,
+    STYLE + '.',
+  ].join(' ')
+}
+
 if (process.argv.includes('--prompts')) {
   const lines = []
   manifest.forEach((it, i) => {
-    const prompt = [
-      `Photograph: ${subjectFor(it)}.`,
-      `${it.cityEn} home cooking — ${CITY_PROP[it.cityId]}.`,
-      `On a ${SURFACES[i % SURFACES.length]}, ${ANGLES[i % ANGLES.length]}.`,
-      STYLE + '.',
-    ].join(' ')
     lines.push(`### ${it.key}|${it.city}${it.poolCn}·${it.cn}`)
-    lines.push(prompt)
+    lines.push(promptFor(it, i))
   })
   console.log(lines.join('\n'))
+  process.exit(0)
+}
+
+// 只出「还缺的那些」的 prompt —— 一条条去生图时对着抄，不用自己滤
+if (process.argv.includes('--prompts-missing')) {
+  const dir0 = new URL('../src/assets/world/', import.meta.url)
+  const have0 = existsSync(dir0) ? new Set(readdirSync(dir0).map((f) => f.replace(/\.webp$/, ''))) : new Set()
+  const missing = manifest.map((it, i) => [it, i]).filter(([it]) => !have0.has(it.key))
+  missing.forEach(([it, i], n) => {
+    console.log(`--- ${String(n + 1).padStart(2)}/${missing.length}  ${it.key}  （${it.city} ${it.poolCn}·${it.cn}）`)
+    console.log(promptFor(it, i))
+    console.log('')
+  })
+  console.log(`共缺 ${missing.length} 条`)
   process.exit(0)
 }
 
