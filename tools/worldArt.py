@@ -87,8 +87,13 @@ def collect() -> int:
         for it in items:
             if (RAW_DIR / f"{it['key']}.png").exists():
                 continue
-            for drop_city in (False, True):
-                lab = norm(label_of(it, drop_city))
+            # ⚠️ 两种写法**只有真的不同时**才当两个候选。
+            #    没有 CITY 的城市（9 座）两种写法是同一个字符串 —— 重复登记会让
+            #    「第二名」等于自己，于是 `best_n - second < 3` 判定成歧义、
+            #    整批图都认不回去（2026-09-21 踩过：22 张里只认领了 10 张，
+            #    剩下 12 张全被打成「只对上 18，第二 18」）。
+            labels = {norm(label_of(it, drop_city)) for drop_city in (False, True)}
+            for lab in labels:
                 cands.append((lcp(stem, lab), lab, it))
         cands.sort(key=lambda c: -c[0])
         if not cands:

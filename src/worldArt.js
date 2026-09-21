@@ -78,7 +78,29 @@ import w_lisbon_sweets_almond from './assets/world/lisbon-sweets-almond.webp'
 import w_lisbon_sweets_cinnamon from './assets/world/lisbon-sweets-cinnamon.webp'
 import w_lisbon_sweets_custard_tart from './assets/world/lisbon-sweets-custard-tart.webp'
 import w_mexico_drinks_chocolate from './assets/world/mexico-drinks-chocolate.webp'
+import w_mexico_drinks_corn from './assets/world/mexico-drinks-corn.webp'
+import w_mexico_drinks_hibiscus from './assets/world/mexico-drinks-hibiscus.webp'
 import w_mexico_drinks_lime from './assets/world/mexico-drinks-lime.webp'
+import w_mexico_eats_avocado from './assets/world/mexico-eats-avocado.webp'
+import w_mexico_eats_black_bean from './assets/world/mexico-eats-black-bean.webp'
+import w_mexico_eats_chili from './assets/world/mexico-eats-chili.webp'
+import w_mexico_eats_corn from './assets/world/mexico-eats-corn.webp'
+import w_mexico_eats_pork_shoulder from './assets/world/mexico-eats-pork-shoulder.webp'
+import w_mexico_sweets_chia from './assets/world/mexico-sweets-chia.webp'
+import w_mexico_sweets_cinnamon from './assets/world/mexico-sweets-cinnamon.webp'
+import w_mexico_sweets_dulce_de_leche from './assets/world/mexico-sweets-dulce-de-leche.webp'
+import w_naples_drinks_almond from './assets/world/naples-drinks-almond.webp'
+import w_naples_drinks_blood_orange from './assets/world/naples-drinks-blood-orange.webp'
+import w_naples_drinks_espresso from './assets/world/naples-drinks-espresso.webp'
+import w_naples_drinks_lemon from './assets/world/naples-drinks-lemon.webp'
+import w_naples_eats_basil from './assets/world/naples-eats-basil.webp'
+import w_naples_eats_eggplant from './assets/world/naples-eats-eggplant.webp'
+import w_naples_eats_margherita from './assets/world/naples-eats-margherita.webp'
+import w_naples_eats_seafood from './assets/world/naples-eats-seafood.webp'
+import w_naples_eats_tomato from './assets/world/naples-eats-tomato.webp'
+import w_naples_sweets_lemon from './assets/world/naples-sweets-lemon.webp'
+import w_naples_sweets_pistachio from './assets/world/naples-sweets-pistachio.webp'
+import w_naples_sweets_ricotta from './assets/world/naples-sweets-ricotta.webp'
 import w_seoul_drinks_corn_silk from './assets/world/seoul-drinks-corn-silk.webp'
 import w_seoul_drinks_makgeolli from './assets/world/seoul-drinks-makgeolli.webp'
 import w_seoul_drinks_omija from './assets/world/seoul-drinks-omija.webp'
@@ -180,7 +202,29 @@ export const WORLD_ART = {
   'lisbon-sweets-cinnamon': w_lisbon_sweets_cinnamon,
   'lisbon-sweets-custard-tart': w_lisbon_sweets_custard_tart,
   'mexico-drinks-chocolate': w_mexico_drinks_chocolate,
+  'mexico-drinks-corn': w_mexico_drinks_corn,
+  'mexico-drinks-hibiscus': w_mexico_drinks_hibiscus,
   'mexico-drinks-lime': w_mexico_drinks_lime,
+  'mexico-eats-avocado': w_mexico_eats_avocado,
+  'mexico-eats-black-bean': w_mexico_eats_black_bean,
+  'mexico-eats-chili': w_mexico_eats_chili,
+  'mexico-eats-corn': w_mexico_eats_corn,
+  'mexico-eats-pork-shoulder': w_mexico_eats_pork_shoulder,
+  'mexico-sweets-chia': w_mexico_sweets_chia,
+  'mexico-sweets-cinnamon': w_mexico_sweets_cinnamon,
+  'mexico-sweets-dulce-de-leche': w_mexico_sweets_dulce_de_leche,
+  'naples-drinks-almond': w_naples_drinks_almond,
+  'naples-drinks-blood-orange': w_naples_drinks_blood_orange,
+  'naples-drinks-espresso': w_naples_drinks_espresso,
+  'naples-drinks-lemon': w_naples_drinks_lemon,
+  'naples-eats-basil': w_naples_eats_basil,
+  'naples-eats-eggplant': w_naples_eats_eggplant,
+  'naples-eats-margherita': w_naples_eats_margherita,
+  'naples-eats-seafood': w_naples_eats_seafood,
+  'naples-eats-tomato': w_naples_eats_tomato,
+  'naples-sweets-lemon': w_naples_sweets_lemon,
+  'naples-sweets-pistachio': w_naples_sweets_pistachio,
+  'naples-sweets-ricotta': w_naples_sweets_ricotta,
   'seoul-drinks-corn-silk': w_seoul_drinks_corn_silk,
   'seoul-drinks-makgeolli': w_seoul_drinks_makgeolli,
   'seoul-drinks-omija': w_seoul_drinks_omija,
@@ -208,4 +252,4 @@ export const WORLD_ART = {
 }
 
 // 已入库张数（清单总数 122，见 tools/world-art-manifest.mjs）
-export const WORLD_ART_COUNT = 100
+export const WORLD_ART_COUNT = 122

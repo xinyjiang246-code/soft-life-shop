@@ -11,7 +11,8 @@
 //     ③ 世界菜单页有没有走「AI 想象图 ↔ 手绘卡」翻面（少一个 imageReal 就退回手绘）
 //     ④ 还没配图的城市要**优雅降级**成手绘卡，而不是断图
 //   所以这四条分开验。
-import { readdirSync, existsSync } from 'node:fs'
+import { readdirSync, existsSync, statSync, readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 
 const url = process.argv[2] || 'http://127.0.0.1:8080/'
 
@@ -29,17 +30,35 @@ function check(label, cond, detail = '') {
 }
 
 // ---------------------------------------------------------------- 1 构建产物
-console.log('【1】src/assets/world/ 里的每一张都进了 dist')
+console.log('【1】122 条清单里的每一张都进了 dist')
+let assets = []
+try { assets = readdirSync('dist/assets') } catch { assets = [] }
+
+// 清单以 tools/world-art-manifest.mjs 为准（它是从 dishForge.js 解析出来的），
+// 别拿「src/assets/world 里有什么」当期望值 —— 那样少几张也验不出来。
+let expected = []
+try {
+  const out = execFileSync(process.execPath, ['tools/world-art-manifest.mjs', '--json'], { encoding: 'utf8' })
+  expected = JSON.parse(out).map((it) => it.key)
+} catch (e) {
+  console.error('❌ 跑不动 tools/world-art-manifest.mjs --json：', e.message)
+  process.exit(1)
+}
 const keys = existsSync('src/assets/world')
   ? readdirSync('src/assets/world').filter((f) => f.endsWith('.webp')).map((f) => f.replace(/\.webp$/, '')).sort()
   : []
-let assets = []
-try { assets = readdirSync('dist/assets') } catch { assets = [] }
-const notBuilt = keys.filter((k) => !assets.some((f) => f.startsWith(`${k}-`) && f.endsWith('.webp')))
-check(`${keys.length} 张世界配图全在 dist 里`, keys.length > 0 && notBuilt.length === 0,
-  notBuilt.slice(0, 5).join(' '))
-check('dist 里没混进 1MB 以上的巨图', assets.filter((f) => f.startsWith('world')).length === 0 ? true : true)
-console.log(`      （清单 122 条，已入库 ${keys.length} 张）`)
+const missingFiles = expected.filter((k) => !keys.includes(k))
+const notBuilt = expected.filter((k) => !assets.some((f) => f.startsWith(`${k}-`) && f.endsWith('.webp')))
+check(`清单 ${expected.length} 条全部有图`, expected.length > 0 && missingFiles.length === 0,
+  `缺 ${missingFiles.length}：${missingFiles.slice(0, 5).join(' ')}`)
+check(`${expected.length} 张全部进了 dist`, notBuilt.length === 0, notBuilt.slice(0, 5).join(' '))
+check('src/worldArt.js 与图目录一致（重跑 tools/world-art-map.mjs 能消除）', (() => {
+  try { execFileSync(process.execPath, ['tools/world-art-map.mjs', '--check'], { encoding: 'utf8' }); return true } catch { return false }
+})())
+// 单张不能太大（世界菜 100+ 张一起下载，1MB 的图会让首屏很沉）
+const fat = assets.filter((f) => expected.some((k) => f.startsWith(`${k}-`))).map((f) => [f, statSync(`dist/assets/${f}`).size])
+  .filter(([, s]) => s > 400 * 1024)
+check('没有单张超过 400KB 的巨图', fat.length === 0, fat.map(([f, s]) => `${f}(${Math.round(s / 1024)}KB)`).join(' '))
 
 // ---------------------------------------------------------------- 浏览器
 const version = await fetch('http://127.0.0.1:9222/json/version').then((r) => r.json())
@@ -256,27 +275,34 @@ try {
   check('翻面后没有断图', (await evaluate(IMG_PROBE)).length === 0)
   await shot('世界菜单_翻到背面_手绘卡')
 
-  // ---------------------------------------------------------------- 4 没配图的城市
-  console.log('\n【4】还没生成图的城市：要优雅降级成手绘卡')
+  // ---------------------------------------------------------------- 4 最后补齐的两座城
+  // 原来这两座城是「缺图城市」（墨西哥城 10 张 / 那不勒斯 12 张没生成，退回手绘卡）。
+  // 2026-09-21 补齐后 122/122 —— 所以这里改成验「它们现在也有图了」，
+  // 并且**静态**确认降级分支还在（哪天又缺图时不会断图，只会安静退回手绘卡）。
+  console.log('\n【4】最后补齐的两座城：现在也全都有图了')
+  for (const [city, cityId] of [['墨西哥城', 'mexico'], ['那不勒斯', 'naples']]) {
+    await pickCity(city)
+    const st = await evaluate(CARDS_PROBE)
+    check(`${city} 8 张卡全都能翻面（不再退回手绘）`, st.length === 8 && st.every((c) => c.toggle),
+      `${st.filter((c) => c.toggle).length}/8 有翻面按钮`)
+    check(`${city} 的图都真的解码出来了`, st.every((c) => c.src && c.widths.every((w) => w > 0)),
+      st.map((c) => c.widths.join('/')).join(' | '))
+    check(`${city} 的图键没错位`, st.every((c) => c.src.includes(`/${cityId}-`)),
+      st.map((c) => c.src.split('/').pop()).join(' '))
+    check(`${city} 没有断图`, (await evaluate(IMG_PROBE)).length === 0)
+  }
   await pickCity('那不勒斯')
-  const naples = await evaluate(CARDS_PROBE)
-  check('那不勒斯的 8 张卡仍是手绘卡（没有翻面按钮、没有图）',
-    naples.length === 8 && naples.every((c) => !c.toggle && !c.src), 
-    `${naples.filter((c) => c.toggle).length}/8 意外出现了翻面卡`)
-  const drawn = await evaluate(`document.querySelectorAll('.world-card svg.dish-art').length`)
-  check('手绘卡确实画出来了（8 张 DishArt）', drawn === 8, `数到 ${drawn} 张`)
-  check('没有断图', (await evaluate(IMG_PROBE)).length === 0)
+  await shot('世界菜单_那不勒斯_补图后')
 
-  console.log('\n【5】墨西哥城：只有两张图，同屏里应该图 / 手绘混排')
-  await pickCity('墨西哥城')
-  const mexico = await evaluate(CARDS_PROBE)
-  const withArt = mexico.filter((c) => c.toggle).length
-  check('墨西哥城是「部分有图」——有图的那几张照常翻面', withArt > 0 && withArt < 8, `${withArt}/8 有图`)
-  check('缺图的那几张安静退回手绘卡，不是断图', mexico.every((c) => c.toggle || !c.src))
-  check('没有断图', (await evaluate(IMG_PROBE)).length === 0)
+  // 降级路径：所有城都配齐后没法用真数据触发，所以改成读源码确认这两条还在 ——
+  // 「一条图都没配的城市」要能安静退回手绘卡，而不是渲染成断图。
+  const itemArtSrc = readFileSync('src/components/ItemArt.jsx', 'utf8')
+  const flipSrc = readFileSync('src/components/FlipImage.jsx', 'utf8')
+  check('ItemArt 里「只有 art 没图」的降级分支还在', /if \(item\.art\) return drawDish/.test(itemArtSrc))
+  check('FlipImage 里「没有背面」退化成静态图的分支还在', /if \(!backFace\)/.test(flipSrc))
 
   // ---------------------------------------------------------------- 6 明信片 + 购物袋
-  console.log('\n【6】明信片邮票 + 购物袋里也跟着出图')
+  console.log('\n【5】明信片邮票 + 购物袋里也跟着出图')
   await evaluate(`(() => { window.scrollTo({ top: 0, behavior: 'instant' }); return true })()`)
   await evaluate(WAIT_IMAGES)
   await settle()
@@ -305,7 +331,7 @@ try {
   await shot('世界菜单_购物袋出图')
 
   // ---------------------------------------------------------------- 7 全局
-  console.log('\n【7】全局：布局 / JS 报错 / 4xx')
+  console.log('\n【6】全局：布局 / JS 报错 / 4xx')
   // ⚠️ 上一段停在购物袋页 —— 不回世界菜单的话这里量不到 .world-card，
   //    会得到「图框高度是空数组」这种假失败（2026-09-21 踩过）
   await goto()
