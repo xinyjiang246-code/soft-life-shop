@@ -5069,108 +5069,84 @@ footer {
 }
 .wd-time { font-size: 11px; color: var(--text-sub); letter-spacing: .03em; white-space: nowrap; }
 
-/* ===== 陪等方式 · 帮他看路 ===== */
-.rider-hop { display: block; }
+/* ===== 陪等方式 · 帮他看路 =====
+   2026-09-21 按用户给的方向重做，原话：「他不像我一开始想的，就是 Chrome 没网时候小鳄鱼跳的，
+   我就想这样」。所以这一版**不换皮**，照小恐龙那四条语言来：
+     ① 极简 —— 一条地平线，云 / 远树 / 虚线马路 / 终点 🏠 / 天空渐变全撤；
+     ② 方块 —— 硬边色块，无渐变、无圆角、无投影、无高光（shape-rendering: crispEdges）；
+     ③ **按住跳得更高**（最关键的一条，数值在 RiderHop.jsx 的 G / HOLD_G）；
+     ④ 节奏更脆 —— 2.6s 滑过、2.0s 一个（原来 4.2s / 2.1s，太像等）。
+   ⚠️ 三条不许抄过来：不计分 · 不会输 · 速度恒定不渐快。 */
+.rider-hop { display: block; --rh-paper: #F7F1E4; }
 .rh-lane {
-  position: relative; display: block; width: 100%; height: 96px;
-  padding: 0; border: 0; border-radius: 12px; overflow: hidden; cursor: pointer;
-  /* 天空 → 路面两层：暖纸色天 + 奶油路肩，雨天滤镜下也能读出层次 */
-  background:
-    linear-gradient(180deg, rgba(203, 219, 227, .45) 0%, rgba(240, 234, 222, 0) 36%),
-    linear-gradient(180deg, #F7F1E4 0%, #EFE6D2 58%, #E7DCC4 58%, #E0D2B7 100%);
-  transition: filter .15s ease;
+  position: relative; display: block; width: 100%; height: 104px;
+  padding: 0; border: 0; border-radius: 10px; overflow: hidden; cursor: pointer;
+  background: var(--rh-paper);
+  touch-action: manipulation;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  transition: background .14s ease;
 }
-.rh-lane:active { filter: brightness(1.035); }
-/* 地平线 */
+/* 按下时**连纸色一起变** —— 骑手眼睛是从底色里挖出来的，只改背景不改这个变量，
+   眼睛就会留在旧颜色上变成两个脏点。 */
+.rh-lane:active { --rh-paper: #F3ECDC; }
+/* 地平线：整屏只有这一条线 */
 .rh-lane::before {
-  content: ''; position: absolute; left: 0; right: 0; top: 57%;
-  border-top: 1px solid rgba(159, 127, 95, .26);
+  content: ''; position: absolute; left: 0; right: 0; bottom: 22px;
+  border-top: 2px solid rgba(74, 69, 64, .5);
 }
-/* 路面虚线（滚动感） */
+/* 地面：线下面两行小石子，跟着速度滚（小恐龙地上就这几颗点） */
 .rh-road {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 32px;
-  background:
-    repeating-linear-gradient(90deg, rgba(159, 127, 95, .34) 0 12px, transparent 12px 26px) 0 14px / 100% 2px no-repeat,
-    linear-gradient(180deg, rgba(159, 127, 95, .12), rgba(159, 127, 95, .05));
-  animation: rhRoadSlide 1.1s linear infinite;
+  position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(74, 69, 64, .30) 0 3px, transparent 3px 27px),
+    repeating-linear-gradient(90deg, transparent 0 11px, rgba(74, 69, 64, .17) 11px 14px, transparent 14px 44px);
+  background-size: 27px 3px, 44px 3px;
+  background-position: 0 6px, 0 13px;
+  background-repeat: repeat-x;
+  animation: rhGround 1.05s linear infinite;
 }
-@keyframes rhRoadSlide { from { background-position: 0 14px, 0 0; } to { background-position: -26px 14px, 0 0; } }
-/* 云：慢慢飘 */
-.rh-cloud {
-  position: absolute; top: 9px; left: -46px;
-  width: 34px; height: 11px; border-radius: 999px;
-  background: rgba(255, 253, 246, .85);
-  box-shadow: 22px -5px 0 -3px rgba(255, 253, 246, .85);
-  animation: rhCloudDrift 9s linear infinite;
+@keyframes rhGround {
+  from { background-position: 0 6px, 0 13px; }
+  to   { background-position: -27px 6px, -44px 13px; }
 }
-@keyframes rhCloudDrift { from { transform: translateX(0); } to { transform: translateX(470px); } }
-/* 远处的小树 */
-.rh-hill {
-  position: absolute; top: 30px; right: 18%;
-  width: 16px; height: 20px;
-  background:
-    radial-gradient(circle at 50% 32%, #C5CD9E 0 7px, transparent 8px),
-    linear-gradient(#B49B78, #B49B78) 50% 62% / 2.5px 9px no-repeat;
-  opacity: .55;
-}
-/* 终点小旗：他反正会到 */
-.rh-goal {
-  position: absolute; right: 7px; bottom: 6px;
-  font-size: 13px; opacity: .5;
-}
-/* 障碍：原来是一个 24×9 的圆角色块 + 头顶一行文字标签（「一滩水」…），
-   看着像调试占位。现在每个路况由 Obstacle 画成真图形，文字只在结果行里说。 */
 .rh-item {
-  position: absolute; bottom: 4px; left: 100%;
+  position: absolute; bottom: 22px; left: 100%;
   animation-name: rhSlide; animation-timing-function: linear; animation-fill-mode: forwards;
-  filter: drop-shadow(0 2px 2px rgba(120, 96, 70, .25));
   z-index: 2;
 }
-@keyframes rhSlide { from { left: 100%; } to { left: -16%; } }
-.rh-item svg { display: block; }
-/* 骑手：圆徽章 + 地面影 + 空中前倾 */
+@keyframes rhSlide { from { left: 100%; } to { left: -18%; } }
+/* 骑手：只负责「离地多高」。--rh-y 由 JS 每帧写，所以这里**不能有 transition** ——
+   加了就变成"补间动画"，按住跳更高不跟手，手感立刻垮掉。 */
 .rh-rider {
-  position: absolute; left: 15%; bottom: 9px;
-  width: 36px; height: 36px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: #F6EEDF; color: var(--caramel);
-  box-shadow: 0 3px 8px rgba(159, 127, 95, .35), inset 0 0 0 1px rgba(159, 127, 95, .18);
-  transform: translateY(0) rotate(0deg);
-  transition: transform .3s cubic-bezier(.3, .8, .4, 1);
+  position: absolute; left: 15%; bottom: 22px;
+  color: var(--text-main);
+  transform: translateY(calc(var(--rh-y, 0px) * -1));
+  transform-origin: 50% 100%;
+  will-change: transform;
   z-index: 3;
 }
-.rh-rider::after {
-  /* 地面影：起跳时缩小变淡 */
-  content: ''; position: absolute; left: 50%; bottom: -7px;
-  width: 26px; height: 5px; border-radius: 50%;
-  background: rgba(120, 96, 70, .22);
-  transform: translateX(-50%);
-  transition: transform .25s ease, opacity .25s ease;
+/* 形变层：落地压扁 / 撞上趔趄。用独立的 scale / rotate 属性，**别写进 transform** ——
+   写进去会盖掉上面那个 translateY，跳起来的人会瞬移回地面。 */
+.rh-body { display: block; transform-origin: 50% 100%; }
+.rh-body.is-land { animation: rhLand .18s ease-out; }
+@keyframes rhLand {
+  from { scale: 1.1 .86; }
+  to   { scale: 1 1; }
 }
-.rh-rider.is-hop {
-  transform: translateY(-32px) rotate(-9deg);
-  transition: transform .2s cubic-bezier(.28, 1.45, .5, 1);
-}
-.rh-rider.is-hop::after { transform: translateX(-50%) scale(.55); opacity: .5; }
-/* 起跳小尘土 */
-.rh-puff {
-  position: absolute; left: calc(15% + 6px); bottom: 6px;
-  width: 10px; height: 10px; border-radius: 50%;
-  border: 1.5px solid rgba(159, 127, 95, .4);
-  opacity: 0; pointer-events: none;
-}
-.rh-puff.is-on { animation: rhPuff .5s ease-out forwards; }
-@keyframes rhPuff {
-  0% { opacity: .7; transform: scale(.4) translateY(0); }
-  100% { opacity: 0; transform: scale(2.1) translateY(-8px); }
+.rh-body.is-bump { animation: rhBump .34s ease-out; }
+@keyframes rhBump {
+  0%   { rotate: 0deg; }
+  28%  { rotate: -8deg; }
+  62%  { rotate: 5deg; }
+  100% { rotate: 0deg; }
 }
 .rh-line { margin: 9px 0 0; font-size: 12px; line-height: 1.55; color: var(--text-main); min-height: 18px; }
-.rh-foot { margin: 4px 0 0; font-size: 10.5px; color: var(--text-sub); }
+.rh-foot { margin: 4px 0 0; font-size: 10.5px; line-height: 1.5; color: var(--text-sub); }
 /* 「你提醒了他 N 次」原来在抬头的右侧，抬头合并进 .wait-deck 后落到这里 */
 .rh-tally { color: var(--caramel); }
 @media (prefers-reduced-motion: reduce) {
-  .rh-road, .rh-cloud { animation: none; }
-  .rh-puff.is-on { animation: none; opacity: 0; }
+  .rh-road { animation: none; }
+  .rh-body.is-land, .rh-body.is-bump { animation: none; }
 }
 
 /* ===== 陪等方式 · 先下线（折个小盒子）=====
