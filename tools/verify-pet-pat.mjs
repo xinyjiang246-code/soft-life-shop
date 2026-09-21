@@ -125,7 +125,12 @@ try {
   console.log('\n[1] 走到软软的小屋')
   await send('Page.navigate', { url })
   await waitFor('document.readyState === "complete" && document.body.innerText.trim().length > 20')
-  await click('.corner-grid .corner-tile:nth-child(1)')
+  // ⚠️ 首页磁贴区（.corner-grid）已随 2026-09-21 的 IA 重排删掉 —— 改走
+  //    「邻居猫 → 去小屋看看」这条入口（与 tools/verify-color-scheme.mjs 同一条）。
+  //    别再改回磁贴：等不到 .corner-tile 报的是「宠物页进不去」，看着像宠物页坏了。
+  await evaluate(`(() => { const e = document.querySelector('.pet-visit-btn'); if (e) { e.scrollIntoView({ block: 'center', behavior: 'instant' }); e.click(); } return true })()`)
+  await evaluate('new Promise(r => setTimeout(r, 420))')
+  await evaluate(`(() => { const e = Array.from(document.querySelectorAll('.pet-visit-bubble [role="button"]')).find((x) => /小屋/.test(x.textContent)); if (e) e.click(); return true })()`)
   await waitFor(`document.querySelector('.pet-pat-btn')`)
   ok('宠物页已挂载', await evaluate(`document.querySelector('.pet-hero h1').innerText`))
 
@@ -266,6 +271,11 @@ try {
   console.log('\n[7] 首页那只溜达猫摸一下也要有反应')
   await click('.topbar .menu-button') // 左上角返回
   await waitFor(`document.querySelector('.home-cat-btn')`, 12000)
+  // ⚠️ 新手引导（.ob-backdrop）是全屏遮罩：**程序化 click 穿得过去，真实鼠标事件穿不过去**。
+  //    不点掉的话下面 elementFromPoint 命中的是 .ob-body，会误报「首页摸猫没反应」
+  //    （2026-09-21 新引导上线后踩到）。
+  await evaluate(`(() => { const b = document.querySelector('.ob-skip'); if (b) b.click(); return true })()`)
+  await evaluate('new Promise((r) => setTimeout(r, 500))')
   // ⚠️ 必须先把猫滚进视口再量坐标：从磁贴进来时页面停在顶部，
   //    .home-cat 在屏幕外，getBoundingClientRect 给出的是负/超屏坐标，
   //    鼠标事件会落空 —— 上一版就是这么误报「首页摸猫没反应」的。

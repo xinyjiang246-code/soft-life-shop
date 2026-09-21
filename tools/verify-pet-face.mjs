@@ -189,7 +189,11 @@ async function gotoPet(stage) {
   })()`)
   await send('Page.reload')
   await waitFor('document.readyState === "complete" && document.body.innerText.trim().length > 20')
-  await click('.corner-grid .corner-tile:nth-child(1)')
+  // ⚠️ 首页磁贴区（.corner-grid）已随 2026-09-21 的 IA 重排删掉 —— 改走
+  //    「邻居猫 → 去小屋看看」这条入口（与 tools/verify-color-scheme.mjs / verify-pet-pat.mjs 一致）。
+  await evaluate(`(() => { const e = document.querySelector('.pet-visit-btn'); if (e) { e.scrollIntoView({ block: 'center', behavior: 'instant' }); e.click(); } return true })()`)
+  await wait(420)
+  await evaluate(`(() => { const e = Array.from(document.querySelectorAll('.pet-visit-bubble [role="button"]')).find((x) => /小屋/.test(x.textContent)); if (e) e.click(); return true })()`)
   await waitFor(`document.querySelector('.pet-pat-btn')`)
   await evaluate(`(() => { document.querySelector('.pet-avatar-wrap').scrollIntoView({ block: 'center' }); return true; })()`)
   await wait(650)
