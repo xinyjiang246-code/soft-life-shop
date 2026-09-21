@@ -49,21 +49,42 @@ for (const [k, val] of Object.entries(v)) {
 }
 
 console.log('\n[2] 三支字体落到元素上')
+// ⚠️ 2026-09-21 起：字阶三档里**中文大标题走宋体**是刻意定的（见 skill「字体 · 字型角色」），
+//    所以不能笼统断言「h1 必须是 Fraunces」—— 首页 h1 是中文（「今天，也要好好吃饭。」），
+//    它本来就该落宋体。改成**中英分开判**：中文大标题 → 宋体；英文标题 → Fraunces。
+//    两条都留着，谁被改坏都会红。
 const fonts = await js(`JSON.stringify((() => {
   const pick = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).fontFamily : null }
   // 微标签别写死类名（各页类名不同）：直接找出**第一个真的用上 Space Mono** 的叶子元素
   const monoEl = [...document.querySelectorAll('*')].find((el) => el.children.length === 0 && (el.innerText || '').trim() && /Space Mono/.test(getComputedStyle(el).fontFamily))
+  const h1 = document.querySelector('h1')
+  const h1Text = (h1?.innerText || '').trim()
+  // 英文标题（刊名 / 栏目标题）该走 Fraunces —— 找一个不含中文的标题元素
+  const enTitle = [...document.querySelectorAll('h1, h2, .hm-issue b, .brand')]
+    .find((el) => { const t = (el.innerText || '').trim(); return t && !/[\\u4e00-\\u9fa5]/.test(t) })
   return {
     标题: pick('h1'),
+    标题样本: h1Text.slice(0, 16),
+    标题含中文: /[\\u4e00-\\u9fa5]/.test(h1Text),
+    英文标题: enTitle ? getComputedStyle(enTitle).fontFamily : null,
+    英文标题样本: enTitle ? (enTitle.innerText || '').trim().slice(0, 18) : '没找到',
     微标签: monoEl ? getComputedStyle(monoEl).fontFamily : null,
     微标签样本: monoEl ? (monoEl.className + ' 「' + monoEl.innerText.trim().slice(0, 14) + '」') : '没找到',
     正文: getComputedStyle(document.body).fontFamily,
   }
 })())`)
 const f = JSON.parse(fonts)
-ok('标题', f.标题)
+ok('标题', f.标题 + '  ← 「' + f.标题样本 + '」')
+ok('英文标题', (f.英文标题 || '没找到') + '  ← 「' + f.英文标题样本 + '」')
 ok('微标签', f.微标签 + '  ← ' + f.微标签样本)
-assert.ok(/Fraunces/.test(f.标题 || ''), '标题应该走 Fraunces，实际: ' + f.标题)
+assert.ok(/Fraunces|Songti|宋体|STSong/.test(f.标题 || ''), '标题应该走「字阶三档」里的衬线，实际: ' + f.标题)
+if (f.标题含中文) {
+  assert.ok(/Songti|宋体|STSong/.test(f.标题 || ''),
+    '中文大标题该走宋体 Bold（字阶三档里刻意定的那档），实际: ' + f.标题)
+} else {
+  assert.ok(/Fraunces/.test(f.标题 || ''), '英文大标题该走 Fraunces，实际: ' + f.标题)
+}
+assert.ok(/Fraunces/.test(f.英文标题 || ''), '英文标题该走 Fraunces，实际: ' + f.英文标题)
 assert.ok(/Space Mono/.test(f.微标签 || ''), '微标签应该走 Space Mono，实际: ' + f.微标签)
 assert.ok(/PingFang/.test(f.正文 || ''), '正文应该走苹方，实际: ' + f.正文)
 

@@ -96,10 +96,15 @@ try {
   await send('Network.enable')
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true })
 
+  // ⚠️ 2026-09-21：手账升成一级 tab（底部 `.tabbar-pp-item`），
+  //    「首页磁贴第 3 个 → 存档页第 2 个 tab」那条路已经不存在了。
   const gotoJournal = async () => {
-    await click('.corner-grid .corner-tile:nth-child(3)')
-    await waitFor(`document.querySelector('.archive-tabs')`)
-    await click('.archive-tabs button:nth-child(2)')
+    await waitFor(`document.querySelector('.tabbar-pp-item')`)
+    await evaluate(`(() => {
+      const b = Array.from(document.querySelectorAll('.tabbar-pp-item')).find((x) => x.textContent.trim() === ${JSON.stringify('手账')});
+      if (!b) throw new Error('底部 tab 里没有「手账」');
+      b.click(); return true;
+    })()`)
     await waitFor(`document.querySelector('.jh')`)
   }
 

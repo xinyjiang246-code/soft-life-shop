@@ -74,6 +74,10 @@ try {
   await waitFor(`document.querySelector('.home-page')`)
 
   console.log('\n[1] 档案页：那一大坨克数可以点')
+  // ⚠️ 2026-09-21：猫粮入口从「首页磁贴区」搬到「我的」页（MineScreen 的 `.corner-tile`）。
+  //    首页已经没有任何 `.corner-tile` 了，直接查首页会拿到空数组 → 报「Cannot read properties of undefined」。
+  await evaluate(`(() => { const b = Array.from(document.querySelectorAll('.tabbar-pp-item')).find((x) => x.textContent.trim() === '我的'); if (b) b.click(); return true })()`)
+  await evaluate('new Promise((r) => setTimeout(r, 700))')
   await evaluate(`Array.from(document.querySelectorAll('.corner-tile')).find(t => t.innerText.includes('猫粮')).click()`)
   await waitFor(`document.querySelector('.charity-hero')`)
   const hero = await evaluate(`(() => {
@@ -143,6 +147,10 @@ try {
   console.log('\n[5] 刷新 —— 这一笔还在（而且措辞没越线）')
   await send('Page.navigate', { url })
   await waitFor(`document.querySelector('.home-page')`)
+  // ⚠️ 2026-09-21：猫粮入口从「首页磁贴区」搬到「我的」页（MineScreen 的 `.corner-tile`）。
+  //    首页已经没有任何 `.corner-tile` 了，直接查首页会拿到空数组 → 报「Cannot read properties of undefined」。
+  await evaluate(`(() => { const b = Array.from(document.querySelectorAll('.tabbar-pp-item')).find((x) => x.textContent.trim() === '我的'); if (b) b.click(); return true })()`)
+  await evaluate('new Promise((r) => setTimeout(r, 700))')
   await evaluate(`Array.from(document.querySelectorAll('.corner-tile')).find(t => t.innerText.includes('猫粮')).click()`)
   await waitFor(`document.querySelector('.charity-hero')`)
   const after = await evaluate(`(() => ({

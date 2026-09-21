@@ -53,7 +53,7 @@ async function evaluate(expression) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const ok = (label, value) => console.log('  ✓', label, '=', JSON.stringify(value))
-const homeReady = `document.readyState === "complete" && !!document.querySelector('.amb-today')`
+const homeReady = `document.readyState === "complete" && !!document.querySelector('.hm-snap')`
 
 // ⚠️ evaluate(homeReady) 只求值一次 —— 页面还没渲染完时它返回 false 而不是等，
 //    紧接着的 querySelector 就是 null。必须轮询。
@@ -107,14 +107,23 @@ try {
 
   console.log('\n[1] 今天还什么都没发生：说「今天有什么」，不说「你还缺什么」')
   const b = await evaluate(`(() => {
-    const el = document.querySelector('.amb-today')
-    return { text: el.innerText, inAmbience: !!el.closest('.home-ambience'), tag: el.tagName, clickable: !!el.closest('button') }
+    const el = document.querySelector('.hm-snap')
+    // ⚠️ 2026-09-21：这块从「氛围条那张卡」搬进了 TODAY'S EXTRA 分区
+    //    （容器 .hm-snap，紧跟 .extra-title 标题之后）。口径没变 ——
+    //    还是「跟着标题走的一条记录，不是自己另起一张卡」，只是容器名换了。
+    const title = el.previousElementSibling
+    return {
+      text: el.innerText,
+      inSection: !!title && /extra-title/.test(title.className || ''),
+      tag: el.tagName,
+      clickable: !!el.closest('button'),
+    }
   })()`)
   ok('内容', b.text.replace(/\n+/g, ' | '))
   assert.ok(/^TODAY · \d{1,2}月\d{1,2}日 周[日一二三四五六]/.test(b.text.trim()),
     `第一行必须是「TODAY · 日期 星期」：${b.text}`)
   assert.ok(/今天的特调是/.test(b.text), '空白态要说今天有什么 —— 每日特调是每天真会换的那样')
-  assert.ok(b.inAmbience, '它应该长在氛围条那张卡里，不是另起一张')
+  assert.ok(b.inSection, '它该跟着 TODAY\'S EXTRA 标题走，不另起一张卡')
   assert.equal(b.clickable, false, '它不可点 —— 是记录牌，不是入口（入口就该有内容页）')
   assert.ok(!/还没|快去|抓紧|今日目标|连续\d+天/.test(b.text), `不许催单、不许打卡：${b.text}`)
 
@@ -122,7 +131,7 @@ try {
   await evaluate(seed(0))
   await send('Page.navigate', { url })
   await waitFor(homeReady)
-  const a = await evaluate(`document.querySelector('.amb-today').innerText`)
+  const a = await evaluate(`document.querySelector('.hm-snap').innerText`)
   ok('内容', a.replace(/\n+/g, ' | '))
   assert.ok(/今天等满 3 单/.test(a), `等满次数要读今天的账（注入的是 3）：${a}`)
   assert.ok(/存下 1 餐/.test(a), `今天的手账条目要算进来：${a}`)
@@ -135,7 +144,7 @@ try {
   await evaluate(seed(-1))
   await send('Page.navigate', { url })
   await waitFor(homeReady)
-  const y = await evaluate(`document.querySelector('.amb-today').innerText`)
+  const y = await evaluate(`document.querySelector('.hm-snap').innerText`)
   ok('内容', y.replace(/\n+/g, ' | '))
   assert.ok(/今天的特调是/.test(y), `昨天的账不该算进今天：${y}`)
   assert.ok(!/等满 3 单|620/.test(y), `昨天的等满次数与猫粮克数都不该出现：${y}`)

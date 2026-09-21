@@ -127,8 +127,25 @@ try {
   await send('Network.enable')
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true })
 
+  // ⚠️ 2026-09-21 的 IA 重排把首页磁贴区删了：存档页的入口搬到「我的」页
+  //    （MineScreen 的 `.corner-tile`「存档与手账」）。底部 tab 是 `.tabbar-pp-item`。
+  //    别改回 `.corner-grid .corner-tile:nth-child(3)` —— 那正是上一版误报「存档页坏了」的原因。
+  const openTab = async (label) => {
+    await waitFor(`document.querySelector('.tabbar-pp-item')`)
+    await evaluate(`(() => {
+      const b = Array.from(document.querySelectorAll('.tabbar-pp-item')).find((x) => x.textContent.trim() === ${JSON.stringify(label)});
+      if (!b) throw new Error('底部 tab 里没有「' + ${JSON.stringify(label)} + '」');
+      b.click(); return true;
+    })()`)
+    await evaluate('new Promise((r) => setTimeout(r, 700))')
+  }
   const gotoArchive = async () => {
-    await click('.corner-grid .corner-tile:nth-child(3)')
+    await openTab('我的')
+    await evaluate(`(() => {
+      const b = [...document.querySelectorAll('.corner-tile')].find((x) => /存档与手账|存档/.test(x.innerText));
+      if (!b) throw new Error('「我的」页里找不到「存档与手账」');
+      b.scrollIntoView({ block: 'center', behavior: 'instant' }); b.click(); return true;
+    })()`)
     await waitFor(`document.querySelector('.archive-tabs')`)
     await click('.archive-tabs button:nth-child(1)')
     await waitFor(`document.querySelector('.aw')`)

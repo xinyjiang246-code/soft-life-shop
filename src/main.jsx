@@ -3,9 +3,12 @@ import { createRoot } from 'react-dom/client'
 import { Sparkles } from 'lucide-react'
 import './styles.css'
 import { flyToBag, rememberPointer } from './flyToBag.js'
-import { RESCUE, buildRescueShelf, dateSeed, getItem, getTodaySpecial, levelForMeals, setCustomItems, setRescueItems, setRuntimeItems, setWorldItems, stickerPool, toItemFromSpecial } from './data.js'
+// ⚠️ getCounter 必须在这个 import 里：第 ~345 行记订单历史时用它取店名。
+//    漏掉它不是「少个名字」—— 是**整个 App 白屏**（ReferenceError 会把 React 整棵树带下去）。
+//    症状：等待页点「跟骑手说一句」选任意一句 → 整页空白。2026-09-21 真机上抓到过。
+import { RESCUE, buildRescueShelf, dateSeed, getCounter, getItem, getTodaySpecial, levelForMeals, setCustomItems, setRescueItems, setRuntimeItems, setWorldItems, stickerPool, toItemFromSpecial } from './data.js'
 import { forgeMenu, getKitchen, getTodayKitchen } from './dishForge.js'
-import { loadCart, loadCharity, loadCustomItems, loadHouseName, loadPet, loadRescue, loadWishes, loadWorld, logJournalOrder, saveCart, saveCharity, saveCustomItems, savePet, saveRescue, saveWishes, saveWorld } from './storage.js'
+import { loadCart, loadCharity, loadCustomItems, loadHouseName, loadOrders, loadPet, loadRescue, loadWishes, loadWorld, logJournalOrder, saveCart, saveCharity, saveCustomItems, saveOrder, savePet, saveRescue, saveWishes, saveWorld } from './storage.js'
 import HomeScreen from './screens/HomeScreen.jsx'
 import CounterListScreen from './screens/CounterListScreen.jsx'
 import CounterDetailScreen from './screens/CounterDetailScreen.jsx'
@@ -17,6 +20,9 @@ import ArchiveScreen from './screens/ArchiveScreen.jsx'
 import PetScreen from './screens/PetScreen.jsx'
 import MyShopScreen from './screens/MyShopScreen.jsx'
 import WorldMenuScreen from './screens/WorldMenuScreen.jsx'
+import MineScreen from './screens/MineScreen.jsx'
+import JournalView from './components/JournalView.jsx'
+import TabBar from './components/TabBar.jsx'
 import CharityScreen from './screens/CharityScreen.jsx'
 import RescueScreen from './screens/RescueScreen.jsx'
 import SearchScreen from './screens/SearchScreen.jsx'
@@ -337,6 +343,12 @@ function App() {
       .map(({ item, qty }) => ({ id: item.id, name: qty > 1 ? `${item.name} ×${qty}` : item.name }))
     if (entries.length === 0) return null
     logJournalOrder(entries)
+    const first = entries[0].item || getItem(entries[0].id)
+    saveOrder({
+      shop: first ? (getCounter(first.counterId)?.name || '慢活小铺') : '慢活小铺',
+      total: Object.entries(snapshot || {}).reduce((sum, [id, qty]) => sum + (getItem(id)?.price || 0) * qty, 0),
+      items: entries.map((e) => e.name),
+    })
     return { count: entries.length }
   }, [])
 
@@ -467,6 +479,17 @@ function App() {
         />
       )}
       {screen === 'pet' && <PetScreen pet={pet} onColorway={setPetColorway} onBack={goBack} />}
+      {screen === 'journal' && (
+        <div className="shop-page journal-tab">
+          <header className="topbar compact">
+            <span className="topbar-spacer" />
+            <span className="topbar-title serif">食物手账</span>
+            <span className="topbar-spacer" />
+          </header>
+          <JournalView />
+        </div>
+      )}
+      {screen === 'mine' && <MineScreen pet={pet} charity={charity} customItems={customItems} onNavigate={navigate} />}
       {screen === 'myshop' && (
         <MyShopScreen
           customItems={customItems}
@@ -495,6 +518,9 @@ function App() {
           <Sparkles size={14} strokeWidth={1.6} />
           <span>{toast.message}</span>
         </div>
+      )}
+      {['home', 'journal', 'pet', 'mine'].includes(screen) && (
+        <TabBar screen={screen} onNavigate={navigate} />
       )}
     </main>
   )

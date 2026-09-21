@@ -86,8 +86,8 @@ try {
   console.log('\n[1] 全新访客：第一句不能是「欢迎回来」')
   await send('Page.navigate', { url })
   await waitFor(homeReady)
-  await waitFor(`document.querySelector('.amb-greet b')`)
-  const greet1 = await evaluate(`document.querySelector('.amb-greet b').innerText`)
+  await waitFor(`document.querySelector('.hm-greet')`)
+  const greet1 = await evaluate(`document.querySelector('.hm-greet').innerText`)
   const hint1 = await evaluate(`document.querySelector('.hint-bubble p')?.innerText || ''`)
   const visited = await evaluate(`localStorage.getItem('soft-life-visited-v1')`)
   ok('问候语', greet1); ok('提示气泡', hint1); ok('已落 visit 标记', visited)
@@ -109,14 +109,17 @@ try {
   console.log('\n[3] 回头客：这时才该说「欢迎回来」')
   await send('Page.navigate', { url })
   await waitFor(homeReady)
-  await waitFor(`document.querySelector('.amb-greet b')`)
-  const greet2 = await evaluate(`document.querySelector('.amb-greet b').innerText`)
+  await waitFor(`document.querySelector('.hm-greet')`)
+  const greet2 = await evaluate(`document.querySelector('.hm-greet').innerText`)
   const hint2 = await evaluate(`document.querySelector('.hint-bubble p')?.innerText || ''`)
   ok('问候语', greet2); ok('提示气泡', hint2)
   assert.ok(/欢迎回来/.test(greet2), `来过一次就该被当成熟人：${greet2}`)
   assert.ok(!/不会真的送来/.test(hint2), '新人解释只说一次 —— 回头客每次都被解释一遍就成了啰嗦')
 
   console.log('\n[4] 猫粮账本：说清这笔钱可以往哪儿去')
+  // ⚠️ 2026-09-21：猫粮入口从首页磁贴区搬到「我的」页
+  await evaluate(`(() => { const b = Array.from(document.querySelectorAll('.tabbar-pp-item')).find((x) => x.textContent.trim() === '我的'); if (b) b.click(); return true })()`)
+  await evaluate('new Promise((r) => setTimeout(r, 700))')
   await evaluate(`(() => {
     const b = [...document.querySelectorAll('.corner-tile')].find((x) => /猫粮/.test(x.innerText));
     if (!b) throw new Error('找不到「慢活猫粮计划」磁贴');

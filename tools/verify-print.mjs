@@ -88,8 +88,17 @@ await js(`document.querySelector('.rider-window')?.scrollIntoView({block:'start'
 await shot('3-wait')
 
 console.log('\n[4] 结局页：走最长的 eyebrow，头部不许折行 + 角章')
-await js(`document.querySelector('.skip-wait-button').click()`); await sleep(900)
-await js(`document.querySelector('.exchange-option').click()`); await sleep(2600)
+// ⚠️ 2026-09-21：加速改成了「催单仪式」（永不退回一键跳过）——
+//    点 `.skip-wait-button` 只是**打开催单卡**（setExchangeOpen(true)），
+//    还要选一句 `.exchange-option`（跟骑手说的一句话）才真的加速。
+//    只点第一下 = 结局页永远等不到（上一版就是这么红的）。
+await waitFor(`document.querySelector('.skip-wait-button')`, 30000)
+await js(`document.querySelector('.skip-wait-button').click()`)
+// ⚠️ 催单卡是 portal 到 body 的，渲染比点一下慢 —— 必须等 `.exchange-option` 真的出现再点。
+//    旧版是「点完 sleep(900) 直接点」，卡还没出来 → 点空 → 结局页永远等不到（红在这）。
+await waitFor(`document.querySelector('.exchange-option')`, 15000)
+await js(`document.querySelector('.exchange-option').click()`)
+await sleep(2600)
 await js(`document.fonts.ready.then(() => true)`)
 for (let t = 0; t < 15000; t += 500) { if (await js(`!!document.querySelector('.ending-card')`)) break; await sleep(500) }
 await sleep(1000)
