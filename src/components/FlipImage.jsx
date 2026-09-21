@@ -3,16 +3,25 @@ import { Repeat } from 'lucide-react'
 
 /**
  * FlipImage —— 一图两面的翻面卡片
- * 正面 = 手绘线稿（默认展示），背面 = 真实照片
+ * 正面 = 默认展示的那一张，背面 = 翻过去看的那一张
  * 交互和 Instagram「上传两张头像、点头像换一张」一样：点一下翻过去，再点一下翻回来。
+ *
+ * 两面可以各自是 **图片地址**（front / back）或 **任意 React 节点**（frontNode / backNode）——
+ * 后者是给世界菜单用的：AI 现编的菜没有手绘**文件**，那张手绘卡是 DishArt 现画的 SVG，
+ * 所以只能当节点塞进来。
  *
  * 用法：
  *   <FlipImage front={item.image} back={item.imageReal} alt={item.cn} />
+ *   <FlipImage frontNode={<DishArt … />} back={item.imageReal} frontTag="手绘" backTag="AI 想象" />
  * 放进任何 position:relative 的容器里（.product-art / .counter-thumb …），会自动铺满。
+ *
+ * ⚠️ 角标文案由调用方给，**不许把 AI 生成的图写成「实拍」**（红线：世界菜是现编的）。
  */
 export default function FlipImage({
   front,
   back,
+  frontNode = null,
+  backNode = null,
   alt = '',
   className = '',
   hint = true,
@@ -25,11 +34,14 @@ export default function FlipImage({
 }) {
   const [flipped, setFlipped] = useState(false)
 
-  // 没有实拍图（例如用户自己拍的照片），退化成普通图片
-  if (!back) {
+  const frontFace = frontNode || (front ? <img src={front} alt={alt} /> : null)
+  const backFace = backNode || (back ? <img src={back} alt="" aria-hidden="true" /> : null)
+
+  // 没有背面（例如用户自己拍的照片、还没配图的世界菜）→ 退化成普通图片
+  if (!backFace) {
     return (
       <div className={`flip-frame flip-static ${className}`}>
-        {front ? (
+        {frontNode || (front ? (
           <img className="flip-solo" src={front} alt={alt} />
         ) : (
           <span className="flip-emoji" aria-hidden="true">
@@ -39,7 +51,7 @@ export default function FlipImage({
               <circle cx="12" cy="12" r="3.4" />
             </svg>
           </span>
-        )}
+        ))}
       </div>
     )
   }
@@ -50,7 +62,7 @@ export default function FlipImage({
         type="button"
         className="flip-toggle"
         aria-pressed={flipped}
-        aria-label={`${alt}：点击切换手绘 / 实拍`}
+        aria-label={`${alt}：点击切换${frontTag} / ${backTag}`}
         onClick={(e) => {
           if (stopPropagation) e.stopPropagation()
           setFlipped((v) => !v)
@@ -59,11 +71,11 @@ export default function FlipImage({
         <span className="flip-inner">
           <span className="flip-face flip-front">
             {showTag && <span className="flip-tag">{frontTag}</span>}
-            <img src={front} alt={alt} />
+            {frontFace}
           </span>
           <span className="flip-face flip-back">
             {showTag && <span className="flip-tag">{backTag}</span>}
-            <img src={back} alt="" aria-hidden="true" />
+            {backFace}
           </span>
         </span>
       </button>

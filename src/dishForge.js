@@ -4,12 +4,17 @@
 //  慢活小铺的菜品分三层：
 //    ① 招牌层：13 款内置商品 —— 有手绘 + 实拍两张真图，可以翻面
 //    ② 世界层：这里生成的菜 —— AI 用「城市 × 主料 × 手法 × 形态」现编，
-//              世界上并不存在，所以不需要照片，统一用手绘卡片（DishArt）呈现
+//              世界上并不存在，所以**不能**说「实拍」；配的是 AI 想象图
+//              （`src/assets/world/`，按主料挂）+ 现画的 DishArt 手绘卡，两张可翻面
 //    ③ 自建层：用户拍照上架（MyShopScreen）
 //
 //  生成是「确定性」的：同一个 (城市, 批次) 永远得到同一桌菜，
 //  所以商品 id 稳定，购物车/刷新都不会错位。
 // ============================================================
+
+// 世界菜单的 AI 想象图（100 张，键 = 城市-池-主料，见 src/worldArt.js）。
+// 清单总共 122 条 —— 还有城市没生成，取不到就退回手绘卡，属正常降级。
+import { WORLD_ART } from './worldArt.js'
 
 // 每座城市的「空运来信」图（2026-09-20 补）—— 菜品是 AI 每天现编的，配不了固定照片，
 // 所以给「城市」配图：明信片页头、首页入口用它交代「这桌菜从哪来」。
@@ -82,6 +87,15 @@ export const KINDS = {
 
 // 一桌菜单的形态配比（8 道）
 export const KIND_ORDER = ['cup', 'cup', 'bowl', 'bowl', 'plate', 'plate', 'cake', 'bread']
+
+// 形态 → 主料池。**配图的键也走这一层**（图挂在主料上，见 src/worldArt.js）：
+//   杯 → drinks（饮品）· 碗/盘 → eats（咸食）· 蛋糕/面包 → sweets（甜点）
+const KIND_POOL = { cup: 'drinks', bowl: 'eats', plate: 'eats', cake: 'sweets', bread: 'sweets' }
+
+/** 和 tools/world-art-manifest.mjs 的 slug() 必须是同一套，否则取的键对不上图 */
+function slugEn(en) {
+  return String(en).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
 
 // 城市的厨房：一座城市 = 一套主料 + 一套手法 + 一套味道形容
 export const WORLD_KITCHENS = [
@@ -209,7 +223,8 @@ const DESC_TEMPLATES = [
 // 关键：主料 / 手法 / 形态都用 index 做轮转，保证同一桌里不会出现两道一样的组合
 function forgeDish(kitchen, kind, seed, index) {
   const meta = KINDS[kind]
-  const pool = kind === 'cup' ? kitchen.drinks : kind === 'bowl' || kind === 'plate' ? kitchen.eats : kitchen.sweets
+  const poolName = KIND_POOL[kind]
+  const pool = kitchen[poolName]
 
   const main = pool[(h32(seed + 11) + index) % pool.length]
   const touch = kitchen.touches[(h32(seed + 101) + index * 3) % kitchen.touches.length]
@@ -219,6 +234,11 @@ function forgeDish(kitchen, kind, seed, index) {
 
   const [lo, hi] = meta.price
   const price = lo + (h32(seed + 503 + index * 977) % (hi - lo + 1))
+
+  // 这一道菜的「AI 想象图」：键挂在（城市 × 主料 × 池）上 —— 菜名每天现编，
+  // 只有主料是稳定的，所以图跟着主料走。没配图的城市（还没生成）取到 undefined，
+  // ItemArt 会自动退回手绘卡，不用在这里特判。
+  const imageReal = WORLD_ART[`${kitchen.id}-${poolName}-${slugEn(main[1])}`]
 
   return {
     id: `world-${kitchen.id}-${index}`,
@@ -233,6 +253,11 @@ function forgeDish(kitchen, kind, seed, index) {
     city: kitchen.city,
     cityEn: kitchen.cityEn,
     description: tpl(kitchen.city, main[0], sense),
+    // ⚠️ 世界菜的图**不是实拍**，是 AI 现编的想象图 —— 所以：
+    //    · 不写 image（那张手绘卡是 DishArt 组件现画的，没有图片文件）
+    //    · 只写 imageReal，由 ItemArt 走「手绘卡 ↔ AI 想象图」翻面分支
+    //    角标文案也因此不能写「实拍」（见 ItemArt），别改成「实拍」。
+    imageReal,
     // main/shape 喂给 DishArt 画插画细节：主料决定配料颜色，形态后缀决定画法变体
     art: { kind, hex: kitchen.hex, city: kitchen.city, cityEn: kitchen.cityEn, main: main[0], shape: shape[0] },
     isWorld: true,

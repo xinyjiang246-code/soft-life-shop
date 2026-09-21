@@ -5,8 +5,10 @@ import ItemArt from '../components/ItemArt.jsx'
 function WorldCard({ item, onAdd }) {
   return (
     <article className="product-card world-card">
+      {/* prefer="real"：先露那张 AI 想象图（这桌菜「长什么样」是第一眼最该看到的），
+          点一下翻到手绘卡。还没配图的城市会自然退回手绘卡（ItemArt 自己判断）。 */}
       <div className="product-art">
-        <ItemArt item={item} size="lg" />
+        <ItemArt item={item} size="lg" prefer="real" />
       </div>
       <p className="product-code">{item.code}</p>
       <h2>{item.name}</h2>
@@ -70,7 +72,8 @@ export default function WorldMenuScreen({
             <span className="world-badge"><Sparkles size={12} strokeWidth={1.8} />AI 现编 · 世界上并没有</span>
           </div>
           <div className="pc-stamp" aria-hidden="true">
-            <ItemArt item={items[0]} size="lg" />
+            {/* 邮票上贴第一道菜：和卡片同一套图（AI 想象图 ↔ 手绘卡），尺寸由 CSS 给 */}
+            <ItemArt item={items[0]} size="lg" prefer="real" />
             <span className="pc-stamp-denom">{items.length} 道 · 空运</span>
           </div>
         </div>
