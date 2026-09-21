@@ -72,6 +72,7 @@ await js(`document.fonts.ready.then(() => true)`)
 
 await js(`document.querySelectorAll('.shop-row')[0].click()`); await sleep(1400)
 await js(`[...document.querySelectorAll('.add-button')].slice(0,1).forEach(b=>b.click())`); await sleep(500)
+await js(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`) // 有规格的商品点 + 是「展开」，这里补一步提交（默认规格）
 await js(`document.querySelector('.cart-button').click()`); await sleep(900)
 await js(clickText('/去结账|结算|下单/')); await sleep(900)
 await js(clickText('/确认|下单|提交/')); await sleep(1200)

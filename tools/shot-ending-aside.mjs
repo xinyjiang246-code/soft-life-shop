@@ -22,6 +22,7 @@ await js('localStorage.clear()')
 await send('Page.navigate', { url: 'http://127.0.0.1:8080/' }); await sleep(2600)
 await js("document.querySelectorAll('.shop-row')[0].click()"); await sleep(1300)
 await js("[...document.querySelectorAll('.add-button')].slice(0, 1).forEach(function (b) { b.click() })"); await sleep(400)
+await js(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`) // 有规格的商品点 + 是「展开」，这里补一步提交（默认规格）
 await js("document.querySelector('.cart-button').click()"); await sleep(800)
 await js("(function(){var b=[...document.querySelectorAll('button')].find(function(x){return /去结账|结算|下单/.test(x.textContent)}); b&&b.click()})()"); await sleep(800)
 await js("(function(){var b=[...document.querySelectorAll('button')].find(function(x){return /确认|下单|提交/.test(x.textContent)}); b&&b.click()})()"); await sleep(1200)

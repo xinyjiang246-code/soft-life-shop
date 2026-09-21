@@ -331,6 +331,8 @@ try {
   await evaluate(`document.querySelector('.shop-row').click()`)
   await waitFor(`document.querySelectorAll('.add-button').length > 0`)
   await evaluate(`[...document.querySelectorAll('.add-button')].slice(0, 2).forEach((b) => b.click())`)
+  await new Promise((r) => setTimeout(r, 120))
+  await evaluate(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`) // 有规格的商品点 + 是「展开」，这里补一步提交（默认规格）
   await waitFor(`document.querySelector('.bag-button')`)
   await click('.bag-button')
   await waitFor(`[...document.querySelectorAll('button')].some((x) => /去结账|结算|下单/.test(x.textContent))`)

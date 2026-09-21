@@ -119,6 +119,9 @@ async function orderToWait() {
   await js(`document.querySelector('.shop-row').click()`)
   await waitFor(`document.querySelectorAll('.add-button').length > 0`)
   await js(`[...document.querySelectorAll('.add-button')].slice(0, 2).forEach(b => b.click())`)
+  // 有规格的商品点 + 是「展开」，等 .spec-add 渲染出来再点一遍（默认规格）加进袋子
+  await new Promise((r) => setTimeout(r, 120))
+  await js(`[...document.querySelectorAll('.spec-add')].forEach(b => b.click())`)
   await waitFor(`document.querySelector('.bag-button')`)
   await js(`document.querySelector('.bag-button').click()`)
   await waitFor(`[...document.querySelectorAll('button')].some(x => /去结账|结算|下单/.test(x.textContent))`)

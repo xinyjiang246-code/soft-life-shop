@@ -36,6 +36,7 @@ async function runPort(port, tag) {
   await waitFor(`document.querySelector('.shop-row')`)
   await js(`document.querySelectorAll('.shop-row')[0].click()`); await sleep(1200)
   await js(`[...document.querySelectorAll('.add-button')].slice(0,1).forEach(b=>b.click())`); await sleep(450)
+  await js(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`) // 有规格的商品点 + 是「展开」，这里补一步提交（默认规格）
   await js(`(function(){var bs=[...document.querySelectorAll('.cart-button')];bs[bs.length-1].click()})()`); await sleep(850)
   await waitFor(`[...document.querySelectorAll('button')].find(x=>/去结账|结算|下单/.test(x.textContent))`)
   await js(`[...document.querySelectorAll('button')].find(x=>/去结账|结算|下单/.test(x.textContent)).click()`); await sleep(900)

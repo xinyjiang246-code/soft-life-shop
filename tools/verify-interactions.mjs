@@ -62,11 +62,18 @@ await send('Runtime.enable')
 await send('DOM.enable')
 await send('CSS.enable')
 await send('Log.enable')
+// ⚠️ 2026-09-21 补：这里原来打裸 URL 又没关缓存 —— dist 重新构建后，
+// 会拿到**上一份 index.html**（引用着已经不存在的 index-xxxx.css），
+// 于是控制台报 404、末尾那条「控制台不许有报错」断言假红（真踩过：build 绿、单独重跑就绿）。
+// 两件事必须一起做：Network.setCacheDisabled + URL 带时间戳。
+await send('Network.enable')
+await send('Network.setCacheDisabled', { cacheDisabled: true })
+const HREF = 'http://127.0.0.1:8080/?t=' + Date.now()
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true })
-await send('Page.navigate', { url: 'http://127.0.0.1:8080/' })
+await send('Page.navigate', { url: HREF })
 await sleep(1200)
 await js(`localStorage.clear()`)
-await send('Page.navigate', { url: 'http://127.0.0.1:8080/' })
+await send('Page.navigate', { url: 'http://127.0.0.1:8080/?t=' + Date.now() })
 await sleep(2000)
 await waitFor(`document.querySelectorAll('.shop-row').length > 0`, 20000)
 
@@ -203,6 +210,11 @@ const fly = await js(`(async () => {
   const before = badge() ? parseInt(badge().textContent, 10) : 0
   const btn = document.querySelector('.add-button')
   btn.click()
+  // 有规格的商品点 + 是「展开规格」，不直接加购 —— 展开后等 .spec-add 渲染出来再点（默认规格）。
+  // 无规格商品（眼罩等）没有 .spec-add，点 + 就已经加进去了。
+  await new Promise(r => setTimeout(r, 80))
+  const specAdd = document.querySelector('.spec-add')
+  if (specAdd) specAdd.click()
   const token = document.querySelector('.fly-token')
   const start = token ? token.getBoundingClientRect() : null
   await new Promise(r => setTimeout(r, 200))
@@ -295,7 +307,7 @@ assert.ok(
 // ---- [6] 减弱动态效果：上面那些动效全部不发生，但功能照常 ----
 console.log('\n[6] prefers-reduced-motion')
 await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
-await send('Page.navigate', { url: 'http://127.0.0.1:8080/' })
+await send('Page.navigate', { url: 'http://127.0.0.1:8080/?t=' + Date.now() })
 await sleep(1600)
 await waitFor(`document.querySelectorAll('.shop-row').length > 0`, 20000)
 const reduced = await js(`(async () => {
@@ -308,6 +320,10 @@ const reduced = await js(`(async () => {
   const onCounter = !!document.querySelector('.add-button')
   const btn = document.querySelector('.add-button')
   if (btn) btn.click()
+  // 有规格商品要等 .spec-add 渲染出来再点（同上）
+  await new Promise(r => setTimeout(r, 80))
+  const specAdd = document.querySelector('.spec-add')
+  if (specAdd) specAdd.click()
   await new Promise(r => setTimeout(r, 250))
   return {
     进场动画: 进场,
@@ -327,7 +343,7 @@ await send('Emulation.setEmulatedMedia', { features: [] })
 
 // ---- [7] 体检 ----
 console.log('\n[7] 体检')
-await send('Page.navigate', { url: 'http://127.0.0.1:8080/' })
+await send('Page.navigate', { url: 'http://127.0.0.1:8080/?t=' + Date.now() })
 await sleep(1500)
 const health = await js(`(() => ({
   横向溢出: document.documentElement.scrollWidth > innerWidth,

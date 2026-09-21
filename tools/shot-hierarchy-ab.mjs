@@ -88,7 +88,14 @@ for (const { side, port } of SIDES) {
     await waitFor(`document.querySelectorAll('.shop-row').length > 0`)
     for (const c of v.clicks) {
       if (typeof c === 'string') { await waitFor(`document.querySelector('${c}')`); await js(`document.querySelector('${c}').click()`); await sleep(1100) }
-      else if (c.addButtons) { await waitFor(`document.querySelectorAll('.add-button').length > 0`); await js(`[...document.querySelectorAll('.add-button')].slice(0,${c.addButtons}).forEach(b=>b.click())`); await sleep(500) }
+      // 有规格的商品点 + 是「展开规格」，所以要补一步提交（默认规格）才真的进袋子
+      else if (c.addButtons) {
+        await waitFor(`document.querySelectorAll('.add-button').length > 0`)
+        await js(`[...document.querySelectorAll('.add-button')].slice(0,${c.addButtons}).forEach(b=>b.click())`)
+        await sleep(320)
+        await js(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`)
+        await sleep(500)
+      }
       else if (c.text) { await waitFor(`[...document.querySelectorAll('button')].some(x=>${c.text}.test(x.textContent))`); await js(`(()=>{const b=[...document.querySelectorAll('button')].find(x=>${c.text}.test(x.textContent)); b&&b.click()})()`); await sleep(900) }
       else if (c.skipWait) { await waitFor(`document.querySelector('.skip-wait-button')`, 35000); await js(`document.querySelector('.skip-wait-button').click()`); await sleep(900) }
       else if (c.wait) { await waitFor(`document.querySelector('${c.wait}')`, 20000); await sleep(900) }

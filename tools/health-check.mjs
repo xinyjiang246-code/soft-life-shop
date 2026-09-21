@@ -41,6 +41,7 @@ await js(`window.scrollTo(0, 0)`); await sleep(400)
 console.log('\nB. 主流程 → 等待页（组件 = RiderWindow「骑手骑到哪了」，2026-09-16 取代了 RiderGame）')
 await js(`document.querySelector('.shop-row')?.click()`); await sleep(1500)
 await js(`document.querySelectorAll('.menu-row .add-button')[0]?.click()`); await sleep(500)
+await js(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`) // 有规格的商品点 + 是「展开」，这里补一步提交（默认规格）
 await click('button[aria-label*="购物袋"]'); await sleep(1400)
 await click('.primary-button'); await sleep(1500)
 await click('.primary-button'); await sleep(2000)  // 结算 → 配送

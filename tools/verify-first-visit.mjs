@@ -142,10 +142,13 @@ try {
   })()`)
   await waitFor(`document.querySelector('.add-button, button[aria-label^="加入"]')`)
   await evaluate(`(() => {
-    const b = [...document.querySelectorAll('button')].find((x) => /^加入/.test((x.getAttribute('aria-label') || '') + (x.innerText || '')));
+    const b = [...document.querySelectorAll('button')].find((x) => /加入/.test((x.getAttribute('aria-label') || '') + (x.innerText || '')));
     if (!b) throw new Error('找不到加入购物篮的按钮');
     b.click();
   })()`)
+  // 有规格的商品点 + 是「展开」，等 .spec-add 渲染出来再点一遍（默认规格）加进袋子
+  await new Promise((r) => setTimeout(r, 120))
+  await evaluate(`[...document.querySelectorAll('.spec-add')].forEach(b => b.click())`)
   await waitFor(`document.querySelector('.bag-button')`)
   await evaluate(`document.querySelector('.bag-button').click()`)
   await waitFor(`document.querySelector('.simple-hero')`)

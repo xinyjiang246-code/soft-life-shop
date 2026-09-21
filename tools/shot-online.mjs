@@ -85,6 +85,7 @@ if (mode) {
   await clickWhen('.shop-row')
   await waitFor(`document.querySelectorAll('.add-button').length > 0`, 20000)
   await js(`[...document.querySelectorAll('.add-button')].slice(0,2).forEach(b=>b.click())`)
+  await js(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`) // 有规格的商品点 + 是「展开」，这里补一步提交（默认规格）
   await sleep(400)
   await clickWhen('.cart-button')
   await clickTextWhen('/去结账|结算|下单/')

@@ -67,6 +67,7 @@ await shot('2-menu')
 await js(`window.scrollTo(0,0)`); await sleep(300)
 await waitFor(`document.querySelectorAll('.add-button').length > 0`)
 await js(`[...document.querySelectorAll('.add-button')].slice(0,1).forEach(b=>b.click())`); await sleep(500)
+await js(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`) // 有规格的商品点 + 是「展开」，这里补一步提交（默认规格）
 await waitFor(`document.querySelector('.cart-button')`)
 await js(`document.querySelector('.cart-button').click()`); await sleep(900)
 await waitFor(`[...document.querySelectorAll('button')].some(x=>/去结账|结算|下单/.test(x.textContent))`)

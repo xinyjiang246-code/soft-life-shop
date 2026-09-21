@@ -10,7 +10,7 @@
 //   ⚠️ 别用 data.js 的长度代替它 —— 数据对不代表渲染得出来（build 绿 ≠ 接线对）。
 import { writeFile, mkdir } from 'node:fs/promises'
 
-const url = process.argv[2] || 'https://soft-life-shop.app.workbuddy.host/'
+const url = process.argv[2] || 'https://soft-life-shop-18918.app.workbuddy.host/'
 // 逐店截图存这儿（拼总览图用）。它在 gitignore 里（预览截图/ 整目录），不进仓库。
 const SHOT_DIR = '预览截图/店铺菜单'
 
