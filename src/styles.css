@@ -5073,7 +5073,9 @@ footer {
    2026-09-21 按用户给的方向重做，原话：「他不像我一开始想的，就是 Chrome 没网时候小鳄鱼跳的，
    我就想这样」。所以这一版**不换皮**，照小恐龙那四条语言来：
      ① 极简 —— 一条地平线，云 / 远树 / 虚线马路 / 终点 🏠 / 天空渐变全撤；
-     ② 方块 —— 硬边色块，无渐变、无圆角、无投影、无高光（shape-rendering: crispEdges）；
+     ② 硬边、不上色 —— 路况是方块像素（crispEdges）；骑手当天晚些又单独改成线条剪影
+        （用户：「你就换成骑单车的这种人吧，不要这个数码人」）—— **骑手不再走像素**，
+        别的都不动；
      ③ **按住跳得更高**（最关键的一条，数值在 RiderHop.jsx 的 G / HOLD_G）；
      ④ 节奏更脆 —— 2.6s 滑过、2.0s 一个（原来 4.2s / 2.1s，太像等）。
    ⚠️ 三条不许抄过来：不计分 · 不会输 · 速度恒定不渐快。 */
@@ -5086,8 +5088,8 @@ footer {
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   transition: background .14s ease;
 }
-/* 按下时**连纸色一起变** —— 骑手眼睛是从底色里挖出来的，只改背景不改这个变量，
-   眼睛就会留在旧颜色上变成两个脏点。 */
+/* 按下时**连纸色一起变** —— 车道背景就是骑手图里「挖空」的地方（车轮内圈、座垫缝里
+   透出来的底），只改背景不改这个变量，那些缝会留在旧颜色上变成脏块。 */
 .rh-lane:active { --rh-paper: #F3ECDC; }
 /* 地平线：整屏只有这一条线 */
 .rh-lane::before {
@@ -6982,56 +6984,119 @@ select:focus-visible {
 .world-page .world-note { font-family: var(--pp-mono); font-size: 10px; letter-spacing: .04em; }
 
 /* ============================================================
-   首页报头 hm-mast（2026-09-21 真重构：第一屏只留报头+心情+店铺）
+   首页报头 hm-mast（2026-09-21 · 方案 B「封面 · 图先」· 用户选定）
+   第一屏顺序：刊头一行 → 整张封面图 → 中文大标题 → 问候 → 心情 → 收尾线
+   用户原话「打开链接第一眼能被 ui 吸引」；改前是「标题在左 / 小图在右」的双栏，
+   一屏塞了四个模块，被判断为「像一个功能副页」。
+   回退前先看：预览截图/首页_开屏_方案对比_20260921.png
    ============================================================ */
 .hm-mast {
-  margin: 4px 16px 4px;
-  padding: 12px 2px 14px;
-  border-top: 2.5px solid var(--pp-ink);
+  margin: 2px 16px 0;
+  padding: 14px 2px 0;
+  border-top: 3px solid var(--pp-ink);
   position: relative;
 }
 .hm-issue {
   display: flex; align-items: baseline; gap: 8px;
-  margin: 0 0 14px;
-  padding-bottom: 7px;
+  margin: 0 0 16px;
+  padding-bottom: 9px;
   border-bottom: 1px solid var(--pp-ink);
-  font: 700 9.5px/1 var(--pp-mono);
+  font: 700 10px/1 var(--pp-mono);
   letter-spacing: .2em;
   color: var(--pp-ink);
 }
 .hm-issue em { font-style: normal; font-weight: 400; color: var(--pp-seal); }
 .hm-issue .hm-date { margin-left: auto; font-weight: 400; letter-spacing: .06em; color: var(--text-sub); }
-.hm-main { display: flex; gap: 14px; align-items: flex-start; }
-.hm-copy { flex: 1; min-width: 0; }
-.hm-copy h1 {
-  margin: 0 0 12px;
-  font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
-  font-weight: 900;
-  font-size: 33px;
-  line-height: 1.18;
-  letter-spacing: .04em;
-  color: #241F18;
-}
-.hm-greet {
-  margin: 0;
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  font: 400 10.5px/1.7 var(--pp-mono);
-  letter-spacing: .03em;
-  color: #57503F;
-}
-/* 拍立得：小一号，斜贴，白框 */
+
+/* 封面：一叠实拍相纸（2026-09-21 换成 HomeCover —— 可横扫翻看）。
+   相纸外壳（白边 / 墨线 / 硬阴影）从 `.hm-polaroid .flip-frame` 搬到了 `.hm-polaroid` 自己身上：
+   它不再是「翻面卡」，所以 `.flip-frame` 那套（透视 / backface / 3D 翻转）在这里用不上。
+   ⚠️ **照片区高度必须给**：`.hc-slide` 是 height:100%、里面有 img 全靠父盒子撑，
+   父盒子不给尺寸就整块塌成「一条相纸边」（这条坑踩过两次，见 verify-flip-frames.mjs）。
+   高度这么定：38vh 时相纸总高 366、收尾线离底栏只剩 12px —— 心情 chip 一旦换行就会压线，
+   所以收到 36vh/上限 352（照片 330×304，仍是一张「大图」），余量回到 29px；
+   下限 260 是给短屏的（375×667 上 36vh 只有 240，会和改成之前持平，别再往下压）。 */
 .hm-polaroid {
-  position: relative; flex: none;
-  width: 104px;
-  transform: rotate(2.4deg);
-}
-.hm-polaroid .flip-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0 0 24px;
+  padding: 7px 7px 30px;
+  background: #FBF8F1;
   border: 4px solid #FFFDF6;
   border-radius: 2px;
-  box-shadow: 3px 4px 0 rgba(42, 36, 29, .32);
+  box-shadow: 4px 5px 0 rgba(42, 36, 29, .3);
 }
+
+/* 横向翻看：**用原生滚动 + 吸附**，不自己写 pointer 拖拽 ——
+   iOS 的惯性、回弹、吸附都是系统给的，自己实现的那套在纵向滚动的页面里最容易打架。
+   ⚠️ `scroll-snap-stop: always` 是有意的：轻轻一划只翻一张（旧版一趟滑过三张会更晕）。 */
+.hc-viewport {
+  height: clamp(260px, 36vh, 352px);
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  outline: none;
+}
+.hc-viewport::-webkit-scrollbar { display: none; }
+.hc-viewport:focus-visible { outline: 2px dashed var(--caramel); outline-offset: 4px; }
+
+.hc-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.hc-slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* 相纸下缘那一行：名字 / 圆点 / 计数 —— 全部走印刷层的 mono 微标签 */
+.hc-bar {
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  bottom: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hc-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 9px/1 var(--pp-mono);
+  letter-spacing: .1em;
+  color: #6D6656;
+}
+.hc-dots { display: flex; align-items: center; }
+/* 线而不是圆点：圆形是杂志的语言，短横线是印刷的语言（和 `.hm-pagehint` 同一套）。
+   按钮本体 16×16 是**手指尺寸**，可见那 2px 由 ::before 画 —— 别把按钮压成 2px 高。 */
+.hc-dot { position: relative; width: 16px; height: 16px; }
+.hc-dot::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 7px;
+  height: 2px;
+  background: rgba(42, 36, 29, .22);
+  transition: background .18s, left .18s, right .18s;
+}
+.hc-dot.is-on::before { background: var(--pp-ink); left: 0; right: 0; }
+.hc-count {
+  font: 400 9px/1 var(--pp-mono);
+  letter-spacing: .08em;
+  color: #8D867C;
+}
+/* 只有一张时不留那行（也就不用给下缘留位置） */
+.hc-cover.is-single { padding-bottom: 7px; }
 .hm-seal {
-  position: absolute; top: -13px; left: -13px;
+  position: absolute; top: -14px; right: 12px; left: auto;
   display: grid; place-items: center;
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--pp-seal); color: #FFF6EC;
@@ -7039,6 +7104,62 @@ select:focus-visible {
   font: 700 13px/1 var(--f-body);
   transform: rotate(-10deg);
 }
+.hm-copy { min-width: 0; }
+.hm-copy h1 {
+  margin: 0 0 12px;
+  font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+  font-weight: 900;
+  font-size: 37px;
+  line-height: 1.16;
+  letter-spacing: .03em;
+  color: #241F18;
+}
+.hm-greet {
+  margin: 0;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font: 400 11px/1.8 var(--pp-mono);
+  letter-spacing: .03em;
+  color: #57503F;
+}
+
+/* 封面区块：**高度跟视口绑定** —— 不管什么机型，第一屏都只有这一整屏，
+   店铺列表一律从折线以下开始。
+   ⚠️ 别改成「给店铺区加一段 vh padding」：内容高度是固定的（约 715px），
+   而需要补的距离是「视口高 − 715」，它比 vh 长得快得多，越高的屏越会漏出「NEARBY SHOPS」。
+   ⚠️ 也别改成 JS 量高度：首帧字体还没落地时 chip 会换行、标题会多一行，
+   整段高出 70px，量出来直接是 0（2026-09-21 试过，白折腾）。
+   78px = .topbar 高；88px = 底部胶囊自身高 58 + 下边距 14 + 再留 16px 呼吸 */
+.home-page .hm-cover {
+  min-height: calc(100dvh - var(--safe-t) - 78px);
+  padding-bottom: 88px;
+  display: flex;
+  flex-direction: column;
+}
+/* 收尾线压在封面底部（内容不够高时自动被推开，够高时退化成普通间距） */
+.home-page .hm-cover .hm-pagehint { margin-top: auto; }
+
+/* 封面收尾线：只说「下面还有」，**不可点、不带箭头**（用户原话是
+   「打开链接第一眼」——所以第一屏必须自己交代完，不能靠人瞎滑） */
+.hm-pagehint {
+  display: flex; align-items: center; gap: 10px;
+  margin: 34px 18px 0;
+  font: 700 9.5px/1 var(--pp-mono);
+  letter-spacing: .2em;
+  color: var(--text-sub);
+}
+.hm-pagehint::before, .hm-pagehint::after {
+  content: ""; flex: 1; height: 1px; background: rgba(74, 69, 64, .26);
+}
+
+/* 分类 chip 沉进店铺列表 —— 列表自己的 padding 已经给了左右 20px，这里只留底距 */
+.shop-list-section .shop-kinds { padding: 0 0 14px; }
+
+/* 店铺区整体再往下让 24px。
+   ⚠️ 必须是 margin-top，不是 padding-top：串门的邻居猫是 `.pet-visit { top:-6px }`，
+   而它的定位祖先不是 `.shop-list-head`（那个没有 position），是**整个 `.shop-list-section`**
+   （`.pet-host` 给的位置）—— 所以给区块内边距，猫会跟着一起往下走，白给。
+   加上它自带的 bob 动画（最高抬 5px），一共要给 11px 以上；留 24px 是余量。 */
+.home-page .shop-list-section { margin-top: 24px; }
 /* 今日速览（挪到小花样分区头） */
 .hm-snap { margin: 10px 18px 2px; }
 .hm-snap-label {
@@ -7047,9 +7168,10 @@ select:focus-visible {
   letter-spacing: .18em;
   color: var(--pp-seal);
 }
-/* 心情仪式：压缩成一行（无卡片壳） */
+/* 心情仪式：压缩成一行（无卡片壳）。上 24px 跟在大标题下面；
+   下 34px 是给收尾线的兜底间距（封面够高时收尾线会被 .hm-cover 的 flex 推到底，用不上它） */
 .home-page .mood-ritual.is-compact {
-  margin: 2px 16px 10px; padding: 0;
+  margin: 24px 16px 34px; padding: 0;
   background: none; border: none; box-shadow: none;
 }
 .mood-ritual.is-compact .mr-label {
@@ -7057,8 +7179,10 @@ select:focus-visible {
   margin-right: 8px;
   font-size: 12px; color: var(--text-main);
 }
-.mood-ritual.is-compact .mood-ritual-row { display: inline-flex; flex-wrap: wrap; gap: 6px; margin: 0 0 0 2px; }
-.mood-ritual.is-compact .mood-chip { padding: 5.5px 12px; font-size: 12px; }
+/* gap / 左右 padding 调小，是为了让五个 chip 在 390 宽的手机上**一行放得下** ——
+   实测原来差 4px，会把「逛逛选物」挤到第二行，落单一个看着像排坏了 */
+.mood-ritual.is-compact .mood-ritual-row { display: inline-flex; flex-wrap: wrap; gap: 5px; margin: 0 0 0 2px; }
+.mood-ritual.is-compact .mood-chip { padding: 5.5px 10px; font-size: 12px; }
 .mood-ritual.is-compact .mood-ritual-line {
   margin: 7px 0 0; font-size: 11px; color: var(--text-sub);
   animation: obFade .3s ease both;
