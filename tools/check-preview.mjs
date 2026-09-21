@@ -1,7 +1,26 @@
 // 使用已启动的 Chrome 调试端口，在独立无痕上下文测试，不接触用户标签或存档。
 // node tools/check-preview.mjs <url> '[{"click":"selector"}]' [screenshot.png]
 import { writeFile } from 'node:fs/promises'
+import { get as httpGet } from 'node:http'
 import assert from 'node:assert/strict'
+
+// ⚠️ 探「图坏没坏」**不能用全局 fetch**（2026-09-21 修）。
+//    Node 的 undici 会复用 keep-alive 连接，而 `python3 -m http.server` 是 HTTP/1.0、
+//    每次响应后关连接 → undici 复用到的死连接让它在 Parser.finish 里
+//    `assert(!this.paused)` 抛错，**直接崩掉整个进程**（不是 reject，没法 catch）。
+//    换一个刚起的新服务器一样复现，所以不是「服务器跑久了」。
+//    `agent: false` + `connection: close` = 每个请求一条新连接，绕开复用。
+function probeStatus(url) {
+  return new Promise((resolve, reject) => {
+    const req = httpGet(url, { agent: false, headers: { connection: 'close' } }, (res) => {
+      res.resume()
+      res.on('end', () => resolve(res.statusCode))
+      res.on('error', reject)
+    })
+    req.on('error', reject)
+    req.setTimeout(10000, () => req.destroy(new Error(`probe timeout: ${url}`)))
+  })
+}
 
 const url = process.argv[2] || 'http://127.0.0.1:5173/'
 const steps = JSON.parse(process.argv[3] || '[]')
@@ -109,7 +128,9 @@ try {
   const imgSrcs = await evaluate(`Array.from(document.images).map(i => i.src).filter(Boolean)`)
   const brokenImages = []
   for (const src of imgSrcs) {
-    try { const r = await fetch(src); if (!r.ok) brokenImages.push(src) }
+    // data: / blob: 是内联的，没有「取不回来」这回事 —— 探针只对 http(s) 有意义
+    if (!/^https?:/.test(src)) continue
+    try { const status = await probeStatus(src); if (status !== 200) brokenImages.push(`${src} → HTTP ${status}`) }
     catch { brokenImages.push(src) }
   }
   const snapshot = await evaluate(`({
