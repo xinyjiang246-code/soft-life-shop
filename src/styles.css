@@ -8,6 +8,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
+  /* 只做浅色（2026-09-21）。两个理由：
+     ① 产品是暖米色纸感 —— 纸面本身就是产品，自动反色会把整个气质抽掉；
+     ② Chromium / 微信的自动深色主题**会连图片一起反色**，奶白软软会变成只剩描边的黑猫。
+     两行是有意的：不支持 `only` 关键字的旧内核会丢掉第二行、留下第一行兜底。
+     ⚠️ 别为了「支持深色」把它删掉 —— 真要深色版得整套重新配色（另开一版，不是这里改）。
+     见 index.html 的同名 meta。 */
+  color-scheme: light;
+  color-scheme: only light;
   --bg-base: #F6F1E8;
   --surface: #FCFBF7;
   --primary: #E4C6A8;

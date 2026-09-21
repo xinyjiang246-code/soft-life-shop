@@ -6,7 +6,20 @@
          env(safe-area-inset-*) 恒为 0，styles.css 里那几处 calc 等于没写。 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#F6F1E8" />
+    <!-- 小铺只做浅色（2026-09-21）。
+         不声明的话，手机/微信的「自动深色主题」（Chromium Auto Dark Theme / force dark）
+         会把整页当「没适配深色的网站」做算法反色 —— 连图片像素一起反：
+         奶白的软软会变成一只只剩描边的黑猫（真机截图确认过）。
+         这是暖米色纸感产品，纸面本身就是产品的一部分，所以明确只支持 light：
+         meta 的 only light 会**完全阻止**自动变暗（也顺带消掉加载时那一下变暗闪烁）。
+         ⚠️ 别改成 light dark —— 那等于宣布「请把整页反色」。 -->
+    <meta name="color-scheme" content="only light" />
     <title>慢活小铺 · Soft Life</title>
+    <!-- Paper Press chic 层的字体：Fraunces（衬线标题/品牌）+ Space Mono（打字机数据行）。
+         断网时优雅回退 Georgia / Courier，不影响使用。 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,900;1,9..144,700;1,9..144,900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
     <!-- ⚠️ 图标一律用相对路径 ./：base 是 './'，绝对路径 /favicon.png 在
          GitHub Pages 的 /<repo>/ 子路径下会 404。图标由 tools/makeIcon.py 生成。 -->
     <link rel="icon" type="image/png" href="./favicon.png" />
