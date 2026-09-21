@@ -90,19 +90,24 @@ export default function CheckoutScreen({ cart, houseName, setHouseName, onNaviga
           <h2 className="section-title">这一单 <em>{count} 件</em></h2>
 
           <ul className="co-lines">
-            {entries.map(({ item, qty }) => (
-              <li key={item.id}>
+            {entries.map((entry) => {
+              const { item, qty, specText, unitPrice } = entry
+              return (
+              <li key={entry.key}>
                 <span className="co-name">
                   {item.cn}
+                  {/* 规格跟着走 —— 结算前最后一眼能核对「去冰的到底点了没」 */}
+                  {specText && <small>{specText}</small>}
                   {qty > 1 && <small>×{qty}</small>}
                   {item.rescue && <span className="co-tag">惜食柜</span>}
                 </span>
                 <span className="co-price">
-                  ¥{item.price * qty}
+                  ¥{unitPrice * qty}
                   {item.rescue && <s className="co-was">¥{item.originalPrice * qty}</s>}
                 </span>
               </li>
-            ))}
+              )
+            })}
           </ul>
 
           <div className="co-sum">

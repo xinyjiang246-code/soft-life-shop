@@ -6,7 +6,7 @@ import { flyToBag, rememberPointer } from './flyToBag.js'
 // ⚠️ getCounter 必须在这个 import 里：第 ~345 行记订单历史时用它取店名。
 //    漏掉它不是「少个名字」—— 是**整个 App 白屏**（ReferenceError 会把 React 整棵树带下去）。
 //    症状：等待页点「跟骑手说一句」选任意一句 → 整页空白。2026-09-21 真机上抓到过。
-import { RESCUE, buildRescueShelf, dateSeed, getCounter, getItem, getTodaySpecial, levelForMeals, setCustomItems, setRescueItems, setRuntimeItems, setWorldItems, stickerPool, toItemFromSpecial } from './data.js'
+import { RESCUE, buildRescueShelf, cartKeyOf, dateSeed, getCounter, getItem, getTodaySpecial, levelForMeals, parseCartKey, setCustomItems, setRescueItems, setRuntimeItems, setWorldItems, specTextOf, stickerPool, toItemFromSpecial, unitPriceOf } from './data.js'
 import { forgeMenu, getKitchen, getTodayKitchen } from './dishForge.js'
 import { loadCart, loadCharity, loadCustomItems, loadHouseName, loadOrders, loadPet, loadRescue, loadWishes, loadWorld, logJournalOrder, saveCart, saveCharity, saveCustomItems, saveOrder, savePet, saveRescue, saveWishes, saveWorld } from './storage.js'
 import HomeScreen from './screens/HomeScreen.jsx'
@@ -117,16 +117,23 @@ function App() {
 
   // 加进袋子。惜食柜的东西有份数上限 —— 柜上就剩那么几份，
   // 文案承诺了「卖完就没有了」，那就得真的会卖完（两个入口都走这里，所以拦在这）。
-  const addToCart = useCallback((itemId) => {
+  // specIds：选的规格（没选就是 []，键仍是商品 id 本身，和老数据一个形状）
+  const addToCart = useCallback((itemId, specIds = []) => {
     const item = getItem(itemId)
     if (!item) return
     const cap = item.rescue ? RESCUE.perItem : Infinity
-    if ((cart[itemId] || 0) >= cap) {
+    // 柜上剩几份是**按商品**算的 —— 同一碗饭「少一点」「多一点」各加一次只占两份，不是四份
+    const held = Object.entries(cart).reduce((n, [key, qty]) => {
+      const { itemId: id } = parseCartKey(key)
+      return id === itemId ? n + qty : n
+    }, 0)
+    if (held >= cap) {
       setToast({ key: Date.now(), message: `这一格今天只剩 ${cap} 份了` })
       return
     }
+    const key = cartKeyOf(itemId, specIds)
     setCart((prev) => {
-      const next = { ...prev, [itemId]: (prev[itemId] || 0) + 1 }
+      const next = { ...prev, [key]: (prev[key] || 0) + 1 }
       saveCart(next)
       return next
     })
@@ -141,7 +148,8 @@ function App() {
   // 实测过：顶栏角标显示 3，点进去 0 行，还写着「购物篮还是空的」。
   // 所以每次运行时商品表定下来后对一次，把查不到的如实请出去，并且说一声。
   useEffect(() => {
-    const goneCart = Object.keys(cart).filter((id) => !getItem(id))
+    // 键可能是 `m13#ice-none…`，得先拆出商品 id 再查在不在
+    const goneCart = Object.keys(cart).filter((key) => !getItem(parseCartKey(key).itemId))
     const goneWish = wishes.filter((id) => !getItem(id))
     if (!goneCart.length && !goneWish.length) return
 
@@ -299,7 +307,7 @@ function App() {
   const recordRescue = useCallback((snapshot) => {
     const taken = Object.entries(snapshot || {})
       .filter(([, qty]) => qty > 0)
-      .map(([id, qty]) => ({ item: getItem(id), qty }))
+      .map(([key, qty]) => ({ item: getItem(parseCartKey(key).itemId), qty }))
       .filter(({ item }) => item && item.rescue)
     if (taken.length === 0) return null
 
@@ -338,15 +346,28 @@ function App() {
   const recordJournal = useCallback((snapshot) => {
     const entries = Object.entries(snapshot || {})
       .filter(([, qty]) => qty > 0)
-      .map(([id, qty]) => ({ item: getItem(id), qty }))
-      .filter(({ item }) => item)
-      .map(({ item, qty }) => ({ id: item.id, name: qty > 1 ? `${item.name} ×${qty}` : item.name }))
+      .map(([key, qty]) => {
+        const { itemId, specIds } = parseCartKey(key)
+        const item = getItem(itemId)
+        return item ? { item, itemId, specIds, qty } : null
+      })
+      .filter(Boolean)
+      // 手账里也带上规格 —— 「黑糖珍珠奶茶（去冰 · 半糖）」才像真的点过一杯
+      .map(({ item, itemId, specIds, qty }) => {
+        const spec = specTextOf(item, specIds)
+        const tail = qty > 1 ? ` ×${qty}` : ''
+        return { id: itemId, name: spec ? `${item.name}（${spec}）${tail}` : `${item.name}${tail}` }
+      })
     if (entries.length === 0) return null
     logJournalOrder(entries)
-    const first = entries[0].item || getItem(entries[0].id)
+    const first = getItem(entries[0].id)
     saveOrder({
       shop: first ? (getCounter(first.counterId)?.name || '慢活小铺') : '慢活小铺',
-      total: Object.entries(snapshot || {}).reduce((sum, [id, qty]) => sum + (getItem(id)?.price || 0) * qty, 0),
+      // 加料的钱要算进这一单 —— 不然手账里的总额会比实际付的少
+      total: Object.entries(snapshot || {}).reduce((sum, [key, qty]) => {
+        const { itemId, specIds } = parseCartKey(key)
+        return sum + unitPriceOf(getItem(itemId), specIds) * qty
+      }, 0),
       items: entries.map((e) => e.name),
     })
     return { count: entries.length }

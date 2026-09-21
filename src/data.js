@@ -486,6 +486,157 @@ export const menuItems = [
   },
 ]
 
+/* ===== 规格：去冰 / 少糖 / 多加饭 / 加菜 =====
+   2026-09-22 用户提的方向（原话）：「奶茶可以选择去冰 少冰 少糖等等，
+   饭可以多加少加 也可以加菜之类」。三条边界是她当场挑的，别自己挪：
+     ① **在列表行里展开** —— 不弹半屏、不跳详情页（弹窗会打断「逛」这件事）；
+     ② **加料 / 加量加价，冰量甜度不加钱**（加珍珠 +¥2 这种才动价格）。
+        ⚠️ 也**不许写「少糖更健康」「少糖更省」** 之类的话 —— 反说教是这产品的底线；
+     ③ **按品类给**：茶饮 / 饭面有，甜点只有甜度；**生活用品、点心没有**。
+        不是每件东西都能选，硬给反而假（也别给世界菜 / 惜食柜 / 我的小店那些）。
+   **不选也能加** —— 没选就按默认做（正常冰 / 标准糖 / 正常份 / 不加料），
+   不强制选完才能加入购物袋（不卡人、不催人）。 */
+export const SPECS = {
+  // 茶饮：冰量 + 甜度 + 加料（加料可多选）
+  tea: [
+    {
+      id: 'ice', label: '冰量', pick: 'one', def: 'ice-normal',
+      options: [
+        { id: 'ice-normal', label: '正常冰' },
+        { id: 'ice-less', label: '少冰' },
+        { id: 'ice-none', label: '去冰' },
+        { id: 'ice-warm', label: '常温' },
+      ],
+    },
+    {
+      id: 'sugar', label: '甜度', pick: 'one', def: 'sugar-std',
+      options: [
+        { id: 'sugar-std', label: '标准糖' },
+        { id: 'sugar-less', label: '少糖' },
+        { id: 'sugar-half', label: '半糖' },
+        { id: 'sugar-none', label: '无糖' },
+      ],
+    },
+    {
+      id: 'add', label: '加料', pick: 'many',
+      options: [
+        { id: 'add-pearl', label: '珍珠', delta: 2 },
+        { id: 'add-coconut', label: '椰果', delta: 2 },
+        { id: 'add-oat', label: '燕麦', delta: 3 },
+        { id: 'add-pudding', label: '布丁', delta: 3 },
+      ],
+    },
+  ],
+  // 饭：饭量 + 加菜
+  rice: [
+    {
+      id: 'rice', label: '米饭', pick: 'one', def: 'rice-normal',
+      options: [
+        { id: 'rice-normal', label: '正常' },
+        { id: 'rice-less', label: '少一点' },
+        { id: 'rice-more', label: '多一点', delta: 2 },
+      ],
+    },
+    {
+      id: 'add', label: '加菜', pick: 'many',
+      options: [
+        { id: 'add-egg', label: '溏心蛋', delta: 4 },
+        { id: 'add-kimchi', label: '泡菜', delta: 3 },
+        { id: 'add-seaweed', label: '海带丝', delta: 2 },
+        { id: 'add-meat', label: '多一份肉', delta: 6 },
+      ],
+    },
+  ],
+  // 面：面量 + 加菜（加菜比饭的少两样，别整套照抄）
+  noodle: [
+    {
+      id: 'noodle', label: '面量', pick: 'one', def: 'noodle-normal',
+      options: [
+        { id: 'noodle-normal', label: '正常' },
+        { id: 'noodle-less', label: '少一点' },
+        { id: 'noodle-more', label: '多一点', delta: 2 },
+      ],
+    },
+    {
+      id: 'add', label: '加菜', pick: 'many',
+      options: [
+        { id: 'add-egg', label: '溏心蛋', delta: 4 },
+        { id: 'add-chashu', label: '叉烧', delta: 6 },
+        { id: 'add-corn', label: '玉米', delta: 2 },
+      ],
+    },
+  ],
+  // 甜点：只有甜度（不加料 —— 蛋糕上加珍珠是笑话）
+  sweet: [
+    {
+      id: 'sugar', label: '甜度', pick: 'one', def: 'sugar-std',
+      options: [
+        { id: 'sugar-std', label: '标准糖' },
+        { id: 'sugar-less', label: '少糖' },
+        { id: 'sugar-half', label: '半糖' },
+      ],
+    },
+  ],
+}
+
+/** 只有柜台里这几件常驻商品能选规格（外加今日特调）。
+    ⚠️ 世界菜 / 惜食柜 / 我的小店的手拍商品一律没有 —— 它们不是「店里的菜单」。 */
+const WITH_SPECS = new Set([...menuItems.map((m) => m.id), 'special-today'])
+
+export function specsFor(item) {
+  if (!item || !WITH_SPECS.has(item.id)) return []
+  if (item.counterId === 'tea') return SPECS.tea
+  if (item.counterId === 'dessert') return SPECS.sweet
+  if (item.counterId === 'bento') return SPECS.rice
+  // 面店那四件里，「溏心蛋叉烧丼」是饭（category === '饭'），其余是面
+  if (item.counterId === 'noodle') return item.category === '饭' ? SPECS.rice : SPECS.noodle
+  return []
+}
+
+/** 购物袋的键：没选（或全默认）就是商品 id 本身 —— 老数据照旧能读，不用迁移。
+    选了才拼成 `m13#ice-none.sugar-half.add-pearl`（排序过，同一份规格只会有一行）。 */
+export function cartKeyOf(itemId, specIds = []) {
+  // ⚠️ **默认值要从键里剥掉** —— 否则「点了但全是默认」的那杯键会变成
+  // `m13#ice-normal.sugar-std`，跟老数据里那杯 `m13` 在购物袋里分成两行
+  // （同一样东西显示两次，加过的老用户会以为自己手抖加了两杯）。
+  const defaults = new Set(specsFor(getItem(itemId)).filter((g) => g.pick === 'one' && g.def).map((g) => g.def))
+  const picked = Array.from(new Set(specIds.filter((id) => id && !defaults.has(id)))).sort()
+  return picked.length ? `${itemId}#${picked.join('.')}` : itemId
+}
+
+export function parseCartKey(key) {
+  const [itemId, specPart] = String(key).split('#')
+  return { itemId, specIds: specPart ? specPart.split('.') : [] }
+}
+
+/** 「少冰 · 半糖 · 加珍珠」—— 购物袋 / 结算 / 凭证上都用这句，别各处自己拼。
+    默认值不显示（说「正常冰 · 标准糖」是废话），加料前加个「加」字才读得顺。 */
+export function specTextOf(item, specIds = []) {
+  const groups = specsFor(item)
+  if (!groups.length || !specIds.length) return ''
+  const set = new Set(specIds)
+  const out = []
+  groups.forEach((g) => {
+    if (g.pick === 'one') {
+      const hit = g.options.find((o) => set.has(o.id))
+      if (hit && hit.id !== g.def) out.push(hit.label)
+    } else {
+      g.options.filter((o) => set.has(o.id)).forEach((o) => out.push(`加${o.label}`))
+    }
+  })
+  return out.join(' · ')
+}
+
+/** 单价 = 原价 + 加料 / 加量的钱（冰量甜度不花钱，所以它们没有 delta）。 */
+export function unitPriceOf(item, specIds = []) {
+  const set = new Set(specIds)
+  let extra = 0
+  specsFor(item).forEach((g) => {
+    g.options.forEach((o) => { if (set.has(o.id) && o.delta) extra += o.delta })
+  })
+  return (item?.price || 0) + extra
+}
+
 export const promoDrops = [
   { label: '复古贴纸', icon: 'sticker', text: '今日掉落：一枚复古贴纸 ✨' },
   { label: '治愈小物', icon: 'gift', text: '今日掉落：一只亚麻杯垫 ✨' },
@@ -732,6 +883,19 @@ export function getTodaySpecial() {
   return dailySpecials[dateSeed() % dailySpecials.length]
 }
 
+/**
+ * 今日特调往后数 count 杯 —— 首页封面那叠相纸用它（2026-09-21）。
+ * 第 0 杯**就是** `getTodaySpecial()`，所以封面第一张和首页「今天的特调是「X」」
+ * 永远是同一杯，不会打架。
+ * ⚠️ 种子仍然只来自 `dateSeed()`（日期），别换成 Math.random —— 同一天刷新两次
+ * 换一批图，用户会以为「今天的特调变了」。
+ */
+export function getSpecialRun(count = 4) {
+  const n = dailySpecials.length
+  const start = dateSeed() % n
+  return Array.from({ length: Math.max(1, Math.min(count, n)) }, (_, k) => dailySpecials[(start + k) % n])
+}
+
 // ===== 反向 AI 推送：主动给用户一句话 =====
 // 基于「时间 + 购物车 + 宠物状态」组合生成，而不是纯随机
 export function getTodayHint({ hasCart = false, cartCount = 0, petMeals = 0, isFirstVisit = false, hour = new Date().getHours() }) {
@@ -856,17 +1020,32 @@ export function getItem(id) {
  * 今日特调每天换，昨天加的东西今天确实可能不在了（main.jsx 会顺手对账清理）。
  */
 export function cartBreakdown(cart) {
+  // 键可能是 `m13`（没选规格，老数据也是这个形状）或 `m13#ice-none.sugar-half`
   const entries = Object.entries(cart || {})
     .filter(([, qty]) => Number(qty) > 0)
-    .map(([id, qty]) => ({ item: getItem(id), qty: Number(qty) }))
-    .filter(({ item }) => Boolean(item))
+    .map(([key, qty]) => {
+      const { itemId, specIds } = parseCartKey(key)
+      const item = getItem(itemId)
+      if (!item) return null
+      return {
+        key,
+        itemId,
+        item,
+        specIds,
+        specText: specTextOf(item, specIds),
+        unitPrice: unitPriceOf(item, specIds),
+        qty: Number(qty),
+      }
+    })
+    .filter(Boolean)
 
   const byCounter = {}
-  entries.forEach(({ item, qty }) => {
+  entries.forEach(({ item, qty, unitPrice }) => {
     if (!byCounter[item.counterId]) {
       byCounter[item.counterId] = { counter: getCounter(item.counterId), subtotal: 0, qty: 0 }
     }
-    byCounter[item.counterId].subtotal += item.price * qty
+    // 用**加了料之后**的单价算，不然加料的钱会在小计里凭空消失
+    byCounter[item.counterId].subtotal += unitPrice * qty
     byCounter[item.counterId].qty += qty
   })
 

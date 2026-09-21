@@ -730,6 +730,8 @@ img { max-width: 100%; display: block; }
 .cart-info { min-width: 0; }
 .cart-name { margin: 0 0 3px; font: 500 15px/1 var(--f-serif); }
 .cart-cn { margin: 0 0 6px; font-size: 11px; color: var(--text-sub); }
+/* 规格：同一杯奶茶「去冰」「少冰」是两行，这行是让人分得清哪杯是哪杯的关键 */
+.cart-spec { margin: 0 0 6px; font: 400 11px/1.45 var(--f-body); color: var(--caramel); }
 .cart-price { margin: 0; font: 500 15px/1 var(--f-serif); }
 
 .cart-stepper {
@@ -3583,6 +3585,7 @@ footer {
 
 .menu-row {
   display: flex;
+  flex-wrap: wrap; /* 规格展开区是整行的（.spec-box 占 100%），得允许换行 */
   gap: 12px;
   padding: 11px;
   border: 1px solid rgba(159, 127, 95, .13);
@@ -3621,6 +3624,47 @@ footer {
   padding-top: 8px;
 }
 .menu-price { font: 600 18px/1 var(--f-serif); color: var(--clay); }
+
+/* ===== 规格：行内展开（2026-09-22）=====
+   用户挑的做法 —— 不弹半屏、不跳详情页：点一下 +，这一行自己长出小标签。
+   选中态沿用「陪等方式」那套（焦糖底 + 焦糖边），别另发明一种高亮。
+   ⚠️ 只有加料 / 加量标 +¥N；冰量甜度不花钱，标了钱反而像在点单课堂。 */
+.spec-box {
+  flex: 0 0 100%;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(159, 127, 95, .22);
+}
+.spec-group { margin-bottom: 9px; }
+.spec-label {
+  margin: 0 0 5px;
+  font: 500 10.5px/1 var(--f-body);
+  letter-spacing: .08em;
+  color: var(--text-sub);
+}
+.spec-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.spec-chip {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 6px 11px;
+  border: 1px solid rgba(159, 127, 95, .3); border-radius: 999px;
+  background: rgba(255, 255, 255, .78); color: var(--text-main);
+  font: 400 11.5px/1 var(--f-body); cursor: pointer;
+  transition: background-color .18s, border-color .18s, transform .12s;
+}
+.spec-chip:hover { background: #fff; border-color: var(--caramel); }
+.spec-chip:active { transform: scale(.97); }
+.spec-chip.is-on { background: rgba(228, 198, 168, .34); border-color: var(--caramel); }
+.spec-delta { font: 500 10px/1 var(--f-mono); color: var(--caramel); }
+.spec-chip.is-on .spec-delta { color: inherit; opacity: .8; }
+.spec-add {
+  width: 100%; margin-top: 3px; padding: 9px;
+  border: 1px solid var(--text-main); border-radius: 10px;
+  background: transparent; color: var(--text-main);
+  font: 500 12.5px/1 var(--f-body); cursor: pointer;
+  transition: background-color .18s, color .18s;
+}
+.spec-add:hover { background: var(--primary); }
+.spec-add:active { background: var(--text-main); color: #fff; }
 .menu-empty {
   margin: 0;
   padding: 24px 0;

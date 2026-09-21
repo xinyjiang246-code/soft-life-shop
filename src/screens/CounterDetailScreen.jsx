@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { ArrowLeft, Heart, Plus, ShoppingBag } from 'lucide-react'
-import { getCounter, getItemsByCounter, hashSeed } from '../data.js'
+import { getCounter, getItemsByCounter, hashSeed, specsFor, unitPriceOf } from '../data.js'
 import ItemArt from '../components/ItemArt.jsx'
+
+/* 规格的初始选中 = 每个单选组各自的默认值（正常冰 / 标准糖 / 正常份）；加料不预选。
+   没这东西的人点开就是空的，还得自己回忆「我刚才选的什么」。 */
+function defaultPicks(specs) {
+  return specs.filter((g) => g.pick === 'one' && g.def).map((g) => g.def)
+}
 
 // 老招牌没有月售/好评字段，用 id 稳定推一个，避免同一样东西每次刷新都在变
 function monthlyOf(item) {
@@ -12,8 +18,29 @@ function praiseOf(item) {
 }
 
 function MenuRow({ item, wished, onAdd, onToggleWish }) {
+  // 规格是**行内展开**的（2026-09-22 用户挑的做法）：不弹半屏、不跳详情页，
+  // 点一下 + 这一行自己长出小标签。没有规格的东西（眼罩、蒸饺…）照旧一点就加入。
+  const specs = specsFor(item)
+  const [open, setOpen] = useState(false)
+  const [picked, setPicked] = useState(() => defaultPicks(specs))
+
+  const toggle = (group, option) => {
+    setPicked((prev) => {
+      if (group.pick === 'one') {
+        const others = prev.filter((id) => !group.options.some((o) => o.id === id))
+        return [...others, option.id]
+      }
+      return prev.includes(option.id) ? prev.filter((id) => id !== option.id) : [...prev, option.id]
+    })
+  }
+
+  const add = (specIds) => {
+    onAdd(item.id, specIds)
+    setOpen(false)
+  }
+
   return (
-    <article className="menu-row">
+    <article className={`menu-row${open ? ' is-open' : ''}`}>
       <div className="menu-thumb">
         <ItemArt item={item} size="sm" prefer="real" />
       </div>
@@ -26,7 +53,7 @@ function MenuRow({ item, wished, onAdd, onToggleWish }) {
           月售 {monthlyOf(item)} · 好评 {praiseOf(item)}%
         </p>
         <div className="menu-foot">
-          <span className="menu-price">¥{item.price}</span>
+          <span className="menu-price">¥{specs.length ? unitPriceOf(item, picked) : item.price}</span>
           {/* 先记着 —— 不饿的时候别急着下单，记下来，等真的想吃了再点 */}
           <button
             className={`wish-toggle ${wished ? 'is-on' : ''}`}
@@ -37,11 +64,47 @@ function MenuRow({ item, wished, onAdd, onToggleWish }) {
           >
             <Heart size={15} strokeWidth={1.7} fill={wished ? 'currentColor' : 'none'} />
           </button>
-          <button className="add-button" aria-label={`加入 ${item.cn}`} onClick={() => onAdd(item.id)}>
+          <button
+            className="add-button"
+            aria-label={specs.length ? `选规格并加入 ${item.cn}` : `加入 ${item.cn}`}
+            aria-expanded={specs.length ? open : undefined}
+            onClick={() => (specs.length ? setOpen((v) => !v) : add([]))}
+          >
             <Plus size={18} strokeWidth={1.5} />
           </button>
         </div>
       </div>
+
+      {open && specs.length > 0 && (
+        <div className="spec-box">
+          {specs.map((group) => (
+            <div key={group.id} className="spec-group">
+              <p className="spec-label">{group.label}</p>
+              <div className="spec-chips">
+                {group.options.map((option) => {
+                  const on = picked.includes(option.id)
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`spec-chip${on ? ' is-on' : ''}`}
+                      aria-pressed={on}
+                      onClick={() => toggle(group, option)}
+                    >
+                      {option.label}
+                      {/* 只有加料 / 加量标价钱 —— 冰量甜度不花钱，标了反而像在点单课堂 */}
+                      {option.delta ? <span className="spec-delta">+¥{option.delta}</span> : null}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+          <button type="button" className="spec-add" onClick={() => add(picked)}>
+            加入 ¥{unitPriceOf(item, picked)}
+          </button>
+        </div>
+      )}
     </article>
   )
 }

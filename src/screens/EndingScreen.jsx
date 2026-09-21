@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Gift, Heart, PawPrint, RotateCcw, Sparkles } from 'lucide-react'
-import { CHARITY, LEVEL_MEALS, PET_NAME, RIDER_MOMENTS, dateSeed, getCounter, getItem, gramsForAmount, levelForMeals, petStages, stickerPool } from '../data.js'
+import { CHARITY, LEVEL_MEALS, PET_NAME, RIDER_MOMENTS, dateSeed, getCounter, getItem, gramsForAmount, levelForMeals, parseCartKey, petStages, stickerPool, unitPriceOf } from '../data.js'
 import SoftPet from '../components/SoftPet.jsx'
 import WaitReceipt from '../components/WaitReceipt.jsx'
 
@@ -51,13 +51,17 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
   }, [])
 
   // ===== 公益捐赠：这一单的钱可以不变成一份没人吃的外卖 =====
+  // 按**加了料之后**的单价算 —— 加的珍珠也是真钱，捐出去的猫粮也该跟着多几克
   const orderTotal = useMemo(
-    () => Object.entries(cart).reduce((sum, [id, qty]) => sum + (getItem(id)?.price || 0) * qty, 0),
+    () => Object.entries(cart).reduce((sum, [key, qty]) => {
+      const { itemId, specIds } = parseCartKey(key)
+      return sum + unitPriceOf(getItem(itemId), specIds) * qty
+    }, 0),
     [cart]
   )
   const orderShop = useMemo(() => {
-    const firstId = Object.keys(cart).find((id) => cart[id] > 0)
-    const item = firstId ? getItem(firstId) : null
+    const firstKey = Object.keys(cart).find((key) => cart[key] > 0)
+    const item = firstKey ? getItem(parseCartKey(firstKey).itemId) : null
     return item ? (getCounter(item.counterId)?.name || '慢活小铺') : '慢活小铺'
   }, [cart])
   const maxGrams = gramsForAmount(orderTotal)

@@ -440,3 +440,26 @@ export function setJournalNote(dateKey, note, mood) {
   j.days[dateKey] = day
   saveJournal(j)
 }
+
+// ===== 订单历史（「我的」页的订单列表；只存最近 100 单）=====
+const KEY_ORDERS = 'soft-life-orders-v1'
+
+export function loadOrders() {
+  try {
+    const raw = localStorage.getItem(KEY_ORDERS)
+    const parsed = raw ? JSON.parse(raw) : null
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+// entry: { shop, total, items:[名字], at: ISO 时间 }
+export function saveOrder(entry) {
+  if (!entry || !entry.shop) return
+  try {
+    const all = loadOrders()
+    all.unshift({ ...entry, at: entry.at || new Date().toISOString() })
+    localStorage.setItem(KEY_ORDERS, JSON.stringify(all.slice(0, 100)))
+  } catch {}
+}

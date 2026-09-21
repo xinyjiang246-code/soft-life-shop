@@ -1,5 +1,5 @@
 import { ArrowLeft, Gift, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
-import { RESCUE, cartBreakdown, getCounter, promoDrops } from '../data.js'
+import { RESCUE, cartBreakdown, getCounter, parseCartKey, promoDrops } from '../data.js'
 import { useMemo } from 'react'
 import ItemArt from '../components/ItemArt.jsx'
 
@@ -9,23 +9,26 @@ export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
   // 会在那里被丢掉，不会白屏也不会让角标骗人）
   const { entries, byCounter, subtotal, discount, total } = useMemo(() => cartBreakdown(cart), [cart])
 
-  // 惜食柜的东西柜上就剩那么几份，袋子里的「+」也不能越过这条线
+  // 惜食柜的东西柜上就剩那么几份，袋子里的「+」也不能越过这条线。
+  // ⚠️ 份数是**按商品**算的：同一碗饭「少一点」「多一点」各一行，加起来也不能超
   const capOf = (item) => (item?.rescue ? RESCUE.perItem : Infinity)
-  const atCap = (item) => (cart[item.id] || 0) >= capOf(item)
+  const heldOf = (itemId) => Object.entries(cart).reduce(
+    (n, [key, qty]) => (parseCartKey(key).itemId === itemId ? n + qty : n), 0)
+  const atCap = (item) => heldOf(item.id) >= capOf(item)
 
   const drop = useMemo(() => promoDrops[Math.floor(Math.random() * promoDrops.length)], [entries.length])
 
-  const updateQty = (id, delta) => {
+  const updateQty = (key, delta) => {
     setCart((prev) => {
-      const next = { ...prev, [id]: Math.max(0, (prev[id] || 0) + delta) }
-      if (next[id] === 0) delete next[id]
+      const next = { ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }
+      if (next[key] === 0) delete next[key]
       return next
     })
   }
 
-  const bump = (item, delta) => {
-    if (delta > 0 && atCap(item)) return
-    updateQty(item.id, delta)
+  const bump = (entry, delta) => {
+    if (delta > 0 && atCap(entry.item)) return
+    updateQty(entry.key, delta)
   }
 
   return (
@@ -51,38 +54,43 @@ export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
       ) : (
         <>
           <section className="cart-list" aria-label="已选商品">
-            {entries.map(({ item, qty }) => (
-              <article key={item.id} className="cart-row">
+            {entries.map((entry) => {
+              const { item, qty, specText, unitPrice } = entry
+              return (
+              <article key={entry.key} className="cart-row">
                 <div className="cart-thumb">
                   <ItemArt item={item} size="sm" prefer="real" />
                 </div>
                 <div className="cart-info">
                   <p className="cart-name">{item.name}</p>
                   <p className="cart-cn">{item.cn}</p>
+                  {/* 规格：同一杯奶茶「去冰」和「少冰」是两行，得让人看清哪杯是哪杯 */}
+                  {specText && <p className="cart-spec">{specText}</p>}
                   <p className="cart-price">
-                    ¥{item.price}
+                    ¥{unitPrice}
                     {/* 惜食柜来的：原价划掉，让人看清它本来是多少 */}
                     {item.rescue && <s className="cart-was">¥{item.originalPrice}</s>}
                   </p>
                   {item.rescue && <span className="cart-rescue-tag">惜食柜</span>}
                 </div>
                 <div className="cart-stepper">
-                  <button aria-label="减少" onClick={() => bump(item, -1)}><Minus size={16} strokeWidth={1.4} /></button>
+                  <button aria-label="减少" onClick={() => bump(entry, -1)}><Minus size={16} strokeWidth={1.4} /></button>
                   {/* key={qty} 是为了让数字变化时重挂元素、重播一次 .qty-num 的淡入 ——
                       React 只改文本不会重播 CSS 动画，换 key 才会 */}
                   <span key={qty} className="qty-num">{qty}</span>
                   <button
                     aria-label="增加"
-                    onClick={() => bump(item, 1)}
+                    onClick={() => bump(entry, 1)}
                     disabled={atCap(item)}
                     title={atCap(item) ? `柜上只剩 ${capOf(item)} 份` : undefined}
                   ><Plus size={16} strokeWidth={1.4} /></button>
                 </div>
-                <button className="cart-remove" aria-label="删除" onClick={() => updateQty(item.id, -qty)}>
+                <button className="cart-remove" aria-label="删除" onClick={() => updateQty(entry.key, -qty)}>
                   <Trash2 size={16} strokeWidth={1.4} />
                 </button>
               </article>
-            ))}
+              )
+            })}
           </section>
 
           <section className="cart-promo" aria-label="优惠进度">
