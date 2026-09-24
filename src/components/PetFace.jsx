@@ -1,4 +1,5 @@
 import { FACE_EYE, FACE_INK, faceAnchor } from '../petFace.js'
+import { DOG_FACE_EYE, DOG_FACE_INK, dogFaceAnchor } from '../dogFace.js'
 
 /**
  * PetFace —— 软软的「表情」层（2026-09-17）
@@ -44,10 +45,13 @@ export const EXPRESSIONS = {
   star: { blush: 0.5, mouth: 'laugh', marks: ['sparkles'] },                  // 摸嗨了 → 星星眼 + 大笑
 }
 
-export default function PetFace({ stage = 0, expr = 'bliss', className = '' }) {
+export default function PetFace({ stage = 0, expr = 'bliss', className = '', species = 'cat' }) {
   const cfg = EXPRESSIONS[expr]
   if (!cfg) return null
-  const a = faceAnchor(stage)
+  // 物种决定三样：墨色 / 眼珠色 / 锚点（猫用 petFace.js，狗用 dogFace.js —— 两套别混）
+  const ink = species === 'dog' ? DOG_FACE_INK : FACE_INK
+  const eye = species === 'dog' ? DOG_FACE_EYE : FACE_EYE
+  const a = (species === 'dog' ? dogFaceAnchor : faceAnchor)(stage)
 
   const W = 720, H = 812
   const eL = [a.eyeL[0] * W, a.eyeL[1] * H]
@@ -62,7 +66,7 @@ export default function PetFace({ stage = 0, expr = 'bliss', className = '' }) {
     <svg
       className={`pet-face pet-face-${expr} ${className}`}
       viewBox={`0 0 ${W} ${H}`}
-      stroke={FACE_INK}
+      stroke={ink}
       fill="none"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -82,7 +86,7 @@ export default function PetFace({ stage = 0, expr = 'bliss', className = '' }) {
           那样以后往表情层里再加任何一层带 transform 的 <g>（比如嘴）都会把眼睛数错。 */}
       {[['L', eL], ['R', eR]].map(([side, [cx, cy]]) => (
         <g key={side} className="pf-eye" transform={`translate(${cx} ${cy}) rotate(${a.tilt})`}>
-          <Eye expr={expr} rx={rx} ry={ry} side={side} />
+          <Eye expr={expr} rx={rx} ry={ry} side={side} ink={ink} eye={eye} />
         </g>
       ))}
 
@@ -98,7 +102,7 @@ export default function PetFace({ stage = 0, expr = 'bliss', className = '' }) {
       )}
 
       {/* 浮空小记号 */}
-      <g className="pf-marks" stroke={FACE_INK} fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <g className="pf-marks" stroke={ink} fill="none" strokeLinecap="round" strokeLinejoin="round">
         {cfg.marks.map((m, i) => (
           <Mark key={m} kind={m} mid={mid} gap={gap} rx={rx} ry={ry} idx={i} />
         ))}
@@ -154,7 +158,7 @@ function Mouth({ kind, w, ry }) {
 
 /* ---------- 眼睛 ---------- */
 
-function Eye({ expr, rx, ry, side = 'L' }) {
+function Eye({ expr, rx, ry, side = 'L', ink, eye }) {
   const sp = side === 'L' ? 1 : -1   // 朝向脸中心：左眼朝右、右眼朝左
   // 弧线用二次贝塞尔：顶点在 t=.5 处，y = (P0.y + 2*P1.y + P2.y)/4
   const arc = (a0, apex) => {
@@ -163,10 +167,10 @@ function Eye({ expr, rx, ry, side = 'L' }) {
   }
 
   if (expr === 'heart') {
-    return <Heart cx={0} cy={0} r={rx * 0.95} fill={EYE_HEART} stroke={FACE_INK} strokeWidth={SW * 0.66} />
+    return <Heart cx={0} cy={0} r={rx * 0.95} fill={EYE_HEART} stroke={ink} strokeWidth={SW * 0.66} />
   }
   if (expr === 'star') {
-    return <Sparkle cx={0} cy={0} r={rx * 1.25} fill={EYE_STAR} stroke={FACE_INK} strokeWidth={SW * 0.66} />
+    return <Sparkle cx={0} cy={0} r={rx * 1.25} fill={EYE_STAR} stroke={ink} strokeWidth={SW * 0.66} />
   }
   if (expr === 'startle') {
     // 受惊：**睁大的眼白 + 缩小的瞳孔**。
@@ -177,7 +181,7 @@ function Eye({ expr, rx, ry, side = 'L' }) {
     return (
       <g>
         <ellipse cx={0} cy={0} rx={rx * 1.06} ry={ry * 1.16} fill="#FFFDF8" strokeWidth={SW * 0.72} />
-        <circle cx={0} cy={0} r={pr} fill={FACE_EYE} />
+        <circle cx={0} cy={0} r={pr} fill={eye} />
         <circle cx={-pr * 0.42} cy={-pr * 0.42} r={pr * 0.34} fill="#FFFDF8" />
       </g>
     )
@@ -189,7 +193,7 @@ function Eye({ expr, rx, ry, side = 'L' }) {
     // 半眯：眼睛还在，只是压成一条缝（点耳朵被痒到）
     return (
       <g>
-        <ellipse cx={0} cy={0} rx={rx * 0.94} ry={ry * 0.3} fill={FACE_EYE} />
+        <ellipse cx={0} cy={0} rx={rx * 0.94} ry={ry * 0.3} fill={eye} />
         <path d={`M${-rx * 1.05},${-ry * 0.42} L${-rx * 0.35},${-ry * 0.62}`} strokeWidth={SW * 0.6} opacity=".7" />
         <path d={`M${rx * 1.05},${-ry * 0.42} L${rx * 0.35},${-ry * 0.62}`} strokeWidth={SW * 0.6} opacity=".7" />
       </g>

@@ -14,7 +14,8 @@ import { useEffect, useRef, useState } from 'react'
  *
  * **不学**它两样（这是红线，别顺手抄过来）：
  *   · 不计分、不会输、撞上了不罚 —— 撞上只是溅一裤腿水，他自己先笑；
- *   · 速度恒定，绝不越跑越快（不设目标、不做趋势、不催）。
+ *   · 绝不**越跑越快**（不设目标、不做趋势、不催）—— 速度可以有起伏（一阵风、一段下坡），
+ *     但永远循环、不累积，玩多久都不会越来越难。
  *
  * 为什么不用 canvas / rAF 逐帧 setState：
  *   横向位移交给 CSS 动画（最顺）；JS 每帧只做两件事 —— 算跳跃高度（写 CSS 变量，
@@ -72,6 +73,15 @@ const CLEAR = Object.fromEntries(Object.entries(PIXELS).map(([k, rows]) => [k, r
 
 const SLIDE_MS = 2600 // 从右边滑到左边（原来 4200，太飘）
 const SPAWN_MS = 2000 // 出状况的间隔（原来 2100）
+
+/* 速度起伏（2026-09-23 用户「可以有速度变化」→ 拍板选 A：有起伏、不越跑越快）：
+   每 GUST_LEN + LULL_LEN 样一个小周期 —— 前 GUST_LEN 样是「一阵风」（快约 28%），
+   后 LULL_LEN 样回到基准。周期循环、永不累积，所以玩多久都不会越来越难（守住「不催」红线）。
+   phase 用 id 算，确定性、可验收；别改成随机 —— 本文件原注释就说过「稳定节奏方便断言」。 */
+const GUST_LEN = 3
+const LULL_LEN = 5
+const GUST_FAST = 0.72
+
 const G = 640         // 松手后的重力 px/s²
 const HOLD_G = 200    // 按住不放时的重力 —— 小得多，这就是「跳得更高」
 const JUMP_V = 175    // 起跳初速度 px/s
@@ -182,7 +192,10 @@ export default function RiderHop({ active = true }) {
       const kind = OBSTACLES[rnd.current % OBSTACLES.length]
       rnd.current += 1
       const id = ++seq.current
-      setItems((prev) => [...prev.slice(-2), { id, kind }])
+      // 一阵风 vs 回到基准：用 id 数周期，确定性、可验收（别用随机）
+      const phase = (id - 1) % (GUST_LEN + LULL_LEN)
+      const slide = phase < GUST_LEN ? Math.round(SLIDE_MS * GUST_FAST) : SLIDE_MS
+      setItems((prev) => [...prev.slice(-2), { id, kind, slide }])
     }
     spawn()
     const t = setInterval(spawn, SPAWN_MS)
@@ -276,7 +289,7 @@ export default function RiderHop({ active = true }) {
             key={it.id}
             ref={(n) => { if (n) nodeRefs.current.set(it.id, n); else nodeRefs.current.delete(it.id) }}
             className={`rh-item is-${it.kind.type}`}
-            style={{ animationDuration: `${SLIDE_MS}ms` }}
+            style={{ animationDuration: `${it.slide}ms` }}
             aria-hidden="true"
           >
             <Pixel rows={PIXELS[it.kind.type]} fill={COLORS[it.kind.type]} />

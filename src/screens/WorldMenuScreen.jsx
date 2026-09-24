@@ -7,8 +7,10 @@ function WorldCard({ item, onAdd }) {
     <article className="product-card world-card">
       {/* prefer="real"：先露那张 AI 想象图（这桌菜「长什么样」是第一眼最该看到的），
           点一下翻到手绘卡。还没配图的城市会自然退回手绘卡（ItemArt 自己判断）。 */}
+      {/* dishFit="meet"：容器是 4:3、手绘卡是正方形 —— 用 meet 完整显示，
+          底部的中文菜名才不会被 slice 裁掉（「翻面看不出是什么」的元凶） */}
       <div className="product-art">
-        <ItemArt item={item} size="lg" prefer="real" />
+        <ItemArt item={item} size="lg" prefer="real" dishFit="meet" />
       </div>
       <p className="product-code">{item.code}</p>
       <h2>{item.name}</h2>
@@ -73,7 +75,7 @@ export default function WorldMenuScreen({
           </div>
           <div className="pc-stamp" aria-hidden="true">
             {/* 邮票上贴第一道菜：和卡片同一套图（AI 想象图 ↔ 手绘卡），尺寸由 CSS 给 */}
-            <ItemArt item={items[0]} size="lg" prefer="real" />
+            <ItemArt item={items[0]} size="lg" prefer="real" dishFit="meet" />
             <span className="pc-stamp-denom">{items.length} 道 · 空运</span>
           </div>
         </div>

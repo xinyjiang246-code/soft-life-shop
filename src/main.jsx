@@ -6,9 +6,9 @@ import { flyToBag, rememberPointer } from './flyToBag.js'
 // ⚠️ getCounter 必须在这个 import 里：第 ~345 行记订单历史时用它取店名。
 //    漏掉它不是「少个名字」—— 是**整个 App 白屏**（ReferenceError 会把 React 整棵树带下去）。
 //    症状：等待页点「跟骑手说一句」选任意一句 → 整页空白。2026-09-21 真机上抓到过。
-import { RESCUE, buildRescueShelf, cartKeyOf, dateSeed, getCounter, getItem, getTodaySpecial, levelForMeals, parseCartKey, setCustomItems, setRescueItems, setRuntimeItems, setWorldItems, specTextOf, stickerPool, toItemFromSpecial, unitPriceOf } from './data.js'
+import { RESCUE, buildRescueShelf, cartKeyOf, dailySpecials, dateSeed, getCounter, getItem, getSpecialRun, levelForMeals, parseCartKey, setCustomItems, setRescueItems, setRuntimeItems, setWorldItems, specTextOf, stickerPool, toItemFromSpecial, unitPriceOf } from './data.js'
 import { forgeMenu, getKitchen, getTodayKitchen } from './dishForge.js'
-import { loadCart, loadCharity, loadCustomItems, loadHouseName, loadOrders, loadPet, loadRescue, loadWishes, loadWorld, logJournalOrder, saveCart, saveCharity, saveCustomItems, saveOrder, savePet, saveRescue, saveWishes, saveWorld } from './storage.js'
+import { loadCart, loadCharity, loadCustomItems, loadHouseName, loadOrders, loadPets, loadRescue, loadWishes, loadWorld, logJournalOrder, saveCart, saveCharity, saveCustomItems, saveOrder, savePets, saveRescue, saveWishes, saveWorld } from './storage.js'
 import HomeScreen from './screens/HomeScreen.jsx'
 import CounterListScreen from './screens/CounterListScreen.jsx'
 import CounterDetailScreen from './screens/CounterDetailScreen.jsx'
@@ -23,23 +23,31 @@ import WorldMenuScreen from './screens/WorldMenuScreen.jsx'
 import MineScreen from './screens/MineScreen.jsx'
 import JournalView from './components/JournalView.jsx'
 import TabBar from './components/TabBar.jsx'
+import AdminScreen from './screens/AdminScreen.jsx'
+import { beat } from './stats.js'
 import CharityScreen from './screens/CharityScreen.jsx'
 import RescueScreen from './screens/RescueScreen.jsx'
 import SearchScreen from './screens/SearchScreen.jsx'
 import WishlistScreen from './screens/WishlistScreen.jsx'
 
 function App() {
-  const [screen, setScreen] = useState('home')
+  const [screen, setScreen] = useState(() => {
+    try { return new URLSearchParams(location.search).get('admin') === '1' ? 'admin' : 'home' } catch { return 'home' }
+  })
   const [params, setParams] = useState({})
   const [cart, setCart] = useState(() => loadCart())
   const [houseName, setHouseName] = useState(() => loadHouseName())
-  const [pet, setPet] = useState(() => loadPet())
+  const [pets, setPets] = useState(() => loadPets())
   const [customItems, setCustom] = useState(() => loadCustomItems())
   const [world, setWorld] = useState(() => loadWorld())
   const [charity, setCharity] = useState(() => loadCharity())
   const [rescue, setRescue] = useState(() => loadRescue())
   const [wishes, setWishes] = useState(() => loadWishes())
   const [toast, setToast] = useState(null)
+
+  // 当前陪伴的伙伴：从两只独立档案里取「激活的那只」，补上 species 供页面按物种渲染。
+  // 页面拿到的永远是单个 pet 对象（带各自的 meals/level/stickers），不用关心另一只。
+  const activePet = useMemo(() => ({ ...pets[pets.active], species: pets.active }), [pets])
 
   // 今天轮到哪座城市（用户没手动切过就用日期决定）
   // ⚠️ 手动切过的城市**只在当天算数**：跨天必须回到今天的城市，
@@ -62,9 +70,14 @@ function App() {
   // 这样不用给 8 个页面的 onAdd 都加一个「你按在哪儿」的参数。
   useEffect(() => rememberPointer(), [])
 
+  // 特调商品（2026-09-24 用户「主页这个图片点击的话应该能跳到对应商品页面」）：
+  // **12 杯全部登记**，但只有封面上那 4 杯标 onShelf（决定谁出现在茶饮铺菜单里）。
+  // 不在架的也登记，是为了让**跨天存下来的购物袋**还能查到它 —— 只登记在架那 4 杯的话，
+  // 用户昨天加的那杯今天就会从袋子里消失（cartBreakdown 会丢掉查不到的 id）。
   useEffect(() => {
-    const special = getTodaySpecial()
-    setRuntimeItems([toItemFromSpecial(special)])
+    const shelf = new Set(getSpecialRun(4).map((s) => s.index))
+    setRuntimeItems(dailySpecials.map((s, i) =>
+      toItemFromSpecial({ ...s, index: i }, { onShelf: shelf.has(i) })))
   }, [])
 
   // 世界菜单的商品不进柜台，但必须能被 getItem 查到（购物篮里要用）
@@ -81,6 +94,9 @@ function App() {
   }, [rescueShelf])
 
   const cartCount = useMemo(() => Object.values(cart).reduce((sum, qty) => sum + qty, 0), [cart])
+
+  // 匿名统计：每次打开记一笔（未部署/已关闭时静默）
+  useEffect(() => { beat('visit') }, [])
 
   const navigate = useCallback((nextScreen, nextParams = {}, dir = 'fwd') => {
     // ---- 切页转场（2026-09-18）----
@@ -193,8 +209,11 @@ function App() {
 
   // 完成一单 → 喂小饼干 + 掉落贴纸 + 可能升级，返回本次成长结果
   // extraSticker：等待页完整等完不跳过时的「路上的纪念」（多掉一枚）
+  // 只喂「当前陪伴的那只」—— 猫狗各自成长，别喂错对象。
   const growPet = useCallback((opts = {}) => {
     const { extraSticker = false } = opts
+    const species = pets.active
+    const pet = pets[species]
     const meals = pet.meals + 1
     const used = new Set(pet.stickers)
     const pickOne = () => {
@@ -219,17 +238,33 @@ function App() {
       stickers,
       level,
     }
-    setPet(next)
-    savePet(next)
+    setPets((prev) => {
+      const p = { ...prev, [species]: next }
+      savePets(p)
+      return p
+    })
     return { leveledUp, newSticker, bonusSticker, meals, level }
-  }, [pet])
+  }, [pets])
 
-  // 换毛色（奶油白 / 樱花粉 / 婴儿蓝）
+  // 换毛色（奶油白 —— 现在只有一种配色）
   const setPetColorway = useCallback((colorway) => {
-    setPet((prev) => {
-      const next = { ...prev, colorway }
-      savePet(next)
-      return next
+    setPets((prev) => {
+      const species = prev.active
+      const p = { ...prev, [species]: { ...prev[species], colorway } }
+      savePets(p)
+      return p
+    })
+  }, [])
+
+  // 切换当前陪伴哪只（猫 软软 / 狗 团团，09-24）：两只独立成长、都一直在，
+  // 切换只改「现在陪的是谁」，另一只的档案原样保留、随时切回。
+  const switchPetSpecies = useCallback((species) => {
+    setPets((prev) => {
+      const nextActive = species === 'dog' ? 'dog' : 'cat'
+      if (prev.active === nextActive) return prev
+      const p = { ...prev, active: nextActive }
+      savePets(p)
+      return p
     })
   }, [])
 
@@ -267,6 +302,8 @@ function App() {
 
   // 公益：把这一单折算出的猫粮记进档案
   const donateCatFood = useCallback(({ grams, amount, ratio, shop }) => {
+    // 统计打点：这一单捐出的猫粮克数（未部署时 beat 自己静默跳过）
+    beat('grams', grams)
     setCharity((prev) => {
       const next = {
         grams: (prev.grams || 0) + grams,
@@ -359,15 +396,26 @@ function App() {
         return { id: itemId, name: spec ? `${item.name}（${spec}）${tail}` : `${item.name}${tail}` }
       })
     if (entries.length === 0) return null
-    logJournalOrder(entries)
     const first = getItem(entries[0].id)
+    beat('order')
+    let payName = ''
+    try {
+      const saved = { alipay: '支付宝', wechat: '微信支付', shop: '小铺零钱' }[localStorage.getItem('soft-life-last-pay')] || ''
+      payName = saved
+    } catch {}
+    // 加料的钱要算进这一单 —— 不然手账里的总额会比实际付的少
+    const total = Object.entries(snapshot || {}).reduce((sum, [key, qty]) => {
+      const { itemId, specIds } = parseCartKey(key)
+      return sum + unitPriceOf(getItem(itemId), specIds) * qty
+    }, 0)
+    const shop = first ? (getCounter(first.counterId)?.name || '慢活小铺') : '慢活小铺'
+    // 手账那笔也带上订单的样子（2026-09-23「手账就是订单」）：店名 + 这一单几样、多少钱。
+    // 只陈述这一单本身，不算账 —— 汇总永远不出现在手账里。
+    logJournalOrder(entries, { shop, total, pay: payName, count: entries.length })
     saveOrder({
-      shop: first ? (getCounter(first.counterId)?.name || '慢活小铺') : '慢活小铺',
-      // 加料的钱要算进这一单 —— 不然手账里的总额会比实际付的少
-      total: Object.entries(snapshot || {}).reduce((sum, [key, qty]) => {
-        const { itemId, specIds } = parseCartKey(key)
-        return sum + unitPriceOf(getItem(itemId), specIds) * qty
-      }, 0),
+      payment: payName,
+      shop,
+      total,
       items: entries.map((e) => e.name),
     })
     return { count: entries.length }
@@ -416,7 +464,7 @@ function App() {
       {screen === 'home' && (
         <HomeScreen
           cartCount={cartCount}
-          pet={pet}
+          pet={activePet}
           customItems={customItems}
           worldKitchen={worldKitchen}
           charity={charity}
@@ -432,6 +480,7 @@ function App() {
       {screen === 'counter' && (
         <CounterDetailScreen
           counterId={params.counterId}
+          focusItemId={params.focus}
           cartCount={cartCount}
           wishes={wishes}
           onToggleWish={toggleWish}
@@ -455,6 +504,7 @@ function App() {
       {screen === 'delivery' && (
         <DeliveryScreen
           houseName={houseName}
+          pet={activePet}
           onNavigate={navigate}
           order={params}
         />
@@ -462,7 +512,7 @@ function App() {
       {screen === 'ending' && (
         <EndingScreen
           houseName={houseName}
-          pet={pet}
+          pet={activePet}
           cart={cart}
           wait={params}
           onGrow={growPet}
@@ -499,7 +549,8 @@ function App() {
           onBack={goBack}
         />
       )}
-      {screen === 'pet' && <PetScreen pet={pet} onColorway={setPetColorway} onBack={goBack} />}
+      {screen === 'pet' && <PetScreen pet={activePet} onColorway={setPetColorway} onSpecies={switchPetSpecies} onBack={goBack} />}
+      {screen === 'admin' && <AdminScreen onBack={goBack} />}
       {screen === 'journal' && (
         <div className="shop-page journal-tab">
           <header className="topbar compact">
@@ -510,7 +561,7 @@ function App() {
           <JournalView />
         </div>
       )}
-      {screen === 'mine' && <MineScreen pet={pet} charity={charity} customItems={customItems} onNavigate={navigate} />}
+      {screen === 'mine' && <MineScreen pet={activePet} charity={charity} customItems={customItems} onNavigate={navigate} />}
       {screen === 'myshop' && (
         <MyShopScreen
           customItems={customItems}
@@ -541,7 +592,7 @@ function App() {
         </div>
       )}
       {['home', 'journal', 'pet', 'mine'].includes(screen) && (
-        <TabBar screen={screen} onNavigate={navigate} />
+        <TabBar screen={screen} pet={activePet} onNavigate={navigate} />
       )}
     </main>
   )

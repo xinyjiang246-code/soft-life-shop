@@ -1,21 +1,18 @@
-import { ChevronRight, CloudRain, CloudSun, Globe, Heart, Menu, MoonStar, Plus, Refrigerator, Search, ShoppingBag, Sparkles, Sun, Wand2, X } from 'lucide-react'
+import { ChevronRight, CloudRain, CloudSun, Globe, Heart, Menu, MoonStar, Plane, Plus, Refrigerator, Search, ShoppingBag, Sparkles, Sun, Wand2, X } from 'lucide-react'
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { CHARITY, counters, dateSeed, getTodayHint, getTodaySpecial, hashSeed, levelForMeals, menuItems, NEIGHBOR_NAME, PET_NAME, petStages, pickNeighborLine, toItemFromSpecial } from '../data.js'
+import { CHARITY, counters, dateSeed, getSpecialRun, getTodayHint, getTodaySpecial, hashSeed, levelForMeals, menuItems, NEIGHBOR_NAME, petNameFor, pickNeighborLine, toItemFromSpecial } from '../data.js'
 import { WORLD_KITCHENS } from '../dishForge.js'
 import { hasVisited, loadMood, markVisited, saveMood } from '../storage.js'
-import FlipImage from '../components/FlipImage.jsx'
+import HomeCover from '../components/HomeCover.jsx'
 import ItemArt from '../components/ItemArt.jsx'
 import SoftPet, { moodFromEmoji, neighborArtUrl } from '../components/SoftPet.jsx'
 import PetPops, { spawnPops } from '../components/PetPops.jsx'
 import { MOOD_BY_ZONE, patLine, playPatReaction, zoneFromPoint } from '../petTouch.js'
 import { getTodaySnapshot, todayDoneLines, todayOfferLines } from '../today.js'
 import ShopRow from '../components/ShopRow.jsx'
-import matchaLatteDraw from '../assets/products/matcha-latte-draw.webp'
-import matchaLatteReal from '../assets/products/matcha-latte-real.webp'
+import Onboarding from '../components/Onboarding.jsx'
+// 封面图：全站第一眼看到的东西 —— 现在是一叠实拍（见下面的 HomeCover）
 // 「MORE 小角落」四块磁贴的小画：前三块是水彩小图，第一块直接用软软的实时形象
-import tileCharity from '../assets/tiles/charity.webp'
-import tileArchive from '../assets/tiles/archive.webp'
-import tileMyshop from '../assets/tiles/myshop.webp'
 
 // 分类筛选用的短标签
 const KIND_LABEL = {
@@ -52,41 +49,6 @@ function getWeather(phase) {
   return WEATHERS[hashSeed(`${dateSeed()}:wx`) % WEATHERS.length]
 }
 
-function AmbienceStrip({ isFirstVisit, rescueCount = 0, worldCity = '' }) {
-  const phase = getPhase()
-  const weather = getWeather(phase)
-  const WIcon = weather.Icon
-  // 「今天」（2026-09-19）：把散在各处的每日状态串成一天。
-  // 并进这张卡、而不是另起一张 —— 它和问候同性质，都是「小铺开口说的第一句话」。
-  // 它**不可点、没有箭头**：一可点就会变成「栏目」，而这块东西不该有内容页。
-  const snap = useMemo(
-    () => getTodaySnapshot({ rescueCount, worldCity }),
-    [rescueCount, worldCity]
-  )
-  const lines = snap.hasToday ? todayDoneLines(snap) : todayOfferLines(snap)
-  return (
-    <div className={`home-ambience is-${phase.id} ${weather.id === 'rain' ? 'has-rain' : ''} ${weather.id === 'night' ? 'has-stars' : ''}`} role="status">
-      {weather.id === 'rain' && (
-        <i className="amb-rain" aria-hidden="true"><span /><span /><span /><span /><span /></i>
-      )}
-      {weather.id === 'night' && (
-        <i className="amb-stars" aria-hidden="true"><span /><span /><span /><span /><span /><span /></i>
-      )}
-      <p className="amb-greet">
-        {/* 第一句就说「欢迎回来」，是对一个从没来过的人撒谎 —— 首次来的要换一句 */}
-        <b>{isFirstVisit ? `${phase.greet}。第一次来？` : `${phase.greet}，欢迎回来`}</b>
-        <span><WIcon size={14} strokeWidth={1.6} />{weather.label} · {weather.line}</span>
-      </p>
-      {lines.length > 0 && (
-        <div className="amb-today">
-          <p className="amb-today-label">TODAY · {snap.label}</p>
-          {lines.map((t) => <p key={t} className="amb-today-line">{t}</p>)}
-        </div>
-      )}
-    </div>
-  )
-}
-
 /* ---------- 每日心情仪式：今天想被什么治愈？ ---------- */
 
 const MOODS = [
@@ -97,15 +59,11 @@ const MOODS = [
   { id: 'life', label: '逛逛选物', shops: ['life'], line: '今天想照顾的不是胃。' },
 ]
 
-function MoodRitual({ mood, onPick }) {
+function MoodRitual({ mood, onPick, worldCity, onGoWorld }) {
   const cfg = MOODS.find((m) => m.id === mood)
   return (
-    <section className="mood-ritual" aria-label="今日心情">
-      <div className="mood-ritual-head">
-        <Sparkles size={13} strokeWidth={1.7} />
-        <span>今天，想被什么治愈？</span>
-        <em>DAILY MOOD</em>
-      </div>
+    <div className="mood-ritual is-compact" aria-label="今日心情">
+      <span className="mr-label"><Sparkles size={12} strokeWidth={1.7} aria-hidden="true" />想被什么治愈？</span>
       <div className="mood-ritual-row" role="group">
         {MOODS.map((m) => (
           <button
@@ -117,11 +75,20 @@ function MoodRitual({ mood, onPick }) {
             {m.label}
           </button>
         ))}
+        {/* 世界菜单 chip（09-24 用户「放在甜一点旁边」）：排尾的老成员，但长着
+            邮戳的血统 —— 齿孔虚线边 + 小飞机，读得出「我 不是心情，是另一个入口」。
+            它顶替了原来浮在右下角的悬浮邮戳（同屏不出现两个入口）。 */}
+        <button
+          className="mood-chip is-world"
+          aria-label={`世界菜单 · 今日空运自${worldCity || '远方'}`}
+          onClick={onGoWorld}
+        >
+          <Plane size={12} strokeWidth={1.7} aria-hidden="true" />
+          空运 · {worldCity || '远方'}
+        </button>
       </div>
-      <p className="mood-ritual-line">
-        {cfg ? cfg.line : '选一个，小铺按心情帮你把店铺排好序'}
-      </p>
-    </section>
+      {cfg && <p className="mood-ritual-line">{cfg.line}</p>}
+    </div>
   )
 }
 
@@ -137,7 +104,7 @@ function PetVisit({ pet, onNavigate }) {
       <button className="pet-visit-btn" aria-label={`和${NEIGHBOR_NAME}打个招呼`} onClick={() => setOpen((o) => !o)}>
         {art
           ? <img className="neighbor-cat" src={art} alt="" />
-          : <SoftPet stage={levelForMeals(pet.meals)} mood={moodFromEmoji(line.mood)} colorway={pet.colorway || 'cream'} size={62} />}
+          : <SoftPet stage={levelForMeals(pet.meals)} mood={moodFromEmoji(line.mood)} colorway={pet.colorway || 'cream'} species={pet.species || 'cat'} size={62} />}
       </button>
       {open && (
         <div className="pet-visit-bubble" role="status">
@@ -191,6 +158,8 @@ function TopBar({ count, wishCount, onOpenMenu, onNavigate }) {
 
 function HomeCat({ pet }) {
   const level = levelForMeals(pet.meals)
+  const name = petNameFor(pet.species || 'cat')
+  const species = pet.species || 'cat'
   const [pos, setPos] = useState({ x: 64, dir: -1 })
   const [walking, setWalking] = useState(false)
   const [jumping, setJumping] = useState(false)
@@ -268,13 +237,13 @@ function HomeCat({ pet }) {
   }
 
   return (
-    <div className="home-cat" aria-label={`${PET_NAME}在小铺里溜达`}>
+    <div className="home-cat" aria-label={`${name}在小铺里溜达`}>
       <button
         className="home-cat-btn"
         style={{ left: `${pos.x}%` }}
         onClick={tapCat}
         data-zone={zone}
-        aria-label={`摸摸${PET_NAME}——耳朵、肚子、爪子反应不一样`}
+        aria-label={`摸摸${name}——耳朵、肚子、爪子反应不一样`}
       >
         <span className="home-cat-flip" style={{ transform: `scaleX(${pos.dir})` }}>
           <span className={`home-cat-body ${walking ? 'is-walking' : ''} ${jumping ? 'is-jumping' : ''}`}>
@@ -283,6 +252,7 @@ function HomeCat({ pet }) {
                 stage={level}
                 mood={loved ? MOOD_BY_ZONE[zone] || 'love' : 'happy'}
                 colorway={pet.colorway || 'cream'}
+                species={species}
                 size={58}
               />
             </span>
@@ -306,7 +276,6 @@ export default function HomeScreen({
   onNavigate,
   onAdd,
 }) {
-  const stage = petStages[levelForMeals(pet.meals)]
   const todaySpecial = useMemo(() => getTodaySpecial(), [])
   // 今日特调的商品对象（和茶饮铺菜单、购物袋里的是同一个）—— 图从这儿出，
   // 不再各页各画一份，避免「首页是手绘、菜单是实拍」这种对不上
@@ -321,7 +290,14 @@ export default function HomeScreen({
     () => getTodayHint({ hasCart: cartCount > 0, cartCount, petMeals: pet.meals, isFirstVisit }),
     [cartCount, pet.meals, isFirstVisit]
   )
-  const [hintOpen, setHintOpen] = useState(true)
+  const [hintOpen, setHintOpen] = useState(() => {
+    try { return Number(localStorage.getItem('soft-life-hint-views') || 0) < 3 } catch { return true }
+  })
+  // 记访问次数：第 4 次起气泡不再打扰（引导卡已经讲过了）
+  useEffect(() => {
+    try { localStorage.setItem('soft-life-hint-views', String(Number(localStorage.getItem('soft-life-hint-views') || 0) + 1)) } catch {}
+  }, [])
+  const [obOpen, setObOpen] = useState(() => { try { return !localStorage.getItem('soft-life-onboarded-v1') } catch { return false } })
   const [kind, setKind] = useState('all')
 
   // 每日心情（跨天自动作废）
@@ -332,6 +308,14 @@ export default function HomeScreen({
 
   // 邻居猫今天在哪个角落串门（0 hero / 1 店铺列表 / 2 今日特调）
   const visitSpot = today % 3
+
+  // 「封面自成一屏」：把店铺区推到毛玻璃底部导航**以下**，第一屏只有一张完整封面。
+  // 为什么用 JS 量、不在 CSS 里写死 padding：底部导航的位置跟安全区 / 浏览器工具栏有关，
+  // 写死一个数在别的机型上就会让「NEARBY SHOPS」透过毛玻璃显出一道影子（实测差 10px 就会透）。
+  // 量的是「分隔线底 → 底部导航顶」这段空白 —— 它跟本段的 padding 互不依赖，不会来回抖。
+  // 「封面自成一屏」的间距写在 CSS 里（`.home-page .shop-list-section` 的 padding-top）。
+  // ⚠️ 别改成 JS 量高度：首帧字体还没落地，心情 chip 会挤成两行、大标题多一行，
+  // 整段高出 70px，量出来的间距会是 0（2026-09-21 试过，白折腾一轮）。
 
   // 每家店的在售件数（含用户自己上架的）
   const shopCounts = useMemo(() => {
@@ -359,6 +343,9 @@ export default function HomeScreen({
     <div className="shop-page home-page">
       <TopBar count={cartCount} wishCount={wishes.length} onNavigate={onNavigate} onOpenMenu={() => onNavigate('counters')} />
 
+      {/* 第一次来：三屏引导（看完/跳过都记账，不再弹） */}
+      {obOpen && <Onboarding onDone={() => setObOpen(false)} />}
+
       {/* 反向 AI 推送：主动冒出来的小气泡 */}
       {hintOpen && (
         <div className="hint-bubble" role="status">
@@ -370,47 +357,82 @@ export default function HomeScreen({
         </div>
       )}
 
-      <AmbienceStrip isFirstVisit={isFirstVisit} rescueCount={rescueShelf.length} worldCity={worldKitchen?.city || ''} />
+      {/* 封面区块：报头 + 封面图 + 心情 + 收尾线。高度在 CSS 里跟视口绑定，
+          所以不管什么机型，第一屏都只有这一整屏内容，店铺列表从折线以下才开始 ——  */}
+      <div className="hm-cover">
+      {/* —— 报头 · 方案 B「封面 · 图先」（2026-09-21 用户选定）
+             顺序刻意是：刊头一行 → 整张封面图 → 中文大标题 → 问候。
+             先看见「今天长什么样」，再读到「今天要干什么」—— 打开链接第一眼是一张图，
+             而不是一张功能清单。⚠️ 别再改回「标题在左、小图在右」的双栏，
+             那一版第一屏塞了四个模块，用户原话「像一个功能副页」。 —— */}
+      {(() => {
+        const phase = getPhase()
+        const weather = getWeather(phase)
+        const WIcon = weather.Icon
+        // 封面那叠相纸：第 0 张就是今天的特调，后面三张是接下来几天要出场的
+        const coverSpecials = getSpecialRun(4)
+        const dateStr = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+        return (
+          <section className={`hm-mast pet-host is-${phase.id}`} id="top" aria-label="慢活小铺">
+            <p className="hm-issue">
+              <b>THE SOFT HOUR</b><em>VOL.09</em>
+              <span className="hm-date">{dateStr} · {weather.label}</span>
+            </p>
+            {/* 封面：一叠实拍（今日特调 + 接下来三杯），横扫翻看。
+                2026-09-21 用户原话：「我不要蜡笔 但是其他的可以的，蜡笔看起来脏脏的」
+                → 封面不再放油画棒那张；紧接着她说「这个主页的怎么不能换了」——
+                上一版只给 FlipImage 传了正面、没有背面，退化成静态图，翻面手感一起丢了。
+                这一版换成 HomeCover：实拍换实拍，横扫 / 点一下 / 点圆点都能翻。
+                ⚠️ 别把 matchaLatteDraw 或「手绘 / 实拍」角标塞回封面。
+                油画棒版仍用在菜单 / 购物袋的翻面背面（那边是「作品 ↔ 实物」对照，她没有否掉）。 */}
+            {/* 点封面 = 进这一杯的商品页（2026-09-24 用户要求）。
+                特调全在慢活茶饮铺，`focus` 让店铺页滚到那一行并把规格展开。 */}
+            <HomeCover
+              slides={coverSpecials}
+              label="今天的几杯特调"
+              onOpen={(s) => onNavigate('counter', { counterId: 'tea', focus: `special-${s.index}` })}
+            />
+            <div className="hm-copy">
+              <h1>今天，也要<br />好好吃饭。</h1>
+              <p className="hm-greet">
+                <WIcon size={13} strokeWidth={1.7} aria-hidden="true" />
+                {isFirstVisit ? `${phase.greet}，第一次来` : `${phase.greet}，欢迎回来`} —— {weather.line}。
+              </p>
+            </div>
+            {visitSpot === 0 && <PetVisit pet={pet} onNavigate={onNavigate} />}
+          </section>
+        )
+      })()}
 
-      <section className="hero pet-host" id="top" aria-label="慢活小铺">
-        <div className="hero-copy">
-          <p className="hero-issue">THE SOFT HOUR <em>VOL.09</em></p>
-          <h1>今天，也要<br />好好吃饭。</h1>
-          <p className="hero-quote">慢慢点，慢慢等，<br />慢慢吃完一顿不着急的饭。</p>
-          <span className="hero-foot">一间给生活留白的小铺<small>EST. 2026</small></span>
-          <i className="hero-stamp" aria-hidden="true">慢</i>
-        </div>
-        <div className="hero-flip">
-          <span className="hero-tape" aria-hidden="true" />
-          <FlipImage front={matchaLatteDraw} back={matchaLatteReal} alt="慢活小铺 · 冰抹茶拿铁" />
-          <span className="hero-cap" aria-hidden="true">冰抹茶拿铁 <em>NO.01</em></span>
-        </div>
-        {visitSpot === 0 && <PetVisit pet={pet} onNavigate={onNavigate} />}
-      </section>
+      <MoodRitual mood={mood} onPick={pickMood} worldCity={worldKitchen?.city || ''} onGoWorld={() => onNavigate('world')} />
 
-      <MoodRitual mood={mood} onPick={pickMood} />
-
-      {/* 分类筛选 */}
-      <div className="shop-kinds" role="tablist" aria-label="按分类看店">
-        {kinds.map((k) => (
-          <button
-            key={k.id}
-            role="tab"
-            aria-selected={kind === k.id}
-            className={`kind-chip ${kind === k.id ? 'is-active' : ''}`}
-            onClick={() => setKind(k.id)}
-          >
-            {k.label}
-          </button>
-        ))}
+      {/* 封面到此为止：一条细分隔线收尾，顺便告诉第一次来的人下面还有东西 */}
+      <p className="hm-pagehint">往下滑 · 这 {counters.length} 家店，是我替你挑的</p>
       </div>
+      {/* —— /封面区块 —— */}
 
       {/* 店铺列表 —— 外卖软件的主视图 */}
       <section className="shop-list-section pet-host" aria-labelledby="shop-list-heading">
         <div className="shop-list-head">
           <h2 id="shop-list-heading" className="section-title">NEARBY SHOPS <em>{String(shownShops.length).padStart(2, '0')}/{String(counters.length).padStart(2, '0')}</em></h2>
-          <span className="shop-list-sub">都在你家 2 公里内 · 全部虚拟</span>
+          <span className="shop-list-sub">都在你家附近 · 全部虚拟</span>
           {visitSpot === 1 && <PetVisit pet={pet} onNavigate={onNavigate} />}
+        </div>
+
+        {/* 分类筛选：沉到店铺列表标题下面 —— 它本来就是这份列表的筛选器。
+            留在心情下面会变成「两排 chip 挤在首屏」，正是「像功能副页」的一个来源 */}
+        <div className="shop-kinds" role="tablist" aria-label="按分类看店">
+          {kinds.map((k) => (
+            <button
+              key={k.id}
+              role="tab"
+              aria-selected={kind === k.id}
+              className={`kind-chip ${kind === k.id ? 'is-active' : ''}`}
+              onClick={() => setKind(k.id)}
+            >
+              {k.label}
+            </button>
+          ))}
         </div>
 
         <div className="shop-list">
@@ -446,6 +468,21 @@ export default function HomeScreen({
         </button>
       )}
 
+      {/* 今天的小花样：特调 + 世界菜单，归进同一个「附加内容」分区，
+          和上面的「正经点饭」主流程在视觉上分开 —— 新用户能分清主次 */}
+      <div className="section-rule extra-rule"><span /></div>
+      <h2 className="section-title extra-title">TODAY'S EXTRA <em>今天的小花样</em></h2>
+      {(() => {
+        const snap = getTodaySnapshot({ rescueCount: rescueShelf.length, worldCity: worldKitchen?.city || '' })
+        const lines = snap.hasToday ? todayDoneLines(snap) : todayOfferLines(snap)
+        return lines.length > 0 ? (
+          <div className="hm-snap">
+            <p className="hm-snap-label">TODAY · {snap.label}</p>
+            {lines.map((t) => <p key={t} className="amb-today-line">{t}</p>)}
+          </div>
+        ) : null
+      })()}
+
       {/* 今日特调：AI 每天自动生成一款 */}
       <section className="daily-special pet-host" aria-label="今日特调">
         <div className="special-head">
@@ -454,9 +491,10 @@ export default function HomeScreen({
         </div>
         <div className="special-body">
           {/* 走统一出口 ItemArt：配了图的这杯给「实拍 ↔ 油画棒」翻面卡，
-              还没配图的会自动退回原来那张手绘卡，不用在这里分情况。 */}
+              还没配图的会自动退回原来那张手绘卡，不用在这里分情况。
+              hint：96px 的图以前没有翻面提示，真机上谁也不知道能点（09-22 反馈） */}
           <div className="special-art">
-            <ItemArt item={todayItem} size="sm" prefer="real" />
+            <ItemArt item={todayItem} size="sm" prefer="real" hint />
           </div>
           <div className="special-info">
             <h3>{todaySpecial.cn}</h3>
@@ -492,42 +530,6 @@ export default function HomeScreen({
         </span>
         <Sparkles size={18} strokeWidth={1.35} />
       </button>
-
-      {/* 更多小角落：四张磁贴 */}
-      <section className="corner-section" aria-label="更多小角落">
-        <div className="section-rule"><span /></div>
-        <h2 className="section-title">MORE <em>小角落</em></h2>
-        <div className="corner-grid">
-          <button className="corner-tile" onClick={() => onNavigate('pet')}>
-            <span className="corner-tile-icon pet-entry-avatar" aria-hidden="true">
-              <SoftPet stage={levelForMeals(pet.meals)} mood={pet.meals > 0 ? 'happy' : 'sleepy'} colorway={pet.colorway || 'cream'} size={44} />
-            </span>
-            <b>{PET_NAME}的小屋</b>
-            <small>{stage.name} · {pet.meals > 0 ? `已少吃 ${pet.meals} 次外卖` : '每少点一次就长大一点'}</small>
-          </button>
-          <button className="corner-tile" onClick={() => onNavigate('charity')}>
-            <span className="corner-tile-icon is-charity" aria-hidden="true">
-              <img className="corner-tile-art" src={tileCharity} alt="" loading="lazy" />
-            </span>
-            <b>{CHARITY.name}</b>
-            <small>{charity.grams > 0 ? `记下 ${charity.grams.toLocaleString()} g · 还没捐` : '点完一餐，按克记一点'}</small>
-          </button>
-          <button className="corner-tile" onClick={() => onNavigate('archive')}>
-            <span className="corner-tile-icon is-archive" aria-hidden="true">
-              <img className="corner-tile-art" src={tileArchive} alt="" loading="lazy" />
-            </span>
-            <b>把这一餐存下来</b>
-            <small>拍一张，做慢活食物存档</small>
-          </button>
-          <button className="corner-tile" onClick={() => onNavigate('myshop')}>
-            <span className="corner-tile-icon is-myshop" aria-hidden="true">
-              <img className="corner-tile-art" src={tileMyshop} alt="" loading="lazy" />
-            </span>
-            <b>我的小店</b>
-            <small>{customItems.length > 0 ? `已上架 ${customItems.length} 件` : '拍照上架，AI 取名定价'}</small>
-          </button>
-        </div>
-      </section>
 
       {/* 软软在小铺里溜达：走来走去、偶尔跳一下，点它会蹭你 */}
       <HomeCat pet={pet} />

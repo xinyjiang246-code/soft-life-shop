@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Camera, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import { getItem } from '../data.js'
+import { getCounter, getItem } from '../data.js'
 import {
   addJournalItem, journalKey, loadJournal, removeJournalItem, setJournalNote,
 } from '../storage.js'
@@ -12,7 +12,10 @@ import EntryDetail from './EntryDetail.jsx'
  * JournalView —— 食物手账
  *
  * 数据层是另一个 agent 写的（storage.js 的 soft-life-journal-v1 + 7 个 API），
- * UI 2026-09-16 由我补，同日按用户给的参考 App 重做成「月 / 周 / 今天」三视图。
+ * UI 2026-09-16 由我补，同日按用户给的参考 App 重做成「月 / 周 / 今天」三视图；
+ * 2026-09-21 加第四视图「印记」：每笔记录一枚波浪边邮票（铺子上弧/日期下弧/贴纸居中），
+ * 6 枚一页左右翻页（纸张效果），点章先翻面（+震动）再展开详情 —— 对齐用户给的 Brew 交互清单
+ * （#3 盖章翻转、#4 邮票页左右滑页、#5 点标题回到今天）。
  *
  * 参考来源：用户发的 8 张「咖啡记录 + 集章」App 截图（`参考图/手账App界面/`）。抄过来的是它的
  * **设计语言**：中性米灰底、近黑墨色、等宽打字机数字、大圆角卡片、**贴纸**当视觉隐喻。
@@ -33,8 +36,73 @@ import EntryDetail from './EntryDetail.jsx'
 const EMPTY_DAY = { items: [], note: '', mood: '' }
 const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六']
 
-// 集章的里程碑：第 N 份。参考 App 的「Reached 10 Cups」，换成小铺的说法。
+// 集章的节点：第 N 份。参考 App 的「Reached 10 Cups」，换成小铺的说法。
+// ⚠️ 2026-09-22：这里只留「哪几个数字有章」这层数据，UI 上**不出现进度/催促口径** ——
+//   副标题原本写「里程碑 X / 5」（进度条感），没盖的章原本写「还没到」（催促），都已去掉。
+//   留着改回去前先想一遍红线 4：打卡 / 目标 / 奖励 / 催单不许。
 const STAMP_STEPS = [1, 5, 10, 25, 50]
+
+/* --------------------------- 邮票墙（印记） --------------------------- */
+/**
+ * 每一笔记录 = 一枚波浪边邮票（参考 App 的 Time Stamps 页 + Paper Press demo 的盖章徽章）：
+ * 波浪环用城市印章色轮着来，上弧写铺子名，下弧写日期，中间贴那张图。
+ * 点一下：章先翻个面（＋一下震动），然后才展开详情 —— 对应 Brew 交互清单 #3。
+ */
+
+// 波浪环路径：120×120 画布上一圈 26 段圆弧拱（模块加载时算一次）
+const WALL_SCALLOP = (() => {
+  const N = 26
+  const R = 54
+  let d = ''
+  for (let i = 0; i <= N; i += 1) {
+    const a = (i / N) * Math.PI * 2 - Math.PI / 2
+    const x = 60 + R * Math.cos(a)
+    const y = 60 + R * Math.sin(a)
+    const chord = 2 * R * Math.sin(Math.PI / N) * 0.62
+    d += `${i === 0 ? 'M' : `A${chord.toFixed(2)} ${chord.toFixed(2)} 0 0 1 `}${x.toFixed(2)} ${y.toFixed(2)} `
+  }
+  return `${d}Z`
+})()
+
+// 印章色轮：赭红 / 抹茶 / 焦糖 / 青灰 —— 挨着用，一墙不单调
+const STAMP_PALS = ['#B4552D', '#7E9070', '#9F7F5F', '#6E7F92']
+
+// 震动：设备支持就嗡一下，不支持就当没有
+const buzz = (ms = 8) => { try { navigator.vibrate?.(ms) } catch { /* 忽略 */ } }
+
+function WallStamp({ entry, uid, idx, flipped, onFlip }) {
+  const pal = STAMP_PALS[idx % STAMP_PALS.length]
+  const item = entry.id ? getItem(entry.id) : null
+  const shop = item ? (getCounter(item.counterId)?.name || '慢活小铺') : '自己拍的'
+  const { y, m, d } = parseKey(entry.key)
+  const idTop = `wt-${uid}`
+  const idBot = `wb-${uid}`
+  return (
+    <button
+      type="button"
+      className={`jh-wall-stamp${flipped ? ' is-flip' : ''}`}
+      style={{ '--pal': pal }}
+      onClick={() => onFlip(entry)}
+      aria-label={`${shop}，${m} 月 ${d} 日，${entry.name || '一张照片'}`}
+    >
+      <svg viewBox="0 0 120 120" aria-hidden="true" className="jh-wall-ring">
+        <defs>
+          <path id={idTop} d="M60,60 m-43,0 a43,43 0 1,1 86,0" />
+          <path id={idBot} d="M60,60 m-43,0 a43,43 0 1,0 86,0" />
+        </defs>
+        <path d={WALL_SCALLOP} fill="none" stroke={pal} strokeWidth="2" />
+        <circle cx="60" cy="60" r="43.5" fill="none" stroke={pal} strokeWidth=".8" opacity=".55" strokeDasharray="1.5 3" />
+        <text fontSize="8.6" letterSpacing="1.6" fill={pal} opacity=".85">
+          <textPath href={`#${idTop}`} startOffset="50%" textAnchor="middle">{shop}</textPath>
+        </text>
+        <text fontSize="7.6" letterSpacing="1.8" fill={pal} opacity=".7">
+          <textPath href={`#${idBot}`} startOffset="50%" textAnchor="middle">{`${pad2(m)}.${pad2(d)}.${y}`}</textPath>
+        </text>
+      </svg>
+      <span className="jh-wall-art"><Sticker entry={entry} size="md" /></span>
+    </button>
+  )
+}
 
 /* ------------------------------ 日期工具 ------------------------------ */
 
@@ -112,13 +180,19 @@ function NoteMark() {
 export default function JournalView() {
   const todayKey = journalKey()
   const [journal, setJournal] = useState(() => loadJournal())
-  const [view, setView] = useState('month') // month | week | day
+  const [view, setView] = useState('month') // month | week | day | stamps
   const [focus, setFocus] = useState(todayKey)
   const [draft, setDraft] = useState('')
   const [noteDraft, setNoteDraft] = useState(null) // null = 还没动过，直接显示存着的那份
   const [busy, setBusy] = useState(false)
   const [hint, setHint] = useState('')
   const [opened, setOpened] = useState(null) // { key, index } —— 展开的那一张
+  const [page, setPage] = useState(0)        // 印记墙的页码（6 枚一页）
+  const [turnDir, setTurnDir] = useState(1)  // 翻页方向（决定纸张从哪边翻过来）
+  const [flipped, setFlipped] = useState(null) // 正在翻面的那枚（uid）
+  const wallRef = useRef(null)
+  const swipeX0 = useRef(null)
+  const flipTimer = useRef(null)
   const fileRef = useRef(null)
 
   const days = journal.days || {}
@@ -127,15 +201,22 @@ export default function JournalView() {
   const itemsOf = (k) => (days[k]?.items || []).filter((it) => it && it.name)
   const dayOf = (k) => days[k] || EMPTY_DAY
 
-  // 全部记录摊平成一条时间线 —— 集章和回顾都基于它
+  // 全部记录摊平成一条时间线 —— 集章、印记墙和回顾都基于它
+  // idx 带上：印记墙点开详情要用它在那天里的位置
   const timeline = useMemo(() => {
     const out = []
     Object.keys(days).sort().forEach((k) => {
-      itemsOf(k).forEach((it) => out.push({ key: k, ...it }))
+      itemsOf(k).forEach((it, idx) => out.push({ key: k, idx, ...it }))
     })
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days])
+
+  // 印记墙：新的盖在前面（翻本子从最近翻起），6 枚一页
+  const PER_PAGE = 6
+  const wallEntries = useMemo(() => [...timeline].reverse(), [timeline])
+  const pageCount = Math.max(1, Math.ceil(wallEntries.length / PER_PAGE))
+  const wallPageEntries = wallEntries.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE)
 
   const focusParts = parseKey(focus)
   const monthPrefix = `${focusParts.y}-${pad2(focusParts.m)}`
@@ -160,6 +241,11 @@ export default function JournalView() {
   /* ------------------------------ 操作 ------------------------------ */
 
   const step = (dir) => {
+    if (view === 'stamps') {
+      // 印记墙里，箭头就是翻页
+      turnPage(dir)
+      return
+    }
     if (view === 'month') {
       const { y, m, d } = parseKey(focus)
       const t = new Date(y, m - 1 + dir, 1)
@@ -171,6 +257,15 @@ export default function JournalView() {
     else setFocus(shiftKey(focus, dir))
   }
 
+  // 翻页：方向记下来给纸张动画用，越界就停
+  const turnPage = (dir) => {
+    const next = page + dir
+    if (next < 0 || next > pageCount - 1) return
+    setTurnDir(dir)
+    buzz(6)
+    setPage(next)
+  }
+
   const backToToday = () => {
     setFocus(todayKey)
     setView('day')
@@ -178,7 +273,20 @@ export default function JournalView() {
 
   const switchView = (next) => {
     if (next === 'day') setFocus(todayKey)
+    if (next === 'stamps') setPage(0)
     setView(next)
+  }
+
+  // 点一枚章：先翻面（＋震动），翻过去之后才展开详情 —— 仪式感在这半秒里
+  const flipStamp = (entry) => {
+    if (flipped) return
+    buzz(10)
+    setFlipped(`${entry.key}:${entry.idx}`)
+    clearTimeout(flipTimer.current)
+    flipTimer.current = setTimeout(() => {
+      setFlipped(null)
+      openEntry(entry.key, entry.idx)
+    }, 380)
   }
 
   const openDay = (k) => {
@@ -252,15 +360,19 @@ export default function JournalView() {
   /* ------------------------------ 标题 ------------------------------ */
 
   const isToday = focus === todayKey
-  const viewTitle = view === 'month'
-    ? `${focusParts.y} 年 ${focusParts.m} 月`
-    : view === 'week'
-      ? `${parseKey(weekOf(focus)[0]).m}.${parseKey(weekOf(focus)[0]).d} – ${parseKey(weekOf(focus)[6]).m}.${parseKey(weekOf(focus)[6]).d}`
-      : `${focusParts.m} 月 ${focusParts.d} 日`
+  const viewTitle = view === 'stamps'
+    ? `印记 · ${timeline.length} 枚`
+    : view === 'month'
+      ? `${focusParts.y} 年 ${focusParts.m} 月`
+      : view === 'week'
+        ? `${parseKey(weekOf(focus)[0]).m}.${parseKey(weekOf(focus)[0]).d} – ${parseKey(weekOf(focus)[6]).m}.${parseKey(weekOf(focus)[6]).d}`
+        : `${focusParts.m} 月 ${focusParts.d} 日`
 
-  const viewSub = view === 'day'
-    ? `${WEEK_CN[new Date(focusParts.y, focusParts.m - 1, focusParts.d).getDay()]}${isToday ? ' · 今天' : ''}`
-    : `${monthEntries.length} 份 · ${shopIds.size} 家铺子`
+  const viewSub = view === 'stamps'
+    ? '左右翻着看'
+    : view === 'day'
+      ? `${WEEK_CN[new Date(focusParts.y, focusParts.m - 1, focusParts.d).getDay()]}${isToday ? ' · 今天' : ''}`
+      : `${monthEntries.length} 份 · ${shopIds.size} 家铺子`
 
   /* ------------------------------ 渲染 ------------------------------ */
 
@@ -317,6 +429,43 @@ export default function JournalView() {
           <div className="jh-week">
             {WEEK_CN.map((w) => <span key={w} className="jh-dow">{w}</span>)}
             {weekOf(focus).map((k, i) => cellNode(k, i, true))}
+          </div>
+        )}
+
+        {view === 'stamps' && (
+          <div
+            className="jh-wall"
+            ref={wallRef}
+            onPointerDown={(e) => { swipeX0.current = e.clientX }}
+            onPointerUp={(e) => {
+              const x0 = swipeX0.current
+              swipeX0.current = null
+              if (x0 == null) return
+              const dx = e.clientX - x0
+              if (Math.abs(dx) > 42) turnPage(dx < 0 ? 1 : -1) // 往左滑 = 下一页
+            }}
+          >
+            {/* key 换页即换 —— 纸张翻页动画跟着重放 */}
+            <div className="jh-wall-page" key={page} style={{ '--dir': turnDir }}>
+              {wallPageEntries.length > 0 ? wallPageEntries.map((e, i) => (
+                <WallStamp
+                  key={`${e.key}:${e.idx}`}
+                  entry={e}
+                  uid={`${e.key}-${e.idx}`}
+                  idx={page * PER_PAGE + i}
+                  flipped={flipped === `${e.key}:${e.idx}`}
+                  onFlip={flipStamp}
+                />
+              )) : (
+                <p className="jh-wall-empty">
+                  还没有印记 —— 贴一张照片，或者点完一单，<br />第一枚会自己盖在这里。
+                </p>
+              )}
+            </div>
+            <p className="jh-wall-num">- {page + 1} -</p>
+            {pageCount > 1 && (
+              <p className="jh-wall-swipe">往左翻，翻到最早的那一天</p>
+            )}
           </div>
         )}
 
@@ -437,7 +586,9 @@ export default function JournalView() {
                 <path d="M24 3.5c3.4 0 5.1 2.6 8.4 2.2 3.3-.4 5.4 1.7 5.6 5 .2 3.3 2.4 4.9 2.4 8.3s-2.2 5-2.4 8.3c-.2 3.3-2.3 5.4-5.6 5-3.3-.4-5 2.2-8.4 2.2s-5.1-2.6-8.4-2.2c-3.3.4-5.4-1.7-5.6-5-.2-3.3-2.4-4.9-2.4-8.3s2.2-5 2.4-8.3c.2-3.3 2.3-5.4 5.6-5 3.3.4 5-2.2 8.4-2.2z" />
               </svg>
               <b>{s.n}</b>
-              <span>{s.date ? `${parseKey(s.date).m}.${pad2(parseKey(s.date).d)}` : '还没到'}</span>
+              {/* 没盖的章不写字（2026-09-22）：原来写「还没到」= 催促口径，
+                  和「不催更」的语气冲突。空着只留虚线齿轮，认得出是「还没到」但不逼迫。 */}
+              {s.date && <span>{`${parseKey(s.date).m}.${pad2(parseKey(s.date).d)}`}</span>}
             </div>
           ))}
         </div>
@@ -475,6 +626,7 @@ export default function JournalView() {
         <button type="button" className={view === 'month' ? 'is-on' : ''} onClick={() => switchView('month')}>月</button>
         <button type="button" className={view === 'week' ? 'is-on' : ''} onClick={() => switchView('week')}>周</button>
         <button type="button" className={view === 'day' ? 'is-on' : ''} onClick={() => switchView('day')}>今天</button>
+        <button type="button" className={view === 'stamps' ? 'is-on' : ''} onClick={() => switchView('stamps')}>印记</button>
         <button
           type="button"
           className="jh-dock-add"

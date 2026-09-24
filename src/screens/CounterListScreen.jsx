@@ -47,7 +47,8 @@ export default function CounterListScreen({ cartCount, customItems = [], onNavig
         <p className="eyebrow">CHOOSE YOUR COMFORT</p>
         <h1>今天想逛<br />哪一家店？</h1>
         <p className="simple-hero-sub">
-          {counters.length} 家虚拟店铺，都开在你家 2 公里内。点进去才能下单 —— 和真外卖一样。
+          {counters.length} 家虚拟店铺，开在你家附近 —— 最近的 {Math.min(...counters.map((c) => c.distance))} 公里，
+          最远的 {Math.max(...counters.map((c) => c.distance))} 公里。点进去才能下单 —— 和真外卖一样。
         </p>
       </section>
 

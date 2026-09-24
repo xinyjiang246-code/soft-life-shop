@@ -21,9 +21,13 @@ import DishArt from './DishArt.jsx'
  * ⚠️ 红线：世界菜的图是 AI 现编的，**角标绝不能写「实拍」** ——
  *    所以这里按 item.isWorld 换成「AI 想象」。
  */
-export default function ItemArt({ item, size = 'lg', prefer = 'draw' }) {
+export default function ItemArt({ item, size = 'lg', prefer = 'draw', dishFit = 'slice', hint }) {
   if (!item) return null
   const big = size === 'lg'
+  // 翻面提示默认只给大图（大图有地方放角标+提示）；
+  // 2026-09-22 真机反馈「除了摸猫没啥交互」——店内菜单缩略图 / 今日特调其实都能翻面，
+  // 但 size="sm" 时 hint 压根不渲染，谁也不知道图能点。这里允许调用方显式打开。
+  const showHint = hint ?? big
 
   // 手绘卡是一个**组件**（SVG），不是图片文件 —— 世界菜都是现画的
   const drawDish = item.art ? (
@@ -38,6 +42,7 @@ export default function ItemArt({ item, size = 'lg', prefer = 'draw' }) {
       label={item.cn}
       en={item.name}
       compact={!big}
+      fit={dishFit}
     />
   ) : null
 
@@ -55,7 +60,7 @@ export default function ItemArt({ item, size = 'lg', prefer = 'draw' }) {
         back={back}
         alt={item.cn}
         showTag={big}
-        hint={big}
+        hint={showHint}
         frontTag={realFirst ? '实拍' : '手绘'}
         backTag={realFirst ? '手绘' : '实拍'}
       />
@@ -76,7 +81,7 @@ export default function ItemArt({ item, size = 'lg', prefer = 'draw' }) {
         backNode={realFirst ? draw : photo}
         alt={item.cn}
         showTag={big}
-        hint={big}
+        hint={showHint}
         frontTag={realFirst ? photoTag : '手绘'}
         backTag={realFirst ? '手绘' : photoTag}
       />

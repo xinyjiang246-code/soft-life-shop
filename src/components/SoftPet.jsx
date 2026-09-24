@@ -1,4 +1,4 @@
-import { PET_COLORWAYS } from '../data.js'
+import { DOG_NAME, PET_COLORWAYS, PET_NAME } from '../data.js'
 import PetFace from './PetFace.jsx'
 
 /**
@@ -66,21 +66,22 @@ export const STAGE_LOOK = [
   { scale: 1.05, ear: 'floppy', earLen: 1.0, bud: false, collar: true, bow: 'big', flower: true, twinBow: true, sparkle: true, ruby: true },
 ]
 
-export function SoftPet({ stage = 0, mood = 'happy', colorway = 'cream', size = 120, className = '', faces = false, face = null, faceTick = 0 }) {
+export function SoftPet({ stage = 0, mood = 'happy', colorway = 'cream', size = 120, className = '', faces = false, face = null, faceTick = 0, species = 'cat' }) {
   const p = PALETTES[colorway] || PALETTES.cream
   const look = STAGE_LOOK[Math.max(0, Math.min(STAGE_LOOK.length - 1, stage))]
   const eyeColor = look.ruby ? p.ruby : p.eye
   const s = look.scale
   const transform = `translate(${110 * (1 - s)} ${234 * (1 - s)}) scale(${s})`
+  const name = species === 'dog' ? DOG_NAME : PET_NAME
 
   // AI 形象图优先；没有对应素材时才走 SVG 手绘
   const artStyle = getPetArtStyle()
-  const art = petArtUrl(artStyle, colorway, stage)
+  const art = petArtUrl(species, artStyle, colorway, stage)
   if (art) {
     // 画表情时：底图换成「无眼底图」，再在上面画新五官（见 components/PetFace.jsx）
     // ⚠️ 只有 faces=true 的实例才挂无眼底图 —— 首页那只溜达猫（58px，眼睛才 4px）
     //    永远用不上表情，挂上去等于白拉一张图、还会截走点击（实测命中到 .pet-noeye）。
-    const noEye = faces ? petNoEyeUrl(artStyle, colorway, stage) : null
+    const noEye = faces ? petNoEyeUrl(species, artStyle, colorway, stage) : null
     const showFace = Boolean(face && noEye)
     // 透明底版（*-t.webp）去掉相框，猫咪是「活的」；带底版保留相纸卡
     return (
@@ -88,7 +89,7 @@ export function SoftPet({ stage = 0, mood = 'happy', colorway = 'cream', size = 
         className={`pet-photo pet-photo-${colorway} ${art.cut ? 'is-cut' : ''} ${className}`}
         style={{ width: size, height: Math.round((size * 248) / 220) }}
         role="img"
-        aria-label={`虚拟伙伴软软，${showFace ? '正在被摸' : mood}`}
+        aria-label={`虚拟伙伴${name}，${showFace ? '正在被摸' : mood}`}
       >
         <img src={art.url} alt="" draggable={false} />
         {/* 无眼底图常驻 DOM（只是透明）—— 临时插进来会有一帧解码空窗，看着像闪一下 */}
@@ -101,7 +102,7 @@ export function SoftPet({ stage = 0, mood = 'happy', colorway = 'cream', size = 
             aria-hidden="true"
           />
         )}
-        {showFace && <PetFace key={`${face}-${faceTick}`} stage={stage} expr={face} />}
+        {showFace && <PetFace key={`${face}-${faceTick}`} species={species} stage={stage} expr={face} />}
         {!showFace && <MoodSticker mood={mood} />}
       </div>
     )
@@ -114,7 +115,7 @@ export function SoftPet({ stage = 0, mood = 'happy', colorway = 'cream', size = 
       width={size}
       height={(size * 248) / 220}
       role="img"
-      aria-label={`虚拟伙伴软软，${mood}`}
+      aria-label={`虚拟伙伴${name}，${mood}`}
     >
       {/* 落地投影（贴纸感） */}
       <ellipse cx="110" cy="238" rx={44 * s} ry={6.5 * s} fill="rgba(150,116,86,.13)" />
@@ -461,7 +462,15 @@ export function setPetArtStyle(style) {
   try { localStorage.setItem(PET_ART_STYLE_KEY, style) } catch { /* 忽略 */ }
 }
 
-function petArtUrl(style, colorway, stage) {
+function petArtUrl(species, style, colorway, stage) {
+  // 小狗：素材前缀是 d-（d-cream-stage*），只有 cream 一个配色，没有 b 画风兜底
+  if (species === 'dog') {
+    const cut = PET_ART[`../assets/pets/d-${colorway}-stage${stage}-t.webp`]
+    if (cut) return { url: cut, cut: true }
+    const hit = PET_ART[`../assets/pets/d-${colorway}-stage${stage}.webp`]
+    if (hit) return { url: hit, cut: false }
+    return null
+  }
   const styles = [style, style === 'a' ? 'b' : 'a']
   const colorways = [colorway, 'cream']
   for (const st of styles) {
@@ -483,7 +492,10 @@ function petArtUrl(style, colorway, stage) {
 //    放同一层会被当成又一个画风素材，污染 petArtUrl 的遍历。
 const PET_NOEYE = import.meta.glob('../assets/pets/noeye/*.webp', { eager: true, query: '?url', import: 'default' })
 
-export function petNoEyeUrl(style, colorway, stage) {
+export function petNoEyeUrl(species, style, colorway, stage) {
+  if (species === 'dog') {
+    return PET_NOEYE[`../assets/pets/noeye/d-${colorway}-stage${stage}-t.webp`] || null
+  }
   const styles = [style, style === 'a' ? 'b' : 'a']
   const colorways = [colorway, 'cream']
   for (const st of styles) {

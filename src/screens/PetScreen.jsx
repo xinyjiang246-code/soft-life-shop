@@ -1,15 +1,18 @@
 import { useMemo, useRef, useState } from 'react'
 import { ArrowLeft, PawPrint, RefreshCw } from 'lucide-react'
-import { LEVEL_MEALS, PET_COLORWAYS, PET_NAME, PET_SPECIES, dateSeed, hashSeed, levelForMeals, petStages, petLinesByStage, stickerPool } from '../data.js'
+import { LEVEL_MEALS, PET_COLORWAYS, dateSeed, hashSeed, levelForMeals, petLinesFor, petNameFor, petStagesFor, stickerPool } from '../data.js'
 import SoftPet, { moodFromEmoji } from '../components/SoftPet.jsx'
 import PetPops, { spawnPops } from '../components/PetPops.jsx'
 import { FACE_HOLD, HEAT_WINDOW, expressionFor, patLine, playPatReaction, zoneFromPoint } from '../petTouch.js'
 
 // 里程碑表与「这一下该说什么」都在 petTouch.js —— 三只猫（小屋 / 首页 / 陪你等）共用一份
 
-export default function PetScreen({ pet, onColorway, onBack }) {
+export default function PetScreen({ pet, onColorway, onSpecies, onBack }) {
+  const species = pet.species || 'cat'
+  const name = petNameFor(species)
+  const stages = petStagesFor(species)
   const level = levelForMeals(pet.meals)
-  const stage = petStages[level]
+  const stage = stages[level]
   const colorway = pet.colorway || 'cream'
   const nextThreshold = LEVEL_MEALS[level + 1]
   const prevThreshold = LEVEL_MEALS[level]
@@ -17,9 +20,9 @@ export default function PetScreen({ pet, onColorway, onBack }) {
     ? Math.min(100, Math.round(((pet.meals - prevThreshold) / (nextThreshold - prevThreshold)) * 100))
     : 100
 
-  // 软软今日心情：每天首次进入抽一句；点「换一句」循环切换
+  // 伙伴今日心情：每天首次进入抽一句；点「换一句」循环切换
   const seed = hashSeed(String(dateSeed()) + 'pet-line')
-  const linesForStage = petLinesByStage[Math.min(level, petLinesByStage.length - 1)]
+  const linesForStage = petLinesFor(species)[Math.min(level, petLinesFor(species).length - 1)]
   const [lineIdx, setLineIdx] = useState(() => seed % linesForStage.length)
 
   // 宠物升级后话池变了，索引可能越界，取模兜底
@@ -102,11 +105,11 @@ export default function PetScreen({ pet, onColorway, onBack }) {
         <button className="icon-button menu-button" aria-label="返回" onClick={onBack}>
           <ArrowLeft size={25} strokeWidth={1.4} />
         </button>
-        <span className="topbar-title serif">{PET_NAME}的小屋</span>
+        <span className="topbar-title serif">{name}的小屋</span>
         <span className="topbar-spacer" />
       </header>
 
-      <section className="pet-hero" aria-label={`${PET_NAME}的成长`}>
+      <section className="pet-hero" aria-label={`${name}的成长`}>
         <div className={`pet-avatar-wrap pet-tone-${colorway}`}>
           <div className="pet-avatar-glow" aria-hidden="true" />
           {/* 三层各管一件事，千万别合并：.pet-idle 呼吸（无限循环）·
@@ -117,8 +120,8 @@ export default function PetScreen({ pet, onColorway, onBack }) {
             data-zone={patZone}
             data-pats={patTick}
             data-face={faceExpr || ''}
-            aria-label={`拍拍${PET_NAME}——耳朵、肚子、爪子反应不一样`}
-            title={`拍拍${PET_NAME}`}
+            aria-label={`拍拍${name}——耳朵、肚子、爪子反应不一样`}
+            title={`拍拍${name}`}
           >
             <span className="pet-idle">
               <span className="pet-hit" ref={hitRef}>
@@ -127,6 +130,7 @@ export default function PetScreen({ pet, onColorway, onBack }) {
                   mood={mood}
                   colorway={colorway}
                   size={150}
+                  species={species}
                   faces
                   face={faceExpr}
                   faceTick={patTick}
@@ -138,13 +142,32 @@ export default function PetScreen({ pet, onColorway, onBack }) {
           {patBubble && <span className="pet-pat-bubble" role="status">{patBubble}</span>}
         </div>
         <p className="eyebrow">SOFT LIFE COMPANION</p>
-        <h1>{PET_NAME} · {stage.name}</h1>
+        <h1>{name} · {stage.name}</h1>
         <p className="pet-stage-desc">{stage.desc}</p>
         <p className="pet-pat-hint">摸摸它 —— 点耳朵、肚子、爪子，表情和动作都不一样</p>
 
+        {/* 伙伴切换（09-24 用户「两个都要在，可以切换用哪个」）：猫 软软 / 狗 团团
+            两只独立成长、都一直在；切换只改「当前陪伴哪只」，另一只档案原样保留。 */}
+        <div className="pet-species-toggle" role="group" aria-label="选择伙伴">
+          {[
+            { key: 'cat', label: '猫', name: petNameFor('cat') },
+            { key: 'dog', label: '狗', name: petNameFor('dog') },
+          ].map((sp) => (
+            <button
+              key={sp.key}
+              className={`pet-species-btn ${species === sp.key ? 'is-active' : ''}`}
+              aria-pressed={species === sp.key}
+              onClick={() => onSpecies && onSpecies(sp.key)}
+            >
+              <span className="pet-species-emoji" aria-hidden="true">{sp.key === 'cat' ? '🐱' : '🐶'}</span>
+              <span>{sp.label} · {sp.name}</span>
+            </button>
+          ))}
+        </div>
+
         {/* 毛色选择器：只有一种毛色时不渲染（现在是「奶白三花」一种） */}
         {PET_COLORWAYS.length > 1 && (
-          <div className="pet-color-row" role="group" aria-label={`${PET_NAME}的毛色`}>
+          <div className="pet-color-row" role="group" aria-label={`${name}的毛色`}>
             {PET_COLORWAYS.map((c) => (
               <button
                 key={c.key}
@@ -166,17 +189,17 @@ export default function PetScreen({ pet, onColorway, onBack }) {
           </div>
           <p className="pet-progress-hint">
             {nextThreshold
-              ? `再喂 ${nextThreshold - pet.meals} 块小饼干，就能长成「${petStages[level + 1].name}」`
-              : `${PET_NAME}已经长到最大啦，谢谢你的陪伴`}
+              ? `再喂 ${nextThreshold - pet.meals} 块小饼干，就能长成「${stages[level + 1].name}」`
+              : `${name}已经长到最大啦，谢谢你的陪伴`}
           </p>
         </div>
       </section>
 
-      {/* AI 模块：软软今日心情 */}
-      <section className="pet-says-card" aria-label="软软今日心情">
+      {/* AI 模块：伙伴今日心情 */}
+      <section className="pet-says-card" aria-label={`${name}今日心情`}>
         <div className="pet-says-head">
           <PawPrint size={14} strokeWidth={1.6} />
-          <span className="pet-says-eyebrow">软软说 · TODAY</span>
+          <span className="pet-says-eyebrow">{name}说 · TODAY</span>
           <span className="pet-says-mood">{todayLine.mood}</span>
         </div>
         <p className={`pet-says-line ${swapping ? 'is-swapping' : ''}`}>{todayLine.line}</p>
@@ -207,15 +230,15 @@ export default function PetScreen({ pet, onColorway, onBack }) {
 
       <p className="pet-encourage">
         你每在这里多点一单，就在现实里少点一次外卖，
-        {PET_NAME}也会长大一点点。这就是你们的约定。
+        {name}也会长大一点点。这就是你们的约定。
       </p>
 
       {/* 成长阶段一览：奶猫 → 小猫崽 → 少年猫 → 青年猫 → 成年猫 */}
       <section className="pet-ladder" aria-label="成长阶段一览">
         <div className="section-rule"><span /></div>
-        <h2 className="section-title">GROWTH <em>{level + 1}/{petStages.length}</em></h2>
+        <h2 className="section-title">GROWTH <em>{level + 1}/{stages.length}</em></h2>
         <div className="pet-ladder-row">
-          {petStages.map((st, i) => {
+          {stages.map((st, i) => {
             const reached = i <= level
             return (
               <div key={st.name} className={`pet-ladder-cell ${i === level ? 'is-current' : ''} ${reached ? 'is-reached' : 'is-locked'}`}>
@@ -224,6 +247,7 @@ export default function PetScreen({ pet, onColorway, onBack }) {
                     stage={i}
                     mood={i === level ? mood : 'happy'}
                     colorway={colorway}
+                    species={species}
                     size={62}
                     className={reached ? '' : 'is-faded'}
                   />

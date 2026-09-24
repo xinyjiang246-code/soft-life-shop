@@ -4,18 +4,34 @@ import { deletePhoto } from './photoStore.js'
 const KEY_CART = 'soft-life-cart-v1'
 const KEY_HOUSE = 'soft-life-house-v1'
 const KEY_ARCHIVES = 'soft-life-archives-v1'
-const KEY_PET = 'soft-life-pet-v1'
+const KEY_PETS = 'soft-life-pets-v1'
+const KEY_PET_LEGACY = 'soft-life-pet-v1'
 const KEY_CUSTOM_ITEMS = 'soft-life-custom-items-v1'
 // 「来过没有」—— 只用来区分第一次和回头客，别拿它存任何业务数据
 const KEY_VISITED = 'soft-life-visited-v1'
 
-// 宠物默认初始状态（形象：小猫「软软」，2026-09-14 由用户敲定的猫咪设计替换原兔熊）
-export const DEFAULT_PET = {
+// ===== 伙伴档案：两只独立（猫 软软 / 狗 团团，2026-09-24 起各自成长）=====
+// 老模型（soft-life-pet-v1）：单只 + species 字段，切物种 = 整只换皮，成长进度共享。
+// 新模型（soft-life-pets-v1）：{ cat, dog, active } —— 猫狗各一本账、各自攒小饼干长大，
+//   active 只表示「当前陪伴的是哪只」。老 key 只读（迁移用），从此一律写新 key。
+// 单只档案里不存 species —— species 由它在 pets 对象里的键决定。
+
+const DEFAULT_PROFILE = {
   meals: 0,        // 累计小饼干 = 完成的虚拟订单数（= 现实里少点的外卖次数）
   totalOrders: 0,  // 累计完成订单
   stickers: [],    // 已收集贴纸 id
   level: 0,        // 成长等级 0-4
-  colorway: 'cream', // 毛色：用户敲定的猫只有一种配色，旧存档里的 pink/blue 一律归一到 cream
+  colorway: 'cream', // 毛色：用户敲定的只有一种配色，旧存档里的 pink/blue 一律归一到 cream
+}
+
+function sanitizeProfile(p) {
+  const s = { ...DEFAULT_PROFILE }
+  s.meals = Math.max(0, Number(p?.meals) || 0)
+  s.totalOrders = Math.max(0, Number(p?.totalOrders) || 0)
+  s.stickers = Array.isArray(p?.stickers) ? p.stickers.filter((x) => typeof x === 'string') : []
+  s.level = Math.max(0, Math.min(4, Number(p?.level) || 0))
+  s.colorway = 'cream'
+  return s
 }
 
 export function loadCart() {
@@ -45,6 +61,57 @@ export function saveHouseName(name) {
   try {
     localStorage.setItem(KEY_HOUSE, name)
   } catch {}
+}
+
+// ===== 装饰地址卡（2026-09-22）：像外卖 App 可存多张、切换、编辑 —— 但全部是装饰性的 =====
+// 结构：{ list: [{ id, name, phone, address }], activeId }
+// 迁移：老版本只有 houseName 一个字符串 → 第一次读时自动拼成第一张地址卡。
+// 诚实红线：姓名 / 电话 / 地址都可以是编的，UI 上必须保留「无需真实信息」的提示。
+const KEY_ADDR = 'soft-life-addresses-v1'
+const DEFAULT_DECOR_ADDRESS = '慢活小区 8 栋 2 单元'
+
+function sanitizeAddress(a) {
+  return {
+    id: String(a?.id || ''),
+    name: String(a?.name || ''),
+    phone: String(a?.phone || ''),
+    address: String(a?.address || ''),
+  }
+}
+
+export function loadAddresses() {
+  try {
+    const raw = localStorage.getItem(KEY_ADDR)
+    const parsed = raw ? JSON.parse(raw) : null
+    if (parsed && Array.isArray(parsed.list) && parsed.list.length) {
+      return {
+        list: parsed.list.filter(Boolean).map(sanitizeAddress),
+        activeId: String(parsed.activeId || ''),
+      }
+    }
+  } catch {}
+  return null
+}
+
+export function saveAddresses(state) {
+  try {
+    localStorage.setItem(KEY_ADDR, JSON.stringify(state || { list: [], activeId: '' }))
+  } catch {}
+}
+
+/** 没存过地址时，用老的小屋名（houseName）拼出第一张卡 —— 老存档无痛迁移 */
+export function ensureAddresses(houseName = '') {
+  const saved = loadAddresses()
+  if (saved) return saved
+  const first = {
+    id: `a${Date.now()}`,
+    name: houseName || '橘子小屋',
+    phone: '',
+    address: DEFAULT_DECOR_ADDRESS,
+  }
+  const state = { list: [first], activeId: first.id }
+  saveAddresses(state)
+  return state
 }
 
 // 「这台设备上有没有来过」—— 只服务于那句问候语和新人解释，不参与任何业务逻辑。
@@ -78,22 +145,43 @@ export function saveArchives(archives) {
   } catch {}
 }
 
-export function loadPet() {
+export function loadPets() {
   try {
-    const raw = localStorage.getItem(KEY_PET)
-    const pet = raw ? { ...DEFAULT_PET, ...JSON.parse(raw) } : { ...DEFAULT_PET }
-    // 存档消毒：旧版（兔熊期）可能存着 pink / blue，而现在的猫只有一种配色、
-    // 那一对 hue-rotate 占位滤镜也已删除 —— 归一化，避免读到幽灵毛色
-    if (pet.colorway !== 'cream') pet.colorway = 'cream'
-    return pet
-  } catch {
-    return { ...DEFAULT_PET }
-  }
+    // ① 新结构优先
+    const raw = localStorage.getItem(KEY_PETS)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return {
+        cat: sanitizeProfile(parsed?.cat),
+        dog: sanitizeProfile(parsed?.dog),
+        active: parsed?.active === 'dog' ? 'dog' : 'cat',
+      }
+    }
+    // ② 迁移老结构：旧版进度是两只共享的同一份 → 复制成两只的共同起点，不丢任何一块饼干
+    const legacy = localStorage.getItem(KEY_PET_LEGACY)
+    if (legacy) {
+      const p = JSON.parse(legacy)
+      const shared = sanitizeProfile(p)
+      const pets = {
+        cat: { ...shared },
+        dog: { ...shared },
+        active: p?.species === 'dog' ? 'dog' : 'cat',
+      }
+      savePets(pets)
+      return pets
+    }
+  } catch {}
+  // ③ 全新
+  return { cat: { ...DEFAULT_PROFILE }, dog: { ...DEFAULT_PROFILE }, active: 'cat' }
 }
 
-export function savePet(pet) {
+export function savePets(pets) {
   try {
-    localStorage.setItem(KEY_PET, JSON.stringify(pet))
+    localStorage.setItem(KEY_PETS, JSON.stringify({
+      cat: sanitizeProfile(pets?.cat),
+      dog: sanitizeProfile(pets?.dog),
+      active: pets?.active === 'dog' ? 'dog' : 'cat',
+    }))
   } catch {}
 }
 
@@ -224,7 +312,7 @@ export function saveRescue(rescue) {
 // 完整等完一单不扣额度，还多掉一份「路上的纪念」；想提前结束就花额度买时间。
 const KEY_PATIENCE = 'soft-life-patience-v1'
 
-export const DAILY_PATIENCE = 10 // 每天可快进的分钟数（约 5 单的量）
+export const DAILY_PATIENCE = 15 // 每天的慢活额度（分钟）；2026-09-22 起 10→15 —— 付款开始按 ¥10=1 分钟花额度，10 分钟不够一天玩
 
 function todayKey() {
   const d = new Date()
@@ -338,15 +426,27 @@ export function saveJournal(journal) {
 }
 
 // 完成一单虚拟外卖 → 记到今天的账上（entries 带 id，日历能贴出真图）
-export function logJournalOrder(entries = []) {
+export function logJournalOrder(entries = [], meta = {}) {
   if (!entries.length) return
   const j = loadJournal()
   const k = journalKey()
   const day = j.days[k] || { items: [], note: '', mood: '' }
   const at = Date.now()
+  // 2026-09-23 用户「手账就是订单，但信息没呈现」：订单笔补上店名（place）和
+  // 这一单的概要（order）。只陈述这一单本身的事实，不做任何跨笔汇总 —— 不算账。
+  // 老数据没有这两个字段，详情卡照常渲染（place 空 = 不显示那行）。
+  const order = meta.total != null
+    ? { count: meta.count || entries.length, total: meta.total, pay: meta.pay || '' }
+    : null
   day.items = [
     ...(day.items || []),
-    ...entries.filter((e) => e && e.name).map((e) => ({ id: e.id || null, name: e.name, at })),
+    ...entries.filter((e) => e && e.name).map((e) => ({
+      id: e.id || null,
+      name: e.name,
+      at,
+      ...(meta.shop ? { place: meta.shop } : {}),
+      ...(order ? { order } : {}),
+    })),
   ]
   j.days[k] = day
   saveJournal(j)

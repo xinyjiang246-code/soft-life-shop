@@ -316,6 +316,11 @@ export default function DishArt({
   label = '',
   en = '',
   compact = false,
+  // fit='slice'（默认）裁切铺满 —— 正方形容器里正合适；
+  // fit='meet' 完整显示（不够的地方露容器底色）—— 给「容器不是正方形」的地方用：
+  // 2026-09-22 世界菜单的 .product-art 改成 4:3 后，正方形手绘卡被 slice 裁掉上下，
+  // 底部的中文菜名（y=276/291）直接被切没 —— 那正是「翻面看不出是什么」的元凶。
+  fit = 'slice',
 }) {
   const raw = useId()
   const gid = raw.replace(/[^a-zA-Z0-9]/g, '')
@@ -338,7 +343,7 @@ export default function DishArt({
     <svg
       className={`dish-art${compact ? ' is-compact' : ''}`}
       viewBox="0 0 300 300"
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio={fit === 'meet' ? 'xMidYMid meet' : 'xMidYMid slice'}
       role="img"
       aria-label={label ? `${label} 手绘插图` : 'AI 手绘菜品'}
     >

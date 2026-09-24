@@ -171,6 +171,22 @@ export default function EntryDetail({
               </span>
             </div>
 
+            {/* 这一单的概要（2026-09-23「手账就是订单」）：订单自动记下的笔才带 entry.order，
+                手写笔 / 老数据没有就不显示。只陈述这一单本身的事实（几样、多少钱、怎么付的），
+                不做任何跨笔汇总 —— 汇总=算账，踩红线。 */}
+            {entry.order && (
+              <div className="jh-detail-row is-order">
+                <TicketIcon />
+                <span>
+                  {entry.order.count > 1
+                    ? `同一单还有 ${entry.order.count - 1} 样`
+                    : '这一单就这一样'}
+                  {' · '}共 ¥{String(entry.order.total).replace(/\.0$/, '')}
+                  {entry.order.pay ? ` · ${entry.order.pay}` : ''}
+                </span>
+              </div>
+            )}
+
             {canEdit ? (
               <>
                 <label className="jh-detail-row is-input">
@@ -322,6 +338,9 @@ const CheckIcon = () => (
 )
 const CalIcon = () => (
   <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5" {...lineProps} /><path d="M3.5 10h17M8 3.5v4M16 3.5v4" {...lineProps} /></svg>
+)
+const TicketIcon = () => (
+  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M4 6.5h16v3a1.8 1.8 0 0 0 0 3.6v3.4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3.4a1.8 1.8 0 0 0 0-3.6z" {...lineProps} /><path d="M9 6.5v11" {...lineProps} strokeDasharray="1.6 2.2" /><path d="M13.5 10h3.5M13.5 13h2.5" {...lineProps} /></svg>
 )
 const CupIcon = () => (
   <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 8h12l-1.4 11.5H7.4z" {...lineProps} /><path d="M8.5 8V6.2a3.5 3.5 0 0 1 7 0V8" {...lineProps} /></svg>

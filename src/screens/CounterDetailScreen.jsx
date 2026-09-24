@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Heart, Plus, ShoppingBag } from 'lucide-react'
 import { getCounter, getItemsByCounter, hashSeed, specsFor, unitPriceOf } from '../data.js'
 import ItemArt from '../components/ItemArt.jsx'
@@ -17,11 +17,13 @@ function praiseOf(item) {
   return item.praise ?? (96 + (hashSeed(item.id + 'p') % 4))
 }
 
-function MenuRow({ item, wished, onAdd, onToggleWish }) {
+function MenuRow({ item, wished, onAdd, onToggleWish, onNavigate, autoOpen = false, rowRef = null }) {
   // 规格是**行内展开**的（2026-09-22 用户挑的做法）：不弹半屏、不跳详情页，
   // 点一下 + 这一行自己长出小标签。没有规格的东西（眼罩、蒸饺…）照旧一点就加入。
   const specs = specsFor(item)
-  const [open, setOpen] = useState(false)
+  // autoOpen：从首页封面点进来时，那一行一开始就是展开的（2026-09-24）——
+  // 用户点的是「这一杯」，落进来还要他自己再点一下 + 才看到规格，就白跳了。
+  const [open, setOpen] = useState(autoOpen)
   const [picked, setPicked] = useState(() => defaultPicks(specs))
 
   const toggle = (group, option) => {
@@ -39,10 +41,21 @@ function MenuRow({ item, wished, onAdd, onToggleWish }) {
     setOpen(false)
   }
 
+  // 立即购买（2026-09-24 用户：「旁边可以加一个立即购买这种，就有点像瑞幸的小程序」）。
+  // 走法按用户定的：**照旧进袋子**，只是顺脚把人送到袋子页 —— 她要的不是「跳过袋子」，
+  // 是「我就要这一件，别让我再找一次」。所以袋子里那件是真的，回去还能改数量。
+  const buyNow = (specIds) => {
+    onAdd(item.id, specIds)
+    setOpen(false)
+    onNavigate('cart')
+  }
+
   return (
-    <article className={`menu-row${open ? ' is-open' : ''}`}>
+    <article ref={rowRef} className={`menu-row${open ? ' is-open' : ''}`}>
       <div className="menu-thumb">
-        <ItemArt item={item} size="sm" prefer="real" />
+        {/* hint：缩略图也能翻面（实拍 ↔ 手绘）——2026-09-22 真机反馈「没啥交互」，
+            提示以前只给大图，谁都不知道这图能点 */}
+        <ItemArt item={item} size="sm" prefer="real" hint />
       </div>
 
       <div className="menu-info">
@@ -100,21 +113,38 @@ function MenuRow({ item, wished, onAdd, onToggleWish }) {
               </div>
             </div>
           ))}
-          <button type="button" className="spec-add" onClick={() => add(picked)}>
-            加入 ¥{unitPriceOf(item, picked)}
-          </button>
+          <div className="spec-actions">
+            <button type="button" className="spec-add" onClick={() => add(picked)}>
+              加入 ¥{unitPriceOf(item, picked)}
+            </button>
+            <button type="button" className="spec-buy" onClick={() => buyNow(picked)}>
+              立即购买
+            </button>
+          </div>
         </div>
       )}
     </article>
   )
 }
 
-export default function CounterDetailScreen({ counterId, cartCount, wishes = [], onNavigate, onBack, onAdd, onToggleWish }) {
+export default function CounterDetailScreen({ counterId, focusItemId, cartCount, wishes = [], onNavigate, onBack, onAdd, onToggleWish }) {
   const counter = getCounter(counterId)
   const items = getItemsByCounter(counterId)
   const categories = ['全部', ...Array.from(new Set(items.map((i) => i.category)))]
   const [activeCategory, setActiveCategory] = useState('全部')
   const filtered = activeCategory === '全部' ? items : items.filter((i) => i.category === activeCategory)
+
+  // 从首页封面点某一杯进来 → 滚到那一行（focusItemId）。
+  // ⚠️ 等一帧再滚：那一行是 autoOpen 展开的，DOM 落地之前量到的高度是收起时的，
+  //    滚过去会差出一大截（面板越高偏得越多）。
+  const focusRef = useRef(null)
+  useEffect(() => {
+    if (!focusItemId) return undefined
+    const raf = requestAnimationFrame(() => {
+      focusRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [focusItemId])
 
   if (!counter) return null
 
@@ -197,6 +227,9 @@ export default function CounterDetailScreen({ counterId, cartCount, wishes = [],
               wished={wishes.includes(item.id)}
               onAdd={onAdd}
               onToggleWish={onToggleWish}
+              onNavigate={onNavigate}
+              autoOpen={item.id === focusItemId}
+              rowRef={item.id === focusItemId ? focusRef : null}
             />
           ))}
           {filtered.length === 0 && <p className="menu-empty">这一类今天还没上。</p>}

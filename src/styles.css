@@ -646,6 +646,9 @@ img { max-width: 100%; display: block; }
   align-items: center;
   justify-content: space-between;
   font: 500 17px/1 var(--f-serif);
+  /* 加购按钮 ::before 命中区向右扩 7px，会撑大 footer 的 scrollWidth（守卫读得到）。
+     裁掉它：视觉、命中区都不变，只让溢出不再传导到卡片。 */
+  overflow: hidden;
 }
 
 .add-button {
@@ -657,7 +660,16 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--text-main);
   border-radius: 50%;
   background: transparent;
+  position: relative;
   transition: background .2s, transform .2s;
+}
+/* 命中区扩到 44px（2026-09-23）：31px 圆在真机上太难点，用户反馈「除了摸猫没交互」。
+   伪元素撑大点击区、视觉不变 —— 加购是主流程，必须够得到。 */
+.add-button::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
 }
 
 .add-button:hover { background: var(--primary); transform: scale(1.05); }
@@ -915,6 +927,57 @@ img { max-width: 100%; display: block; }
 
 .form-group.read-only input:focus { border-bottom-color: var(--divider); }
 
+/* 结算页的装饰地址卡（2026-09-22）：像外卖 App 可切换 / 编辑 / 多张，但全部是装饰性的 */
+.addr-card {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--divider);
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+}
+.addr-who { margin: 0; display: flex; align-items: baseline; gap: 8px; }
+.addr-who b { font: 500 18px/1 var(--f-serif), "PingFang SC", serif; color: var(--text-main); }
+.addr-who small { font-size: 12px; color: var(--text-sub); }
+.addr-where { margin: 6px 0 0; font: 500 15px/1.5 var(--f-serif), "PingFang SC", serif; color: var(--text-main); }
+.addr-switch {
+  flex: 0 0 auto; padding: 0; border: 0; background: none; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 12px; color: var(--text-sub); text-decoration: underline; text-underline-offset: 3px;
+}
+.addr-list { list-style: none; margin: 0; padding: 0; }
+.addr-item {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  padding: 12px 2px; border-bottom: 1px dashed var(--divider);
+}
+.addr-item.is-on .addr-item-main b { color: var(--primary); }
+.addr-item-main { flex: 1; padding: 0; border: 0; background: none; cursor: pointer; font-family: inherit; text-align: left; }
+.addr-item-main b { display: block; font: 500 15px/1.3 var(--f-serif), "PingFang SC", serif; color: var(--text-main); }
+.addr-item-main small { margin-left: 8px; font-size: 12px; color: var(--text-sub); }
+.addr-item-main span { display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.5; color: var(--text-sub); }
+.addr-item-ops { display: inline-flex; align-items: center; gap: 6px; }
+.addr-item-ops button {
+  padding: 9px 11px; border: 0; border-radius: 8px; background: none; cursor: pointer;
+  font-family: inherit; font-size: 11px; color: var(--text-sub);
+  min-height: 36px; display: inline-flex; align-items: center; justify-content: center;
+}
+.addr-item-ops button.is-armed { color: #A0522D; font-weight: 500; }
+.addr-add {
+  margin-top: 12px; padding: 0; border: 0; background: none; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12.5px; color: var(--caramel); text-decoration: underline; text-underline-offset: 3px;
+}
+.addr-form { padding: 4px 0 0; }
+/* 特异性要压过结算页自己的 .form-group label（inline-flex + 22px 大字）—— 否则标签会被挤折行 */
+.form-group .addr-field { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.addr-field span { flex: 0 0 3.2em; display: block; margin-bottom: 0; font-size: 11px; color: var(--text-sub); }
+.addr-field input {
+  width: 100%; padding: 8px 0; border: 0; border-bottom: 1px solid var(--divider);
+  background: transparent; outline: none;
+  font: 500 16px/1.4 var(--f-body); color: var(--text-main);
+}
+.addr-field input:focus { border-bottom-color: var(--primary); }
+.addr-form-actions { display: flex; justify-content: flex-end; gap: 14px; margin-top: 4px; }
+.addr-cancel { padding: 0; border: 0; background: none; cursor: pointer; font-family: inherit; font-size: 12.5px; color: var(--text-sub); }
+.addr-save { padding: 7px 16px; border: 0; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 500; color: #FFFDF6; background: var(--caramel); }
+
 .checkout-note {
   margin-top: 28px;
   padding: 16px;
@@ -971,6 +1034,183 @@ img { max-width: 100%; display: block; }
   background: linear-gradient(90deg, var(--matcha), var(--primary));
   transition: width .6s cubic-bezier(.2, .9, .3, 1);
 }
+
+/* 等待中的**时长拉条**（2026-09-24 用户：「选中时间……拖动拉条这种」）：
+   拖到哪 = 这一单等多久。条上三段：已骑过 → 还要骑 → 没选的余量，
+   两段分界点是 --elapsed / --total（由 JS 一起喂进来，跟数字永远一致）。
+   ⚠️ 元素本身 44px 高（DESIGN.md 的触摸目标），轨道只有 4px 居中 ——
+      视觉上就是原来那条细线（中心落在 26px，和 .delivery-progress 原来一样高），
+      但手指够得到。轨道位置对不上就会在 preview → waiting 切换时跳一下。 */
+.eta-track {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  height: 44px;
+  margin: 4px auto 0;
+  background: transparent;
+  cursor: pointer;
+}
+.eta-track::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    var(--primary) 0 var(--elapsed),
+    var(--matcha) var(--elapsed) var(--total),
+    rgba(159, 127, 95, .12) var(--total) 100%);
+}
+.eta-track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--primary);
+  box-shadow: 0 1px 3px rgba(74, 69, 64, .28);
+}
+.eta-track.is-locked { cursor: default; }
+.eta-track.is-locked::-webkit-slider-thumb { background: var(--line-strong); box-shadow: none; }
+
+/* 这一单等多久（1-60 分钟）：克制的 stepper，mono 数字，不加任何强调色 —— 是个旋钮，不是个催促 */
+.eta-tuner {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap; /* 「就等这么久 / 时间定了」自己换到第二行，别把 stepper 挤窄 */
+}
+
+.eta-tuner-label {
+  font-size: 11px;
+  color: var(--text-sub);
+  letter-spacing: .04em;
+}
+
+.eta-tuner-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-sub);
+  font: 400 17px/1 var(--f-mono);
+  cursor: pointer;
+}
+/* 命中区扩到 44px（DESIGN.md 的触摸目标下限）—— 36px 圆在真机上偏小，
+   尤其这三个按钮挨着排。伪元素撑大点击区、视觉不变（同 .add-button）。
+   ⚠️ inset 相对的是 **padding box**，这个按钮有 1px 边框：-4px 只撑到 42px。
+   要 44px 得用 -5px（34 + 5×2）。相邻两颗按钮间隔 12px，各扩 5px 还剩 2px，不打架。 */
+.eta-tuner-btn::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+}
+
+.eta-tuner-btn:disabled { opacity: .35; cursor: default; }
+
+/* 数字自己是颗按钮（2026-09-24 用户：「时间可以直接手动修改」）——
+   点一下变输入框。从 <span> 升成 <button>，所以要把浏览器给的默认外观全抹掉。 */
+.eta-tuner-val {
+  position: relative;
+  min-width: 3.5em;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  text-align: center;
+  font: 400 13px/1 var(--f-mono);
+  color: var(--text-sub);
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+/* 命中区撑到 44px（同 .eta-tuner-btn）—— 「32 分」这几个字本身太窄，点不准 */
+.eta-tuner-val::before {
+  content: '';
+  position: absolute;
+  inset: -4px -6px;
+  border-radius: 8px;
+}
+.eta-tuner-val:disabled { cursor: default; }
+
+/* 手输那一格：1-60 分钟，回车/失焦生效，Esc 放弃 */
+.eta-tuner-input {
+  width: 4.4em;
+  height: 36px;
+  padding: 0 6px;
+  border: 1px solid var(--caramel);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-main);
+  font: 400 13px/1 var(--f-mono);
+  text-align: center;
+}
+
+/* 定下来（2026-09-24：「这里的时间如果选定了的话就不能换了」）。
+   做成一行谦卑的文字链，不是大按钮 —— 它是个「说定了」的动作，不是主 CTA。 */
+.eta-lock {
+  flex-basis: 100%;
+  min-height: 44px;
+  border: none;
+  background: none;
+  color: var(--caramel);
+  font: 400 11.5px/1 var(--f-body);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.eta-lock:hover { color: var(--primary); }
+
+.eta-locked {
+  flex-basis: 100%;
+  padding: 4px 0;
+  font: 400 11.5px/1.4 var(--f-body);
+  color: var(--text-sub);
+  text-align: center;
+}
+
+/* 🎲 随机这一单等多久（2026-09-24）：摇的时候数字跟着跳、骰子转半圈 */
+.eta-tuner-btn.is-dice {
+  font-size: 15px;
+  line-height: 1;
+}
+.eta-tuner-btn.is-dice.is-rolling { animation: diceSpin .5s ease-in-out both; }
+@keyframes diceSpin {
+  0% { transform: rotate(0) scale(1); }
+  40% { transform: rotate(160deg) scale(1.12); }
+  100% { transform: rotate(180deg) scale(1); }
+}
+.eta-tuner-val.is-rolling {
+  color: var(--caramel);
+  animation: valTick .1s steps(2) infinite;
+}
+@keyframes valTick { 50% { transform: translateY(1px); } }
+@media (prefers-reduced-motion: reduce) {
+  .delivery-page.is-arriving, .eta-tuner-btn.is-dice.is-rolling, .eta-tuner-val.is-rolling { animation: none !important; }
+}
+
+/* 等满那一瞬（类似番茄钟的「到了」）：**整页**左右摇一下，950ms 后进结局页。
+   2026-09-24 从「只摇抬头区」改为摇整页 —— 放下手机的人瞟一眼也要看得出「到了」。
+   页内 fixed 元素（兑换弹层等）在动画期间会被 root 的 transform 收编成包含块，
+   但到达时刻它们并不打开，950ms 一过即恢复，无实际影响。 */
+@keyframes arriving-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  14% { transform: translateX(-10px) rotate(-.5deg); }
+  32% { transform: translateX(9px) rotate(.45deg); }
+  52% { transform: translateX(-7px) rotate(-.35deg); }
+  72% { transform: translateX(4px) rotate(.2deg); }
+  88% { transform: translateX(-2px); }
+}
+
+.delivery-page.is-arriving { animation: arriving-shake .95s ease-in-out both; }
 
 .delivery-timeline {
   padding: 0 36px 30px;
@@ -1279,9 +1519,12 @@ img { max-width: 100%; display: block; }
   inset: 0;
   z-index: 60;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0 0 12vh;
+  /* 2026-09-22 真机 bug：原来 align-items:flex-end 底部锚定 —— 卡片一高
+     （矮窗口 / 横屏）顶部就顶出视口外，还截在半截滚动不到（用户原话
+     「框框不在中间，没有随页面大小变化」）。改成居中：卡片 margin:auto
+     两轴居中，比视口矮时自动顶对齐、backdrop 可滚动，永远不会截断。 */
+  padding: 20px;
+  overflow-y: auto;
   background: rgba(74, 69, 64, .28);
   backdrop-filter: blur(2px);
   animation: fadeIn .2s ease both;
@@ -1291,8 +1534,10 @@ img { max-width: 100%; display: block; }
 
 .exchange-card {
   position: relative;
-  width: calc(100% - 40px);
+  width: 100%;
   max-width: 420px;
+  /* margin:auto 在 flex 里 = 两轴居中；比视口高时退化成顶对齐 + 可滚 */
+  margin: auto;
   padding: 22px 20px 20px;
   /* 催单卡也铺同一张水彩街景（用户 2026-09-17）：白纱压住保证文字可读 */
   background:
@@ -1358,6 +1603,36 @@ img { max-width: 100%; display: block; }
   background: var(--primary-soft);
   border-color: var(--primary);
 }
+
+/* 自己写一句（2026-09-22）：输入框 + 发送，跟上面的预设同一套纸感 */
+.exchange-custom {
+  display: flex;
+  gap: 8px;
+}
+.exchange-input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 14px;
+  border-radius: 13px;
+  background: var(--bg-base);
+  border: 1px solid var(--divider);
+  font: 500 13.5px/1.2 var(--f-body);
+  color: var(--text-main);
+}
+.exchange-input::placeholder { color: #B5AC9E; }
+.exchange-input:focus { outline: none; border-color: var(--primary); background: var(--primary-soft); }
+.exchange-send {
+  flex: none;
+  padding: 13px 15px;
+  border-radius: 13px;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+  font: 500 13.5px/1 var(--f-body);
+  color: var(--text-main);
+  transition: transform .18s, opacity .18s;
+}
+.exchange-send:active { transform: scale(.97); }
+.exchange-send:disabled { opacity: .45; cursor: default; }
 
 .exchange-foot {
   margin: 15px 0 0;
@@ -2961,9 +3236,20 @@ footer {
 /* hero 拍立得里：翻面提示移到相纸右上角，不跟图注挤 */
 .hero-flip .flip-hint {
   top: 12px;
-  right: 12px;
-  bottom: auto;
+  right: 12px;  bottom: auto;
 }
+
+/* 小图上的翻面提示：店内菜单缩略图 / 今日特调（96px 级别）也开 hint（09-22），
+   全尺寸 17px 在小图上太占地方，缩一档、贴边一点 */
+.menu-thumb .flip-hint,
+.special-art .flip-hint {
+  width: 13px;
+  height: 13px;
+  right: 3px;
+  bottom: 3px;
+}
+.menu-thumb .flip-hint svg,
+.special-art .flip-hint svg { width: 8px; height: 8px; }
 
 /* 承载翻面图的容器：定位 + 尺寸 */
 .counter-thumb,
@@ -3085,6 +3371,36 @@ footer {
   color: var(--text-sub);
 }
 .pet-color-swatch.is-active .pet-color-name { color: var(--caramel); }
+
+/* 猫 / 狗切换（09-24 用户「参考小猫做一只小狗，让用户自己选」）：伙伴整体换物种。
+   两段式胶囊，和毛色选择器同一族；狗在右边，选中侧用暖陶土色兜住。 */
+.pet-species-toggle {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 2px 0 20px;
+}
+.pet-species-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 15px;
+  border-radius: 999px;
+  border: 1px solid rgba(159, 127, 95, .18);
+  background: rgba(255, 255, 255, .6);
+  cursor: pointer;
+  font: 500 13px/1 var(--f-body);
+  color: var(--text-sub);
+  transition: border-color .2s, background .2s, color .2s, transform .2s;
+}
+.pet-species-btn:hover { transform: translateY(-1px); }
+.pet-species-emoji { font-size: 15px; line-height: 1; }
+.pet-species-btn.is-active {
+  border-color: var(--caramel);
+  background: rgba(198, 156, 109, .14);
+  color: var(--caramel);
+}
+.pet-species-btn:active { transform: scale(.97); }
 
 /* 成长阶段一览 */
 .pet-ladder { padding: 4px 20px 30px; }
@@ -3287,6 +3603,8 @@ footer {
 }
 
 .world-entry:hover { background: linear-gradient(120deg, rgba(184, 198, 172, .36), rgba(255, 255, 255, .75)); }
+/* 按压反馈（09-22）：大卡按下去要能感觉到 */
+.world-entry:active { transform: scale(.982); transition-duration: .08s; }
 
 .world-entry-flag {
   display: grid;
@@ -3321,17 +3639,39 @@ footer {
 
 .world-entry > svg { color: var(--clay); opacity: .7; flex-shrink: 0; }
 
-/* 世界菜单的商品名比较长（AI 拼出来的英文名），允许折两行 */
+/* 世界菜单 · 菜卡文字排版（2026-09-23 用户「把字体排版一下，不是什么都直接放上去」）：
+   病根不是字号，是层级反了 —— 英文名是三个全大写词组硬拼的长串（HAND ROLLED + PHIN COFFEE + MILK CAP），
+   却被当成「衬线大标题」顶在卡片中央；真正的中文菜名反而被压成最小最灰的副标。
+   按杂志菜单的读法重排：
+     眉题（编号 + 英文名，Space Mono 小字淡色、字距拉开）→ 中文菜名（宋体衬线主角）→ 描述 → 价格。
+   英文名只做「洋气眉题」装饰，不再跟中文抢主角。 */
 .world-card h2 {
+  margin: 2px 0 0;
   white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.05;
-  min-height: 2.1em;
+  overflow: hidden;
+  font-family: var(--pp-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+  min-height: 0;
 }
-.world-card h2 { font-size: 16.5px; }
-.world-card h2 { font-size: 16.5px; }
+.world-card .product-cn {
+  margin: 5px 0 6px;
+  font-family: var(--f-cn-serif);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.32;
+  letter-spacing: .01em;
+  color: var(--text-main);
+}
+.world-card .product-desc { margin-bottom: 10px; font-size: 11px; line-height: 1.55; }
+.world-card .product-footer { font-size: 15px; }
 
 /* 世界菜单的英文名很长，购物袋里折两行就够了，别把行撑高 */
 .cart-name {
@@ -3445,7 +3785,16 @@ footer {
   transition: transform .2s, box-shadow .2s, background .2s;
 }
 .shop-row:hover { background: #fff; box-shadow: 0 6px 18px rgba(74, 69, 64, .08); transform: translateY(-1px); }
-.shop-row:active { transform: scale(.995); }
+/* 按压反馈（09-22 真机反馈「没啥交互」）：scale .995 缩半个百分点等于没有。
+   按下去要「陷进去」：明显缩一点 + 阴影收紧 + 封面图轻微放大，松手弹回。 */
+.shop-row:active {
+  transform: scale(.982);
+  background: #FFFDF8;
+  box-shadow: 0 1px 4px rgba(74, 69, 64, .06);
+  transition-duration: .08s;
+}
+.shop-row:active .shop-cover img { transform: scale(1.04); }
+.shop-cover img { transition: transform .25s ease; }
 
 .shop-cover {
   position: relative;
@@ -3656,15 +4005,32 @@ footer {
 .spec-chip.is-on { background: rgba(228, 198, 168, .34); border-color: var(--caramel); }
 .spec-delta { font: 500 10px/1 var(--f-mono); color: var(--caramel); }
 .spec-chip.is-on .spec-delta { color: inherit; opacity: .8; }
-.spec-add {
-  width: 100%; margin-top: 3px; padding: 9px;
-  border: 1px solid var(--text-main); border-radius: 10px;
-  background: transparent; color: var(--text-main);
+/* 加入 / 立即购买 两栏（2026-09-24 用户：「旁边可以加一个立即购买这种，就有点像瑞幸的小程序」）：
+   左边描边 = 次要（先记进袋子），右边主色实心 = 主要（就要这一件，直接去袋子页）。
+   min-height 44px 是 DESIGN.md 的触摸目标下限 —— 这两颗是展开面板的主操作，必须够得到；
+   原来那个 padding:9px 的按钮只有约 32px 高，本身就偏小。 */
+.spec-actions { display: flex; gap: 8px; margin-top: 6px; }
+.spec-actions button {
+  flex: 1; min-height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 12px;
+  border-radius: 10px;
   font: 500 12.5px/1 var(--f-body); cursor: pointer;
+}
+.spec-add {
+  border: 1px solid var(--text-main);
+  background: transparent; color: var(--text-main);
   transition: background-color .18s, color .18s;
 }
 .spec-add:hover { background: var(--primary); }
 .spec-add:active { background: var(--text-main); color: #fff; }
+.spec-buy {
+  border: 1px solid var(--primary);
+  background: var(--primary); color: #fff;
+  transition: filter .18s, transform .12s;
+}
+.spec-buy:hover { filter: brightness(1.06); }
+.spec-buy:active { transform: scale(.98); }
 .menu-empty {
   margin: 0;
   padding: 24px 0;
@@ -4283,6 +4649,8 @@ footer {
   transition: background .2s ease;
 }
 .rescue-strip:hover { background: linear-gradient(120deg, rgba(232, 216, 168, .46), rgba(255, 255, 255, .78)); }
+/* 按压反馈（09-22）：大卡按下去要能感觉到 */
+.rescue-strip:active { transform: scale(.982); transition-duration: .08s; }
 
 .rescue-strip-icon {
   display: grid;
@@ -5608,6 +5976,15 @@ footer {
 .jh-detail-row.is-input { transition: box-shadow .2s ease; }
 .jh-detail-row.is-input:focus-within { box-shadow: inset 0 0 0 1.5px #E3D6C2; }
 .jh-detail-row.is-input input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--jh-ink); }
+/* 「这一单」概要行 —— 订单的收据感：mono 数据行 + 刻意比别的行矮半档，像贴在备注卡上的一张小票 */
+.jh-detail-row.is-order {
+  padding-top: 11px; padding-bottom: 11px;
+  background: none;
+  border: 1px dashed var(--jh-ink-3);
+  font: 500 12px/1.4 var(--f-mono);
+  letter-spacing: .02em;
+  color: var(--jh-ink-2);
+}
 .jh-detail-row.is-input input:focus { outline: none; }
 .jh-detail-row.is-input input::placeholder { color: var(--jh-ink-3); }
 
@@ -5771,6 +6148,55 @@ footer {
   text-decoration: underline; text-underline-offset: 3px;
 }
 
+/* 这一单的评价卡 —— 长得像外卖评价，但盖进手账（2026-09-22）
+   延续 journal-recap 的暖色 + 虚线 + 米底，不另起一套视觉。 */
+.review-card {
+  margin: 10px 0 0; padding: 13px 14px 12px;
+  border: 1px dashed var(--divider); border-radius: 12px;
+  background: #FDFBF5; text-align: left;
+}
+.review-eyebrow { margin: 0; font-size: 11px; letter-spacing: .06em; color: var(--caramel); }
+.review-eyebrow em { font-style: normal; color: var(--text-sub); letter-spacing: 0; }
+.review-shop { margin: 6px 0 10px; font: 500 15px/1.3 var(--f-serif), "PingFang SC", serif; color: var(--text-main); }
+.review-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.review-chip {
+  padding: 5px 11px; border: 1px solid var(--divider); border-radius: 999px;
+  background: var(--surface); cursor: pointer; font-family: inherit;
+  font-size: 12px; line-height: 1.4; color: var(--text-main);
+}
+.review-chip.is-on { border-color: var(--caramel); background: var(--caramel); color: #FFFDF6; }
+.review-why {
+  width: 100%; box-sizing: border-box; padding: 10px 12px;
+  border: 1px solid var(--divider); border-radius: 10px; background: var(--surface);
+  font-family: inherit; font-size: 13px; line-height: 1.6; color: var(--text-main);
+  resize: none; outline: none;
+}
+.review-why:focus { border-color: var(--caramel); }
+.review-why::placeholder { color: var(--text-sub); }
+.review-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.review-submit {
+  padding: 8px 18px; border: 0; border-radius: 999px; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 500; color: #FFFDF6; background: var(--caramel);
+}
+.review-submit:disabled { opacity: .4; cursor: default; }
+.review-foot { margin: 8px 0 0; font-size: 11px; color: var(--text-sub); }
+.review-card.is-done .review-done { margin: 6px 0 0; font-size: 13px; line-height: 1.6; color: var(--text-main); }
+/* 盖章动效（2026-09-23）：盖进手账后，右上角落一枚砖红方章，
+   入场是「啪」地盖下去 —— 放大 + 斜着落定，克制的 ease-out，不做弹跳（弹跳=红线外的过时感）。 */
+.review-card.is-done { position: relative; }
+.review-seal {
+  position: absolute; top: 12px; right: 12px;
+  width: 38px; height: 38px; font-size: 10px;
+  animation: seal-stamp .34s cubic-bezier(.2, .75, .3, 1) both;
+}
+.review-card.is-done .review-done,
+.review-card.is-done .review-foot { padding-right: 46px; }
+@keyframes seal-stamp {
+  from { transform: rotate(-15deg) scale(1.45); opacity: 0; }
+  62%  { transform: rotate(-4deg) scale(.96); opacity: 1; }
+  to   { transform: rotate(-7deg) scale(1); opacity: 1; }
+}
+
 
 /* ============================================================
    首页「chic」皮肤（2026-09-16）
@@ -5904,6 +6330,22 @@ footer {
 .home-page .world-entry b { color: var(--hm-ink); }
 .home-page .world-entry small { color: var(--hm-ink-2); }
 .home-page .world-entry > svg { color: var(--hm-ink-3); }
+
+/* ---- 世界菜单 chip（09-24 用户「放在甜一点旁边，做成同一个按钮家族」）----
+   排尾的心情 chips 是实线胶囊，这颗长着邮戳的血统：齿孔虚线边 + 小飞机 +
+   「空运 · 城市」，一眼读出「我 不是心情，是另一个入口」。
+   它顶替了右下角悬浮邮戳（已拆）—— 首屏就能看到，不用再浮一个圆章。 */
+.home-page .mood-chip.is-world {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-style: dashed; /* 邮戳齿孔的读法 */
+  border-color: var(--hm-clay);
+  color: var(--hm-clay);
+  background: transparent;
+}
+.home-page .mood-chip.is-world:hover { background: rgba(184, 122, 92, .07); }
+.home-page .mood-chip.is-world:active { transform: scale(.96); }
 
 /* ---- 2×2 角落磁贴 ---- */
 .home-page .corner-tile {
@@ -7015,7 +7457,16 @@ select:focus-visible {
   border-radius: 14px;
   overflow: hidden;
 }
-.world-page .product-code { font-family: var(--pp-mono); letter-spacing: .16em; }
+/* 🔴 世界菜的 AI 想象图是 1024×757（4:3 横图），但 .product-art 全局是 1:1 正方形，
+   object-fit:cover 会把左右各裁掉约 26%（用户原话「裁切吃 13%」，实测更狠）。
+   这里按图本身比例来，整张图完整露出来，不再裁。
+   底色跟 DishArt 手绘卡的纸色（#FBF7F0）对齐：翻面后手绘卡走 meet 完整显示，
+   上下露出的就是这张「纸」，看不出留白和卡片的分界。 */
+.world-page .product-art {
+  aspect-ratio: 4 / 3;
+  background: #FBF7F0;
+}
+.world-page .product-code { font-family: var(--pp-mono); letter-spacing: .16em; margin-bottom: 3px; }
 .world-page .world-postcard { border: 1.2px solid var(--pp-ink); box-shadow: var(--pp-hard); }
 .world-page .ghost-action {
   border: 1.2px solid var(--pp-ink);
@@ -7231,3 +7682,153 @@ select:focus-visible {
   margin: 7px 0 0; font-size: 11px; color: var(--text-sub);
   animation: obFade .3s ease both;
 }
+
+/* ============================================================
+   支付面板（模拟：选方式 → 输 6 位密码 → 成功，2026-09-22）
+   ============================================================ */
+.pay-backdrop {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(42, 36, 29, .42);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: obFade .25s ease both;
+}
+.pay-sheet {
+  width: 100%; max-width: 430px;
+  background: var(--surface);
+  border: 1.2px solid var(--pp-ink); border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 0 rgba(42, 36, 29, .12);
+  padding: 16px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  animation: payUp .32s cubic-bezier(.25, 1.25, .45, 1) both;
+}
+@keyframes payUp { from { transform: translateY(60%); } to { transform: none; } }
+.pay-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.pay-head.dark { margin-bottom: 10px; }
+.pay-title { font: 700 14px/1 var(--f-body); color: var(--text-main); letter-spacing: .04em; }
+.pay-close {
+  display: grid; place-items: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--divider); background: var(--surface); color: var(--text-sub);
+  cursor: pointer;
+}
+.pay-close.ghost { visibility: hidden; }
+.pay-amount {
+  margin: 6px 0 14px; text-align: center;
+  font: 900 34px/1 var(--pp-serif); color: var(--text-main);
+}
+.pay-amount small { display: block; margin-top: 6px; font: 400 9px/1 var(--pp-mono); letter-spacing: .2em; color: var(--text-sub); }
+.pay-methods { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.pay-method {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 11px 12px;
+  background: var(--surface);
+  border: 1.2px solid var(--pp-ink); border-radius: 13px;
+  cursor: pointer; text-align: left;
+  transition: background .15s, box-shadow .15s;
+}
+.pay-method.is-on { box-shadow: var(--pp-hard-soft); background: #FBF6EC; }
+.pay-m-icon {
+  flex: none; display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 9px;
+  color: #FFF; font: 700 15px/1 var(--f-body);
+}
+.pay-m-copy { flex: 1; min-width: 0; }
+.pay-m-copy b { display: block; font-size: 13.5px; color: var(--text-main); }
+.pay-m-copy small { display: block; margin-top: 2px; font-size: 10.5px; color: var(--text-sub); }
+.pay-m-radio {
+  flex: none; display: grid; place-items: center;
+  width: 19px; height: 19px; border-radius: 50%;
+  border: 1.4px solid var(--divider); color: #FFF6EC;
+}
+.pay-method.is-on .pay-m-radio { background: var(--pp-ink); border-color: var(--pp-ink); }
+.pay-confirm {
+  display: block; width: 100%;
+  padding: 13px; border-radius: 999px;
+  background: var(--pp-ink); color: #FFF6EC;
+  border: 1.2px solid var(--pp-ink);
+  box-shadow: var(--pp-hard);
+  font: 700 14.5px/1 var(--f-body); letter-spacing: .08em;
+  cursor: pointer; transition: transform .12s, box-shadow .12s;
+}
+.pay-confirm:active { transform: translate(2px, 2px); box-shadow: none; }
+.pay-honest {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  margin: 11px 0 0;
+  font: 400 10.5px/1 var(--pp-mono); color: var(--text-sub);
+}
+/* 密码盘 */
+.pay-pin { text-align: center; }
+.pay-pin-amount { margin: 2px 0 14px; font: 900 30px/1 var(--pp-serif); color: var(--text-main); }
+.pay-pin-amount small { display: block; margin-top: 6px; font: 400 10px/1 var(--pp-mono); letter-spacing: .14em; color: var(--text-sub); }
+.pay-dots { display: flex; justify-content: center; gap: 10px; margin-bottom: 7px; }
+.pay-dots i {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 1.4px solid var(--pp-ink);
+  transition: background .12s, transform .12s;
+}
+.pay-dots i.is-filled { background: var(--pp-ink); transform: scale(1.08); }
+.pay-pin-hint { margin: 0 0 12px; font: 400 10px/1 var(--pp-mono); color: var(--text-sub); letter-spacing: .04em; }
+.pay-pad {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px;
+  margin: 0 -6px;
+}
+.pay-key {
+  height: 46px;
+  display: grid; place-items: center;
+  background: var(--surface);
+  border: 1px solid var(--pp-ink); border-radius: 11px;
+  font: 700 19px/1 var(--pp-mono); color: var(--text-main);
+  cursor: pointer; box-shadow: var(--pp-hard-soft);
+  transition: transform .08s, box-shadow .08s, background .08s;
+}
+.pay-key:active { transform: translate(1.5px, 1.5px); box-shadow: none; background: #FBF6EC; }
+.pay-key.blank { border: none; box-shadow: none; background: none; }
+/* 进行中 / 成功 */
+.pay-stage { display: grid; place-items: center; gap: 12px; padding: 40px 0 34px; }
+.pay-stage p { margin: 0; font: 700 15px/1 var(--f-body); color: var(--text-main); }
+.pay-stage small { font: 400 10.5px/1 var(--pp-mono); color: var(--text-sub); }
+.pay-spinner {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid var(--divider); border-top-color: var(--pp-ink);
+  animation: paySpin .8s linear infinite;
+}
+@keyframes paySpin { to { transform: rotate(360deg); } }
+.pay-ok {
+  display: grid; place-items: center;
+  width: 60px; height: 60px; border-radius: 50%;
+  background: var(--matcha, #7E9070); color: #FFF6EC;
+  border: 1.2px solid var(--pp-ink);
+  animation: payPop .45s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+@keyframes payPop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .pay-backdrop, .pay-sheet, .pay-ok { animation: none; }
+  .pay-spinner { animation-duration: 2s; }
+}
+
+/* ============================================================
+   小铺后台（AdminScreen）
+   ============================================================ */
+.ad-note { margin: 2px 16px 14px; font: 400 11px/1.7 var(--pp-mono); color: var(--text-sub); }
+.ad-err { margin: 0 16px; padding: 14px 16px; border: 1px dashed var(--pp-seal); border-radius: 12px; font-size: 12.5px; color: var(--pp-seal); }
+.ad-totals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0 16px 18px; }
+.ad-total { padding: 15px 16px 12px; }
+.ad-total b { display: block; font: 900 26px/1 var(--pp-serif); color: var(--pp-seal); }
+.ad-total small { display: block; margin-top: 5px; font: 400 9.5px/1 var(--pp-mono); letter-spacing: .12em; color: var(--text-sub); }
+.ad-sec { margin: 0 18px 9px; font: 700 12.5px/1 var(--f-body); color: var(--text-main); }
+.ad-chart {
+  display: flex; align-items: flex-end; gap: 6px;
+  margin: 0 16px 18px; padding: 14px 12px 9px;
+  height: 112px;
+}
+.ad-bar-col { flex: 1; display: grid; justify-items: center; align-items: end; gap: 5px; height: 100%; }
+.ad-bar-col i { display: block; width: 100%; max-width: 18px; border-radius: 3px 3px 0 0; background: var(--pp-ink); opacity: .82; min-height: 2px; }
+.ad-bar-col span { font: 400 8px/1 var(--pp-mono); color: var(--text-sub); white-space: nowrap; }
+.ad-days { list-style: none; margin: 0 16px 14px; padding: 6px 14px; }
+.ad-days li { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--divider); }
+.ad-days li:last-child { border-bottom: none; }
+.ad-days span { font: 400 10.5px/1 var(--pp-mono); color: var(--text-sub); width: 42px; }
+.ad-days b { font: 700 12.5px/1 var(--f-body); color: var(--text-main); width: 52px; }
+.ad-days small { font: 400 10px/1 var(--pp-mono); color: var(--text-sub); }
+.ad-foot { margin: 0 18px 6px; font: 400 9.5px/1 var(--pp-mono); color: var(--text-sub); }
+.spin { animation: paySpin .9s linear infinite; }

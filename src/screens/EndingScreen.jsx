@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Gift, Heart, PawPrint, RotateCcw, Sparkles } from 'lucide-react'
-import { CHARITY, LEVEL_MEALS, PET_NAME, RIDER_MOMENTS, dateSeed, getCounter, getItem, gramsForAmount, levelForMeals, parseCartKey, petStages, stickerPool, unitPriceOf } from '../data.js'
+import { CHARITY, LEVEL_MEALS, RIDER_MOMENTS, catDaysText, dateSeed, getCounter, getItem, gramsForAmount, levelForMeals, parseCartKey, petNameFor, petStagesFor, stickerPool, unitPriceOf } from '../data.js'
 import SoftPet from '../components/SoftPet.jsx'
+import PetPops, { spawnPops } from '../components/PetPops.jsx'
+import { FACE_HOLD, HEAT_WINDOW, MOOD_BY_ZONE, expressionFor, patLine, playPatReaction, zoneFromPoint } from '../petTouch.js'
 import WaitReceipt from '../components/WaitReceipt.jsx'
+import ReviewCard from '../components/ReviewCard.jsx'
+import { addJournalItem, journalKey } from '../storage.js'
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -68,11 +72,13 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
   const [ratio, setRatio] = useState(CHARITY.defaultRatio)
   const [donated, setDonated] = useState(null)  // { grams, ratio }
   const [skipped, setSkipped] = useState(false)
-  const grams = Math.round((maxGrams * ratio) / 100)
+  const grams = Math.round((maxGrams * ratio) / 100 * 10) / 10  // 一位小数：¥1=0.1g 的世界里克数是小数
 
   const currentLevel = levelForMeals(pet.meals)
-  const stage = petStages[currentLevel]
-  const nextStage = petStages[currentLevel + 1]        // 已满级时为 undefined
+  const name = petNameFor(pet.species || 'cat')
+  const stages = petStagesFor(pet.species || 'cat')
+  const stage = stages[currentLevel]
+  const nextStage = stages[currentLevel + 1]        // 已满级时为 undefined
   const nextThreshold = LEVEL_MEALS[currentLevel + 1]  // 已满级时为 undefined
   const progressToNext = nextThreshold
     ? Math.min(100, Math.round(((pet.meals - LEVEL_MEALS[currentLevel]) / (nextThreshold - LEVEL_MEALS[currentLevel])) * 100))
@@ -93,6 +99,65 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
       shop: orderShop,
     })
     setDonated({ grams, ratio })
+  }
+
+  // ===== 这一单的评价卡：戳点 + 一句话 → 盖进手账（2026-09-22）=====
+  // 写成独立一笔（店名 + mood + why），不补到某件商品 —— 评价挂在「这一单」上，
+  // 不挂在「第一件商品」上。字段复用 addJournalItem 的白名单，零新增。
+  const handleReviewDone = ({ mood, why }) => {
+    addJournalItem(journalKey(), orderShop, { mood, why })
+  }
+
+  // ===== 摸软软（2026-09-22 用户真机反馈「只有小屋的猫有交互」）=====
+  // 跟小屋 / 配送页同一套：六部位形变 + 部位台词 + 指尖小图 + 表情，
+  // 只是搬进结局页的惊喜卡里 —— 它刚被你喂完饼干，正好摸摸它。
+  const [patZone, setPatZone] = useState('tummy')
+  const [patTick, setPatTick] = useState(0)
+  const [faceExpr, setFaceExpr] = useState(null)
+  const [patBubble, setPatBubble] = useState(null)
+  const [patPops, setPatPops] = useState([])
+  const patHitRef = useRef(null)
+  const lastZoneRef = useRef('')
+  const streakRef = useRef(0)
+  const heatRef = useRef(0)
+  const lastPatRef = useRef(0)
+  const bubbleTimer = useRef(null)
+  const faceTimer = useRef(null)
+
+  const patCat = (e) => {
+    const btn = e.currentTarget
+    const rect = btn.getBoundingClientRect()
+    // 键盘 / 程序化点击没有真实坐标，按「摸肚子」兜底（同小屋）
+    const hasPoint = !(e.clientX === 0 && e.clientY === 0)
+    const zone = hasPoint ? zoneFromPoint(rect, e.clientX, e.clientY) : 'tummy'
+    const px = hasPoint ? e.clientX - rect.left : rect.width / 2
+    const py = hasPoint ? e.clientY - rect.top : rect.height / 2
+
+    // 连击：1.5 秒内接着点，幅度越来越大（同小屋）
+    const now = Date.now()
+    const heat = now - lastPatRef.current < HEAT_WINDOW ? heatRef.current + 1 : 0
+    heatRef.current = heat
+    lastPatRef.current = now
+
+    const streak = zone === lastZoneRef.current ? streakRef.current + 1 : 1
+    lastZoneRef.current = zone
+    streakRef.current = streak
+
+    setPatZone(zone)
+    playPatReaction(patHitRef.current, zone, heat)
+    setPatBubble(patLine(zone, streak))
+    clearTimeout(bubbleTimer.current)
+    bubbleTimer.current = setTimeout(() => setPatBubble(null), 2200)
+
+    const tick = patTick + 1
+    setPatTick(tick)
+    setFaceExpr(expressionFor(zone, heat))
+    clearTimeout(faceTimer.current)
+    faceTimer.current = setTimeout(() => setFaceExpr(null), FACE_HOLD)
+
+    const batch = spawnPops(px, py, heat >= 3 ? 6 : 4)
+    setPatPops((ps) => [...ps.slice(-8), ...batch])
+    setTimeout(() => setPatPops((ps) => ps.filter((p) => !batch.some((b) => b.id === p.id))), 1400)
   }
 
   // ===== 等待凭证（2026-09-18）=====
@@ -187,14 +252,17 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
           <section className="journal-recap" aria-label="食物手账">
             <p className="journal-recap-eyebrow">食物手账</p>
             <p className="journal-recap-body">
-              这一单的 <strong>{journaled.count}</strong> 样，已经写进今天那一页了。
+              这一单的 <strong>{journaled.count}</strong> 样，已经写进今天那一页了 —— 店名和这一单的价，都记着呢。
             </p>
             <button
               className="journal-recap-link"
               onClick={() => onNavigate('archive', { view: 'journal' })}
-            >翻翻手账</button>
+            >去手账看看这一单</button>
           </section>
         )}
+
+        {/* 这一单的评价卡：长得像外卖评价，但盖进自己的手账 —— 放在手账回执正下方，顺势写一句 */}
+        <ReviewCard shop={orderShop} onDone={handleReviewDone} />
 
         {/* 路上的这一段：等满 / 提前打了招呼 */}
         {wait && (wait.waited || wait.skipped) && (
@@ -266,29 +334,49 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
           <section className="surprise-card" aria-label="专属惊喜">
             <div className="surprise-glow" aria-hidden="true" />
             <div className="surprise-pet">
-              <SoftPet
-                stage={surprise.level}
-                mood={surprise.leveledUp ? 'sparkle' : 'love'}
-                colorway={pet.colorway || 'cream'}
-                size={168}
-              />
+              <button
+                className="pet-pat-btn"
+                onClick={patCat}
+                data-zone={patZone}
+                data-pats={patTick}
+                data-face={faceExpr || ''}
+                aria-label={`拍拍${name}——耳朵、肚子、爪子反应不一样`}
+                title={`拍拍${name}`}
+              >
+                <span className="pet-idle">
+                  <span className="pet-hit" ref={patHitRef}>
+                    <SoftPet
+                      stage={surprise.level}
+                      mood={faceExpr ? (MOOD_BY_ZONE[patZone] || 'love') : (surprise.leveledUp ? 'sparkle' : 'love')}
+                      colorway={pet.colorway || 'cream'}
+                      species={pet.species || 'cat'}
+                      size={168}
+                      faces
+                      face={faceExpr}
+                      faceTick={patTick}
+                    />
+                  </span>
+                </span>
+                <PetPops pops={patPops} />
+              </button>
+              {patBubble && <span className="pet-pat-bubble" role="status">{patBubble}</span>}
             </div>
 
             <p className="surprise-eyebrow">SOFT LIFE COMPANION</p>
 
             {surprise.leveledUp ? (
               <>
-                <h2 className="surprise-title">{PET_NAME} 升级啦！</h2>
+                <h2 className="surprise-title">{name} 升级啦！</h2>
                 <p className="surprise-body">
-                  它从「{petStages[surprise.level - 1].name}」长成了「{petStages[surprise.level].name}」。
+                  它从「{stages[surprise.level - 1].name}」长成了「{stages[surprise.level].name}」。
                   你每在这里多点一单、在现实里少点一次外卖，它就长大一点点。
                 </p>
               </>
             ) : (
               <>
-                <h2 className="surprise-title">你喂了{PET_NAME}一块小饼干</h2>
+                <h2 className="surprise-title">你喂了{name}一块小饼干</h2>
                 <p className="surprise-body">
-                  这一单代替了一次真实外卖，{PET_NAME}悄悄长大了一点。
+                  这一单代替了一次真实外卖，{name}悄悄长大了一点。
                   累计少点了 <strong>{surprise.meals}</strong> 次外卖。
                 </p>
               </>
@@ -328,8 +416,8 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
               </div>
               <p className="pet-progress-hint">
                 {nextThreshold
-                  ? `再喂 ${nextThreshold - surprise.meals} 块小饼干，${PET_NAME}就能长成「${nextStage.name}」`
-                  : `${PET_NAME}已经长到最大啦，谢谢你的陪伴`}
+                  ? `再喂 ${nextThreshold - surprise.meals} 块小饼干，${name}就能长成「${nextStage.name}」`
+                  : `${name}已经长到最大啦，谢谢你的陪伴`}
               </p>
             </div>
 
@@ -392,9 +480,9 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
 
                     <div className="donate-preview">
                       <span>记下 <b>{grams}g</b> 猫粮</span>
-                      <span className="donate-preview-sub">
-                        约 {(grams / CHARITY.gramPerCatDay).toFixed(1)} 只猫一天的口粮
-                      </span>
+                      {catDaysText(grams) && (
+                        <span className="donate-preview-sub">{catDaysText(grams)}</span>
+                      )}
                     </div>
 
                     <div className="donate-actions">
@@ -411,7 +499,7 @@ export default function EndingScreen({ houseName, pet, cart = {}, wait, onGrow, 
             <div className="surprise-actions">
               <button className="primary-button" onClick={handleViewPet}>
                 <PawPrint size={17} strokeWidth={1.4} />
-                去看{PET_NAME}
+                去看{name}
               </button>
               <button className="ghost-button" onClick={handleAgain}>
                 <RotateCcw size={16} strokeWidth={1.5} />

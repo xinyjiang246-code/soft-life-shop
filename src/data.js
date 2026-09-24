@@ -77,7 +77,7 @@ export const counters = [
     accent: '#B8C6AC',
     bg: '#EEF1EB',
     discount: { threshold: 20, amount: 8 },
-    deliveryTime: 20,
+    deliveryTime: 30,
     distance: 0.8,
     tags: ['满20-8'],
     hero: matchaLatteDraw,
@@ -98,7 +98,7 @@ export const counters = [
     accent: '#C28A70',
     bg: '#F5E8E2',
     discount: { threshold: 30, amount: 18 },
-    deliveryTime: 28,
+    deliveryTime: 38,
     distance: 1.4,
     tags: ['满30-18'],
     hero: seoulBentoDraw,
@@ -119,7 +119,7 @@ export const counters = [
     accent: '#9F7F5F',
     bg: '#F7F1E6',
     discount: { threshold: 20, amount: 15 },
-    deliveryTime: 25,
+    deliveryTime: 32,
     distance: 1.1,
     tags: ['满20-15'],
     hero: creamCakeDraw,
@@ -140,7 +140,7 @@ export const counters = [
     accent: '#8D867C',
     bg: '#FBFAF6',
     discount: null,
-    deliveryTime: 22,
+    deliveryTime: 28,
     distance: 0.6,
     tags: ['无满减'],
     hero: eyeMaskDraw,
@@ -161,7 +161,7 @@ export const counters = [
     accent: '#B07A52',
     bg: '#F4E9DC',
     discount: { threshold: 40, amount: 12 },
-    deliveryTime: 32,
+    deliveryTime: 40,
     distance: 2.1,
     tags: ['满40-12'],
     hero: misoRamen,
@@ -182,7 +182,7 @@ export const counters = [
     accent: '#C9A05C',
     bg: '#F7F0E2',
     discount: { threshold: 35, amount: 10 },
-    deliveryTime: 26,
+    deliveryTime: 35,
     distance: 1.7,
     tags: ['满35-10'],
     hero: shrimpDumpling,
@@ -519,11 +519,15 @@ export const SPECS = {
     },
     {
       id: 'add', label: '加料', pick: 'many',
+      // 2026-09-22 用户要「参考霸王茶姬 / 喜茶」→ 换成大牌奶茶店真在卖的小料，
+      // 价格也往真实靠（奶盖 / 芝士贵一点，寒天 / 脆波波便宜）。叫法别自己编。
       options: [
-        { id: 'add-pearl', label: '珍珠', delta: 2 },
-        { id: 'add-coconut', label: '椰果', delta: 2 },
-        { id: 'add-oat', label: '燕麦', delta: 3 },
-        { id: 'add-pudding', label: '布丁', delta: 3 },
+        { id: 'add-pearl', label: '黑糖珍珠', delta: 2 },
+        { id: 'add-kanten', label: '寒天晶球', delta: 3 },
+        { id: 'add-popping', label: '脆波波', delta: 3 },
+        { id: 'add-teajelly', label: '桂花茶冻', delta: 3 },
+        { id: 'add-cheese', label: '芝士奶盖', delta: 5 },
+        { id: 'add-taro', label: '香芋泥', delta: 4 },
       ],
     },
   ],
@@ -579,12 +583,15 @@ export const SPECS = {
   ],
 }
 
-/** 只有柜台里这几件常驻商品能选规格（外加今日特调）。
-    ⚠️ 世界菜 / 惜食柜 / 我的小店的手拍商品一律没有 —— 它们不是「店里的菜单」。 */
-const WITH_SPECS = new Set([...menuItems.map((m) => m.id), 'special-today'])
+/** 只有柜台里这几件常驻商品能选规格（外加特调 —— 2026-09-24 起有 12 杯，id 形如 `special-<i>`）。
+    ⚠️ 世界菜 / 惜食柜 / 我的小店的手拍商品一律没有 —— 它们不是「店里的菜单」。
+    ⚠️ 特调用**前缀**认、不写进这个 Set：`dailySpecials` 定义在本文件更靠后的位置，
+       在这里引用它会踩 TDZ（模块加载即崩，整站白屏）。 */
+const WITH_SPECS = new Set(menuItems.map((m) => m.id))
 
 export function specsFor(item) {
-  if (!item || !WITH_SPECS.has(item.id)) return []
+  if (!item) return []
+  if (!WITH_SPECS.has(item.id) && !/^special-\d+$/.test(item.id)) return []
   if (item.counterId === 'tea') return SPECS.tea
   if (item.counterId === 'dessert') return SPECS.sweet
   if (item.counterId === 'bento') return SPECS.rice
@@ -732,7 +739,7 @@ export const RIDER_MOMENTS = [
 ]
 
 // ===== 配送等待 · 陪等的方式（2026-09-17 用户：三种都想要，UI 要能切换）=====
-// 等的那两分钟怎么过，由用户自己选，随时可换。三种都守同一条底线：
+// 等的那段时间怎么过，由用户自己选，随时可换。三种都守同一条底线：
 //   **不计分、不会输、不点也完全没事** —— 骑手照样到，什么都不扣。
 // 区别只在「你用这段时间做什么」：
 //   walk    陪他走：路上一件件事，你替他拿主意（有来有回）
@@ -754,8 +761,19 @@ export const RIDER_EXCHANGES = [
   { key: 'hurry', label: '轻轻催一下', reply: '好，我尽量快 —— 汤可能会晃一点。' },
 ]
 
-// ===== 配送等待 · 等待本身的时间（模拟的「预计时长」之外的、真正要你等的那段）=====
-export const WAIT_SECONDS = 120 // 2 分钟：骑手来信大约每 17 秒到一条
+// 自己写的那一句 → 骑手怎么回。按文字的 hash 挑，同一句话回的是同一句（和菜单同一套确定性）。
+// 2026-09-22 用户要的「加一个自定义」—— 只有回话是人写的，规矩不变：一样花慢活额度。
+export const RIDER_CUSTOM_REPLIES = [
+  '收到，这话我揣兜里了 —— 稳稳给你送到。',
+  '哈，好。那我骑快一点点，汤尽量不晃。',
+  '行，就冲你这句话，红绿灯都少等两个。',
+]
+
+// ===== 配送等待 · 等待本身的时间 =====
+// 等多久 = 这家店的 deliveryTime + 天气加成 —— 真实的一单 30~50 分钟，跟真外卖一个量级
+//（2026-09-24 用户「参考外卖一般时间 35 分钟左右，自己也可以调 1-60 分钟」）。
+// 等待页有调节器：想慢慢等完就照预计来，今天只想等一小会儿就调短 —— 自己说了算。
+// 骑手来信按路程比例出现（RIDER_LETTERS 的 at 是 0~1），等多久都成立。
 export const PATIENCE_NOTE = '时间是这个铺子里唯一真实的东西 —— 想快一点，就从今天的时间里借。'
 
 // 等待时给现实里的一件小事（不做小游戏：这个 App 不该让人看更久的屏幕）
@@ -774,6 +792,17 @@ export const PET_NAME = '软软'
 
 export const PET_SPECIES = '小猫'
 
+// 小狗「团团」（2026-09-23 用户「参考小猫形象做一只小狗，让用户自己选猫还是狗」）
+// 素材在 src/assets/pets/d-cream-stage{n}.webp，锚点在 src/dogFace.js，与猫完全隔离。
+export const DOG_NAME = '团团'
+export const DOG_SPECIES = '小狗'
+
+/** 按物种取名字 / 物种标签 / 成长阶段 / 台词池（cat 默认，dog 走狗的一套） */
+export function petNameFor(species) { return species === 'dog' ? DOG_NAME : PET_NAME }
+export function petSpeciesLabel(species) { return species === 'dog' ? DOG_SPECIES : PET_SPECIES }
+export function petStagesFor(species) { return species === 'dog' ? dogStages : petStages }
+export function petLinesFor(species) { return species === 'dog' ? dogLinesByStage : petLinesByStage }
+
 // 毛色可选。用户敲定的这只猫只有一种配色，所以这里只留一项；
 // 保留数组结构是为了以后真加第二只猫时不用改 UI（只有 length > 1 时才渲染选择器）。
 export const PET_COLORWAYS = [
@@ -786,6 +815,15 @@ export const petStages = [
   { level: 2, name: '少年猫', emoji: '🐱', desc: '身子拉长了一点，学会蹲在窗台看楼下的车' },
   { level: 3, name: '青年猫', emoji: '🐱', desc: '前腿长开了，跳上柜台毫不费力' },
   { level: 4, name: '成年猫', emoji: '🐈', desc: '稳稳坐在小铺里，像这里本来就该有它' },
+]
+
+// 小狗「团团」的成长阶段（与 petStages 同构，5 个阶段对应 d-cream-stage0~4）
+export const dogStages = [
+  { level: 0, name: '小奶狗', emoji: '🐾', desc: '刚出生没多久，团成一团圆圆的，眼睛还是半睁的' },
+  { level: 1, name: '奶狗崽', emoji: '🐾', desc: '能自己坐稳了，一对小垂耳第一次垂下来' },
+  { level: 2, name: '幼犬', emoji: '🐶', desc: '圆滚滚的，垂耳垂到脸颊两侧，走路摇摇摆摆' },
+  { level: 3, name: '少年犬', emoji: '🐶', desc: '身子拉长了一点，垂耳长到脸颊以下，机灵又温柔' },
+  { level: 4, name: '成年犬', emoji: '🐕', desc: '毛更蓬松，稳稳坐在你脚边，像这里本来就该有它' },
 ]
 
 // 邻居猫：住在隔壁的那只大猫（用户敲定的另一只猫咪形象），每天来小铺串门。
@@ -879,8 +917,17 @@ export const dailySpecials = [
   },
 ]
 
+/** 今天轮到第几杯（`dailySpecials` 的下标）。
+    2026-09-24 起特调是**能点进去买的商品**，id 用这个下标（`special-<i>`）——
+    所以「今天加的那杯」明天仍然是同一件东西，不会因为轮换而在购物袋里失踪。 */
+export function getTodaySpecialIndex() {
+  return dateSeed() % dailySpecials.length
+}
+
+/** 今天的特调。带 `index`，调用方靠它取商品 id。 */
 export function getTodaySpecial() {
-  return dailySpecials[dateSeed() % dailySpecials.length]
+  const i = getTodaySpecialIndex()
+  return { ...dailySpecials[i], index: i }
 }
 
 /**
@@ -893,7 +940,11 @@ export function getTodaySpecial() {
 export function getSpecialRun(count = 4) {
   const n = dailySpecials.length
   const start = dateSeed() % n
-  return Array.from({ length: Math.max(1, Math.min(count, n)) }, (_, k) => dailySpecials[(start + k) % n])
+  return Array.from({ length: Math.max(1, Math.min(count, n)) }, (_, k) => {
+    const i = (start + k) % n
+    // ⚠️ `index` 是**数组下标**，不是「今天第几杯」—— 后者每天都在滚，拿它做 id 会串。
+    return { ...dailySpecials[i], index: i }
+  })
 }
 
 // ===== 反向 AI 推送：主动给用户一句话 =====
@@ -978,16 +1029,32 @@ export function getAllItems() {
   return [...menuItems, ...runtimeItems, ...customItems]
 }
 
-export function toItemFromSpecial(special) {
+/**
+ * 特调 → 商品（2026-09-24 用户：「主页这个图片点击的话应该是能跳到对应商品页面的」）。
+ * 12 杯全部是能点进去买的商品，和柜台里的常驻商品同一套（有规格、能加购）。
+ *
+ * 🔴 id 用**它在 `dailySpecials` 里的下标**：`special-<i>`。
+ *    别用「今天第几杯」当 id —— 那个每天都在滚，同一杯今天叫 0、明天叫 3，
+ *    用户昨天加进袋子的那杯就查不到了（cartBreakdown 会把查不到的 id 丢掉）。
+ *
+ * `onShelf` = 这一杯今天在不在封面上（决定它出不出现在茶饮铺菜单里）。
+ * 不在架的也照样登记进 runtimeItems —— 只为让**跨天存下来的购物袋**还能查到它。
+ */
+export function toItemFromSpecial(special, { onShelf = false } = {}) {
+  const index = typeof special.index === 'number'
+    ? special.index
+    : Math.max(0, dailySpecials.indexOf(special))
   return {
-    id: 'special-today',
-    code: 'TODAY SPECIAL',
+    id: `special-${index}`,
+    code: `SPECIAL ${String(index + 1).padStart(2, '0')}`,
     name: special.en,
     cn: special.cn,
     price: special.price,
     counterId: 'tea',
     category: 'AI 特调',
     tags: ['ai'],
+    kind: 'special',
+    onShelf,
     emoji: special.emoji,
     description: special.desc,
     // 有真图的走翻面卡（和 13 款招牌商品同一套：实拍 ↔ 油画棒）；
@@ -998,16 +1065,23 @@ export function toItemFromSpecial(special) {
   }
 }
 
+/** 某家店的菜单。⚠️ 特调只在**今天在架**那几杯里出现 ——
+    12 杯都登记在 runtimeItems 里（为了购物袋跨天不丢），但一次只上 4 杯；
+    不过滤的话茶饮铺菜单会一下冒出 12 杯特调，「今日」就没有意义了。 */
 export function getItemsByCounter(counterId) {
-  return getAllItems().filter((item) => item.counterId === counterId)
+  return getAllItems().filter((item) =>
+    item.counterId === counterId && (item.kind !== 'special' || item.onShelf))
 }
 
 // 注意：惜食柜商品单独在 rescueItems 里查 —— 不能并进 getAllItems()，
 // 否则 getItemsByCounter 会把折价品混进店内正常菜单，等于全场打折。
 export function getItem(id) {
-  return getAllItems().find((item) => item.id === id)
-    || worldItems.find((item) => item.id === id)
-    || rescueItems.find((item) => item.id === id)
+  // 老购物袋里的 `special-today`（2026-09-24 之前特调只有一件，用的是这个 id）——
+  // 映射到「今天那一杯」的新 id，老单子不会变成查不到然后被默默丢掉。
+  const real = id === 'special-today' ? `special-${getTodaySpecialIndex()}` : id
+  return getAllItems().find((item) => item.id === real)
+    || worldItems.find((item) => item.id === real)
+    || rescueItems.find((item) => item.id === real)
 }
 
 /**
@@ -1268,6 +1342,50 @@ export function pickPetLine(level) {
   return list[Math.floor(Math.random() * list.length)]
 }
 
+// 小狗「团团」今日心情 + 台词（与 petLinesByStage 同构；mood emoji 要在 SoftPet 的 MOOD_MAP 里有映射）
+export const dogLinesByStage = [
+  // 阶段 0：小奶狗
+  [
+    { mood: '💤', line: '（团成一团，只露出半个小脑袋）' },
+    { mood: '☁️', line: '眼睛半睁，世界还看不太清楚。' },
+    { mood: '🌙', line: '（打了个小哈欠，又缩回去了）' },
+    { mood: '💭', line: '我好像闻到肉骨头的味道了。' },
+    { mood: '✨', line: '（试着往前挪了挪，又趴下了）' },
+  ],
+  // 阶段 1：奶狗崽
+  [
+    { mood: '👀', line: '我能坐稳了，你看我。' },
+    { mood: '🥛', line: '想先喝一点温温的奶。' },
+    { mood: '💭', line: '耳朵为什么自己会垂下来啊。' },
+    { mood: '🥹', line: '你不在的时候，我就守着门口。' },
+    { mood: '✨', line: '今天的你，看起来没那么累。' },
+  ],
+  // 阶段 2：幼犬
+  [
+    { mood: '👀', line: '你点的东西闻起来好香，是给我的吗？' },
+    { mood: '🛋️', line: '在你脚边趴了一下午，暖烘烘的。' },
+    { mood: '🥢', line: '你今天又少点了一次外卖，我又有小饼干了。' },
+    { mood: '🪟', line: '想跟你一起出去走走，不赶时间。' },
+    { mood: '💤', line: '刚打了个盹，梦见追一只蝴蝶。' },
+  ],
+  // 阶段 3：少年犬
+  [
+    { mood: '✨', line: '你少点外卖的次数，我偷偷数过了。' },
+    { mood: '📖', line: '陪你读书的下午，比任何零食都香。' },
+    { mood: '🌿', line: '今天的风适合出去跑一圈，就一圈。' },
+    { mood: '👀', line: '要不要再看我追一下自己的尾巴？' },
+    { mood: '🌙', line: '今晚月亮很圆，我在门口等你回来。' },
+  ],
+  // 阶段 4：成年犬
+  [
+    { mood: '🥹', line: '你把我养得圆滚滚的，谢谢你。' },
+    { mood: '🎀', line: '门口的这块垫子，我趴得刚刚好。' },
+    { mood: '🍵', line: '等你的茶喝完，我们就去散个步。' },
+    { mood: '🛋️', line: '沙发的位置我占了，你坐我旁边就好。' },
+    { mood: '🪟', line: '楼下的麻雀我也认识两只，要不要我介绍？' },
+  ],
+]
+
 // 用日期 hash 抽卡（保证每天不同）
 export function dateSeed() {
   const d = new Date()
@@ -1302,7 +1420,9 @@ export function pickOne(arr, seed) {
 }
 
 // ===== 公益：慢活猫粮计划 =====
-// 换算比例按市面猫粮价格折算：¥1 = 100g 猫粮（10kg 装 ¥100 上下）。
+// 换算比例：¥1 = 0.1g（2026-09-22 用户定，原话「这个比例太高了」——
+//   之前 ¥1=100g，一单就跳「43.5 只猫一天的口粮」，太夸张；再早的 10g 也嫌多。
+//   现在不按市价折算了，数字要小得诚实 —— 一单的猫粮就是「一小把」）。
 // 默认档位只占 30%，不鼓励一次全捐 —— 慢一点，但每一克都记着。
 // ⚠️ 措辞红线：这里一律说「记下 / 记」，不说「捐」。
 //    App 没有后端，钱一直在用户手上 —— 记下的是一笔打算，不是一次转账。
@@ -1310,7 +1430,7 @@ export function pickOne(arr, seed) {
 export const CHARITY = {
   name: '慢活猫粮计划',
   short: '猫粮',
-  gramsPerYuan: 100,     // ¥1 = 100g（2026-09-17 用户定：原 10g 太保守）
+  gramsPerYuan: 0.1,     // ¥1 = 0.1g（2026-09-22 用户定）
   gramPerCatDay: 60,     // 一只成年猫一天约 60g
   defaultRatio: 30,      // 默认记订单金额的 30%
   presets: [10, 30, 50, 100],
@@ -1318,8 +1438,18 @@ export const CHARITY = {
 }
 
 // 订单金额 → 如果全捐，能换成多少克猫粮
+// 保留一位小数：¥1=0.1g 的世界里克数都是小数，Math.round 会把 2.6g 抹成 3g
 export function gramsForAmount(amount) {
-  return Math.round((Number(amount) || 0) * CHARITY.gramsPerYuan)
+  return Math.round((Number(amount) || 0) * CHARITY.gramsPerYuan * 10) / 10
+}
+
+// 克数 → 「几只猫一天的口粮」这句话。
+// 克数小（不到一只猫一天的量）的时候不说「0.0 只猫」，改说「还不到一只猫一天的口粮」。
+export function catDaysText(grams) {
+  const days = (Number(grams) || 0) / CHARITY.gramPerCatDay
+  if (days >= 1) return `约 ${days.toFixed(1)} 只猫一天的口粮`
+  if (days > 0) return '还不到一只猫一天的口粮'
+  return ''
 }
 
 // ===== 惜食柜：今天没卖完的，被你带走就不算浪费 =====

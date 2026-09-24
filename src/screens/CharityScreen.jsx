@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ArrowLeft, Heart, X } from 'lucide-react'
-import { CHARITY } from '../data.js'
+import { CHARITY, catDaysText } from '../data.js'
 
 function formatDay(iso) {
   const d = new Date(iso)
@@ -20,7 +20,6 @@ export default function CharityScreen({ charity, onBack, onSettle }) {
   const settledGrams = settled.reduce((n, s) => n + (Number(s.grams) || 0), 0)
   const settledAmount = settled.reduce((n, s) => n + (Number(s.amount) || 0), 0)
   const pending = Math.max(0, grams - settledGrams)
-  const catDays = grams / CHARITY.gramPerCatDay
   const rate = grams > 0 ? Math.min(100, Math.round((settledGrams / grams) * 100)) : 0
 
   const [open, setOpen] = useState(false)
@@ -36,7 +35,8 @@ export default function CharityScreen({ charity, onBack, onSettle }) {
   }
 
   const commit = () => {
-    const g = Math.round(Number(draftGrams) || 0)
+    // 一位小数：¥1=0.1g 之后账上的克数都是小数（预填的「还没捐的那部分」也是）
+    const g = Math.round((Number(draftGrams) || 0) * 10) / 10
     if (g <= 0) return
     onSettle?.({
       grams: g,
@@ -70,7 +70,7 @@ export default function CharityScreen({ charity, onBack, onSettle }) {
         </button>
         <p className="charity-hero-sub">
           {grams > 0
-            ? `约 ${catDays.toFixed(1)} 只猫一天的口粮 · 还没捐出去`
+            ? `${catDaysText(grams)} · 还没捐出去`
             : '还没有开始 —— 下一单送达后可以记第一笔'}
         </p>
         <button className="charity-hero-more" onClick={() => setOpen(true)}>
@@ -88,8 +88,8 @@ export default function CharityScreen({ charity, onBack, onSettle }) {
           <span className="charity-stat-label">元还没捐</span>
         </div>
         <div className="charity-stat">
-          <span className="charity-stat-num">{grams > 0 ? (grams / 1000).toFixed(2) : '0.00'}</span>
-          <span className="charity-stat-label">公斤待捐</span>
+          <span className="charity-stat-num">{grams > 0 ? grams.toLocaleString() : '0'}</span>
+          <span className="charity-stat-label">克待捐</span>
         </div>
       </div>
 
