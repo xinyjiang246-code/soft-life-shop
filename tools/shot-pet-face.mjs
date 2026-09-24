@@ -163,14 +163,26 @@ try {
   // meals 决定成长阶段：LEVEL_MEALS = [0, 1, 3, 6, 10]
   await send('Page.navigate', { url })
   await waitFor('document.readyState === "complete" && document.body.innerText.trim().length > 20')
+  // ⚠️ 2026-09-24：写**新键** `soft-life-pets-v1`（`{cat, dog, active}`）。
+  //    两只伙伴改版后老键 `soft-life-pet-v1` 只当迁移源、平时不再被读 ——
+  //    往它写 meals 等于没写，会拍到的还是上一次遗留的阶段
+  //    （同一个坑让 verify-pet-face 报过一条「眼睛偏离锚点 14px」的假红）。
   await evaluate(`(() => {
-    const cur = JSON.parse(localStorage.getItem('soft-life-pet-v1') || '{}');
-    localStorage.setItem('soft-life-pet-v1', JSON.stringify({ ...cur, meals: 6 }));
+    const cur = JSON.parse(localStorage.getItem('soft-life-pets-v1') || 'null') || {};
+    localStorage.setItem('soft-life-pets-v1', JSON.stringify({
+      cat: { ...(cur.cat || {}), meals: 6 },
+      dog: cur.dog || {},
+      active: 'cat',
+    }));
     return true;
   })()`)
   await send('Page.reload')
   await waitFor('document.readyState === "complete" && document.body.innerText.trim().length > 20')
-  await click('.corner-grid .corner-tile:nth-child(1)')
+  // 入口：`.corner-grid` 已随 2026-09-21 的 IA 重排删掉（CSS 里那条规则是死的），
+  // 改走「邻居猫 → 去小屋看看」—— 与 verify-pet-face / verify-pet-pat 一致。
+  await evaluate(`(() => { const e = document.querySelector('.pet-visit-btn'); if (e) { e.scrollIntoView({ block: 'center', behavior: 'instant' }); e.click(); } return true })()`)
+  await wait(420)
+  await evaluate(`(() => { const e = Array.from(document.querySelectorAll('.pet-visit-bubble [role="button"]')).find((x) => /小屋/.test(x.textContent)); if (e) e.click(); return true })()`)
   await waitFor(`document.querySelector('.pet-pat-btn')`)
   await evaluate(`(() => { document.querySelector('.pet-avatar-wrap').scrollIntoView({ block: 'center' }); return true; })()`)
   await wait(650)

@@ -182,9 +182,18 @@ async function gotoPet(stage) {
   const meals = [0, 1, 3, 6, 10][stage]
   await send('Page.navigate', { url })
   await waitFor('document.readyState === "complete" && document.body.innerText.trim().length > 20')
+  // ⚠️ 2026-09-24：必须写**新键** `soft-life-pets-v1`（`{cat, dog, active}`）。
+  //    两只伙伴改版后老键 `soft-life-pet-v1` 只当迁移源、平时不再被读 ——
+  //    往它写 meals 等于没写，于是 5 个阶段渲染的是同一张图，却各自拿本阶段的锚点去比，
+  //    报出来是「stage0 眼睛偏离锚点 14px」这种**看着像产品坏了**的假红。
+  //    （当时的实锤：当前图是 `a-cream-stage3-t-*.webp`，而 stage3 的锚点代进去分毫不差。）
   await evaluate(`(() => {
-    const cur = JSON.parse(localStorage.getItem('soft-life-pet-v1') || '{}');
-    localStorage.setItem('soft-life-pet-v1', JSON.stringify({ ...cur, meals: ${meals} }));
+    const cur = JSON.parse(localStorage.getItem('soft-life-pets-v1') || 'null') || {};
+    localStorage.setItem('soft-life-pets-v1', JSON.stringify({
+      cat: { ...(cur.cat || {}), meals: ${meals} },
+      dog: cur.dog || {},
+      active: 'cat',
+    }));
     return true;
   })()`)
   await send('Page.reload')
@@ -197,6 +206,20 @@ async function gotoPet(stage) {
   await waitFor(`document.querySelector('.pet-pat-btn')`)
   await evaluate(`(() => { document.querySelector('.pet-avatar-wrap').scrollIntoView({ block: 'center' }); return true; })()`)
   await wait(650)
+  // 自检：存档真的生效了吗？—— 渲染出来的必须是**这一阶段**的图。
+  // 没有这一步，上面那个「写错键」的坑会以「锚点偏了 / 眼睛画歪了」的面目出现，很难往回查。
+  const shown = await evaluate(`new Promise((resolve) => {
+    const t0 = performance.now();
+    const check = () => {
+      const im = document.querySelector('.pet-photo img');
+      const src = im ? (im.currentSrc || im.src) : '';
+      if (src.includes('stage${stage}-')) return resolve(src.split('/').pop());
+      if (performance.now() - t0 > 6000) return resolve(null);
+      setTimeout(check, 60);
+    };
+    check();
+  })`)
+  assert.ok(shown, `阶段 ${stage}：宠物页渲染的不是 stage${stage} 的图 —— 存档没写进去（要写 soft-life-pets-v1，老键 soft-life-pet-v1 已废弃）`)
 }
 
 /** 点一下并读回表情层的状态 */

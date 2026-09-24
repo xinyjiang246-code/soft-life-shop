@@ -7664,9 +7664,15 @@ select:focus-visible {
   color: var(--pp-seal);
 }
 /* 心情仪式：压缩成一行（无卡片壳）。上 24px 跟在大标题下面；
-   下 34px 是给收尾线的兜底间距（封面够高时收尾线会被 .hm-cover 的 flex 推到底，用不上它） */
+   下边距是**收尾线的兜底间距**（封面够高时收尾线会被 .hm-cover 的 flex 推到底，用不上它）。
+   ⚠️ 2026-09-24 从 34px 收到 20px —— 390×844（守卫的基准机）上首屏内容是**硬溢出**的：
+      内容实高 700px（hm-mast 543 + 上边距 24 + 心情行 87 + 本边距 + 收尾线 10），
+      而预算只有 minH 766 − padding-bottom 88 = 678px，多出 22px。
+      多出来的部分把收尾线顶到 y=778，被固定底栏（顶边 772）压住 6px。
+      ⚠️ **改回 34px 就会再压住**；改 padding-bottom 没用（内容溢出时收尾线位置与它无关，
+      只跟内容高度有关）。20px 实测收尾线落 764，留 8px 余量。 */
 .home-page .mood-ritual.is-compact {
-  margin: 24px 16px 34px; padding: 0;
+  margin: 24px 16px 20px; padding: 0;
   background: none; border: none; box-shadow: none;
 }
 .mood-ritual.is-compact .mr-label {
