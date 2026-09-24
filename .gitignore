@@ -6,6 +6,8 @@ node_modules/
 dist/
 published-site/
 *.log
+# 发布用的打包产物（15MB，随时可重新导出，不进仓库）
+发布/*.zip
 
 # ── 本机隐私 / 与产品无关 ──────────────────────────────────
 .DS_Store
@@ -27,6 +29,7 @@ published-site/
 商品生图原始/
 特调生图原始/
 城市生图原始/
+世界生图原始/
 参考图/
 paper-press-ui-demo-*/
 soft-life-app/
