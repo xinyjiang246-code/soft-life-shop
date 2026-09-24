@@ -1,0 +1,26 @@
+{
+  "name": "soft-life-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "慢活小铺独立后端：Express + SQLite（node:sqlite 内置驱动，零原生依赖）。与前端 dist/ 完全隔离。",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env --watch src/server.js",
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/server.js",
+    "migrate": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/db/migrate.js up",
+    "migrate:down": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/db/migrate.js down",
+    "migrate:status": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/db/migrate.js status",
+    "seed": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env scripts/seed.js",
+    "extract-seed": "node scripts/extract-seed.mjs",
+    "db:reset": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env scripts/reset-db.js",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "zod": "^3.24.1"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-09-22T04:08:59.922Z",
+  "source": "src/data.js#counters",
+  "data": [
+    {
+      "id": "tea",
+      "name": "慢活茶饮铺",
+      "nameEn": "SLOW LIFE TEA",
+      "tagline": "一杯热的，慢慢喝",
+      "sortOrder": 1
+    },
+    {
+      "id": "bento",
+      "name": "暖食便当柜",
+      "nameEn": "BENTO & WARM BOWLS",
+      "tagline": "今天也好好吃饭",
+      "sortOrder": 2
+    },
+    {
+      "id": "dessert",
+      "name": "怀旧甜点柜",
+      "nameEn": "VINTAGE DESSERTS",
+      "tagline": "甜的，治愈一整天",
+      "sortOrder": 3
+    },
+    {
+      "id": "life",
+      "name": "慢活选物",
+      "nameEn": "SOFT LIFE GOODS",
+      "tagline": "照顾自己，不分早晚",
+      "sortOrder": 4
+    },
+    {
+      "id": "noodle",
+      "name": "深夜面馆 · 十二点后",
+      "nameEn": "MIDNIGHT NOODLE BAR",
+      "tagline": "汤一直煨着，饿了就来",
+      "sortOrder": 5
+    },
+    {
+      "id": "dimsum",
+      "name": "一盅两件",
+      "nameEn": "DIM SUM FOR TWO",
+      "tagline": "现蒸现卖，出笼即走",
+      "sortOrder": 6
+    }
+  ]
+}

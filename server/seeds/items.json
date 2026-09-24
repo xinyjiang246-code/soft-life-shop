@@ -1,0 +1,284 @@
+{
+  "generatedAt": "2026-09-22T04:08:59.923Z",
+  "source": "src/data.js#menuItems",
+  "data": [
+    {
+      "sku": "M1",
+      "name": "ICED MATCHA LATTE",
+      "nameCn": "冰抹茶拿铁",
+      "priceCents": 2400,
+      "storeId": "tea",
+      "category": "Matcha",
+      "tags": [
+        "signature"
+      ],
+      "description": "oat milk + matcha，像周一早晨需要的那口绿。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M2",
+      "name": "ICE CREAM BLACK TEA",
+      "nameCn": "冰淇淋红茶",
+      "priceCents": 1900,
+      "storeId": "tea",
+      "category": "奶茶",
+      "tags": [
+        "signature"
+      ],
+      "description": "一大勺香草冰淇淋，慢慢融进红茶里。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M3",
+      "name": "SAKURA MILK TEA",
+      "nameCn": "樱花奶绿",
+      "priceCents": 2200,
+      "storeId": "tea",
+      "category": "奶茶",
+      "tags": [
+        "new"
+      ],
+      "description": "一点点粉，一点点春天。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M13",
+      "name": "BROWN SUGAR BUBBLE TEA",
+      "nameCn": "黑糖珍珠奶茶",
+      "priceCents": 2400,
+      "storeId": "tea",
+      "category": "奶茶",
+      "tags": [
+        "hot"
+      ],
+      "description": "黑糖挂壁，珍珠软糯，罪恶但快乐。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M4",
+      "name": "SEOUL BENTO BOX",
+      "nameCn": "韩式铝制便当",
+      "priceCents": 3600,
+      "storeId": "bento",
+      "category": "便当",
+      "tags": [
+        "hot"
+      ],
+      "description": "分格搭配，像小时候春游带的饭盒。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M5",
+      "name": "NOURISH BOWL",
+      "nameCn": "中式营养碗",
+      "priceCents": 3200,
+      "storeId": "bento",
+      "category": "暖食碗",
+      "tags": [],
+      "description": "米饭、青菜、蛋白质，简单但够用。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M6",
+      "name": "DOUBLE BENTO",
+      "nameCn": "双层便当组合",
+      "priceCents": 4200,
+      "storeId": "bento",
+      "category": "便当",
+      "tags": [
+        "combo"
+      ],
+      "description": "上层饭团，下层配菜，打开有两层惊喜。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M7",
+      "name": "VINTAGE CREAM CAKE",
+      "nameCn": "复古奶油蛋糕",
+      "priceCents": 2800,
+      "storeId": "dessert",
+      "category": "蛋糕",
+      "tags": [
+        "signature"
+      ],
+      "description": "裱花边、小樱桃，像奶奶生日那天的蛋糕。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M8",
+      "name": "DECORATED SHORTCAKE",
+      "nameCn": "裱花奶油蛋糕",
+      "priceCents": 3200,
+      "storeId": "dessert",
+      "category": "蛋糕",
+      "tags": [],
+      "description": "奶油厚一点，今天值得。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M9",
+      "name": "DORAYAKI",
+      "nameCn": "铜锣烧",
+      "priceCents": 1600,
+      "storeId": "dessert",
+      "category": "小点",
+      "tags": [],
+      "description": "红豆馅温热，配茶刚好。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M10",
+      "name": "LINEN EYE MASK",
+      "nameCn": "亚麻眼罩",
+      "priceCents": 3800,
+      "storeId": "life",
+      "category": "居家",
+      "tags": [],
+      "description": "午睡前戴上，世界安静一点。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M11",
+      "name": "GRATITUDE JOURNAL",
+      "nameCn": "感恩手账",
+      "priceCents": 4500,
+      "storeId": "life",
+      "category": "手账",
+      "tags": [
+        "new"
+      ],
+      "description": "写三句话，比冥想还快。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M12",
+      "name": "PILATES MAT",
+      "nameCn": "Pilates 小垫",
+      "priceCents": 8800,
+      "storeId": "life",
+      "category": "运动",
+      "tags": [],
+      "description": "铺开 5 分钟，身体记得你照顾过它。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M14",
+      "name": "MISO TONKOTSU RAMEN",
+      "nameCn": "味噌豚骨拉面",
+      "priceCents": 3800,
+      "storeId": "noodle",
+      "category": "拉面",
+      "tags": [
+        "signature"
+      ],
+      "description": "汤熬了八小时，叉烧两片，溏心蛋半颗。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M15",
+      "name": "KOMBU SOBA",
+      "nameCn": "昆布清汤素面",
+      "priceCents": 3200,
+      "storeId": "noodle",
+      "category": "汤面",
+      "tags": [],
+      "description": "清的，什么都没加，胃会记得这种温柔。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M16",
+      "name": "CHASHU DON",
+      "nameCn": "溏心蛋叉烧丼",
+      "priceCents": 3600,
+      "storeId": "noodle",
+      "category": "饭",
+      "tags": [
+        "hot"
+      ],
+      "description": "四片叉烧盖满饭，蛋黄戳破拌进去。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M17",
+      "name": "COLD RAMEN",
+      "nameCn": "冰镇中华冷面",
+      "priceCents": 3000,
+      "storeId": "noodle",
+      "category": "冷面",
+      "tags": [
+        "new"
+      ],
+      "description": "冰块在汤里，夏天才有的那一碗。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M18",
+      "name": "SHRIMP HAR GOW",
+      "nameCn": "虾饺皇",
+      "priceCents": 2800,
+      "storeId": "dimsum",
+      "category": "蒸点",
+      "tags": [
+        "signature"
+      ],
+      "description": "一笼四只，皮薄到能看见虾的粉色。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M19",
+      "name": "CUSTARD LAVA BUN",
+      "nameCn": "流沙包",
+      "priceCents": 2200,
+      "storeId": "dimsum",
+      "category": "蒸点",
+      "tags": [
+        "hot"
+      ],
+      "description": "掰开会流，烫嘴也要先咬一口。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M20",
+      "name": "SIU MAI",
+      "nameCn": "干蒸烧卖",
+      "priceCents": 2600,
+      "storeId": "dimsum",
+      "category": "蒸点",
+      "tags": [],
+      "description": "顶上一点蟹籽，一口一个刚好。",
+      "inStock": true,
+      "isActive": true
+    },
+    {
+      "sku": "M21",
+      "name": "EGG TART",
+      "nameCn": "酥皮蛋挞",
+      "priceCents": 1800,
+      "storeId": "dimsum",
+      "category": "烘点",
+      "tags": [],
+      "description": "酥皮掉渣，蛋面烤出焦糖斑点。",
+      "inStock": true,
+      "isActive": true
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+name = "soft-life-stats"
+main = "index.js"
+compatibility_date = "2026-01-01"
+
+# 部署前先建 KV namespace，把 id 填进来：
+#   npx wrangler kv namespace create STATS
+[[kv_namespaces]]
+binding = "STATS"
+id = "在这里填你的_kv_namespace_id"
