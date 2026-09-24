@@ -107,7 +107,9 @@ def process(raw: Path, slug: str, kind: str, out_dir: Path) -> Path:
         (TARGET_W, round(cropped.height * TARGET_W / cropped.width)), Image.LANCZOS
     )
     out_dir.mkdir(parents=True, exist_ok=True)
-    dst = out_dir / f"{slug}-{kind}.webp"
+    # kind 传空串 = 文件名就是 `<slug>.webp`（世界菜单那 122 张用这个，
+    # 因为它们的 slug 本身已经含了城市和食材，再加后缀反而冗余）。
+    dst = out_dir / (f"{slug}-{kind}.webp" if kind else f"{slug}.webp")
     out.save(dst, "WEBP", quality=QUALITY, method=6)
 
     check = watermark_score(luminance(Image.open(dst)))

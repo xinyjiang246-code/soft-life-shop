@@ -36,10 +36,24 @@ from collections import deque
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PETS = os.path.join(ROOT, 'src', 'assets', 'pets')
-OUT_JS = os.path.join(ROOT, 'src', 'petFace.js')
-OUT_PNG = os.path.join(ROOT, '预览截图', '软软_脸部锚点_复核.png')
 
 DARK = 128      # 暗像素阈值（眼珠 #5E4030 亮度约 70；轮廓 #8A5638 约 105）
+
+# ---- 物种参数（2026-09-23 加 dog：小狗「团团」素材 d-cream-stage{n}）----
+# 猫锚点写 src/petFace.js（FACE_ANCHORS/faceAnchor），狗写 src/dogFace.js
+# （DOG_FACE_ANCHORS/dogFaceAnchor）—— 两个文件独立，跑狗**不会**覆盖猫的锚点。
+SPECIES_CFG = {
+    'cat': {
+        'prefix': 'a', 'name': '软软',
+        'out_js': 'petFace.js',
+        'anchors': 'FACE_ANCHORS', 'ink': 'FACE_INK', 'eye': 'FACE_EYE', 'fn': 'faceAnchor',
+    },
+    'dog': {
+        'prefix': 'd', 'name': '团团',
+        'out_js': 'dogFace.js',
+        'anchors': 'DOG_FACE_ANCHORS', 'ink': 'DOG_FACE_INK', 'eye': 'DOG_FACE_EYE', 'fn': 'dogFaceAnchor',
+    },
+}
 
 
 def components(mask, min_area=20):
@@ -88,7 +102,7 @@ def analyse(path):
     # ⚠️ 宽高比要放到 2.2 —— stage0 是趴着的胖崽，眼睛是**半眯的扁缝**（63x35，比 1.8），
     #    卡在 1.35 会整个阶段漏掉（这就是第一版只有 4/5 阶段的原因）。
     #    轮廓/胡须靠「填充率 < .45」和「最长边 < 70px」挡掉，不靠宽高比。
-    eyes = []
+    eyes_cand = []
     for b in blobs:
         area, x0, y0, cw, ch, cx, cy, fill = b
         if area < 300 or fill < 0.45:
@@ -97,11 +111,38 @@ def analyse(path):
             continue
         if max(cw, ch) > 70:
             continue
-        eyes.append(b)
-    eyes.sort(key=lambda b: -b[0])
-    if len(eyes) < 2:
+        eyes_cand.append(b)
+    eyes_cand.sort(key=lambda b: -b[0])
+
+    # ---- 配对选眼（2026-09-23 修小狗 stage3/4 量歪）----
+    # 老逻辑「面积前二直接当双眼」在小狗身上翻车：
+    #   · stage4 的深棕大鼻子比左眼面积还大，挤掉左眼 →「鼻子+右眼」被当成双眼（tilt -40°）；
+    #   · stage3 左脸颊的暗块挤掉真鼻子（修法在下面的鼻子中点约束）。
+    # 真双眼的两个硬特征：连线近水平（|dy| << gap）、面积接近。
+    # 候选两两配对，过三条硬约束后取面积和最大的一对：
+    #   ① 连线近水平：|dy|/gap ≤ 0.25（猫 3/4 侧脸约 0.19，留了余量）
+    #   ② 两块不粘连：gap ≥ 较大块宽的 0.8
+    #   ③ 面积同量级：大者 ≤ 小者 4 倍（防「大鼻子+小杂块」蒙混）
+    # ⚠️ 重跑任何物种的素材后，都必须看复核图人眼确认。
+    eyes = None
+    top = eyes_cand[:6]
+    for i in range(len(top)):
+        for j in range(i + 1, len(top)):
+            b1, b2 = top[i], top[j]
+            l, r = (b1, b2) if b1[5] <= b2[5] else (b2, b1)
+            g = r[5] - l[5]
+            if g <= 0:
+                continue
+            if abs(r[6] - l[6]) / g > 0.25:
+                continue
+            if g < max(l[3], r[3]) * 0.8:
+                continue
+            if max(l[0], r[0]) > min(l[0], r[0]) * 4:
+                continue
+            if eyes is None or l[0] + r[0] > eyes[0][0] + eyes[1][0]:
+                eyes = [l, r]
+    if eyes is None:
         return None
-    eyes = eyes[:2]
 
     # ---- 鼻子：两眼连线下方窗口里那块小团（排除两只眼睛本身）----
     eye_ids = {id(b) for b in eyes}
@@ -116,10 +157,12 @@ def analyse(path):
             if id(b) not in eye_ids
             and b[0] >= 40
             and wx0 <= b[5] <= wx1 and wy0 <= b[6] <= wy1
-            and max(b[3], b[4]) < gap * 0.55]
+            and max(b[3], b[4]) < gap * 0.75]
     mx = my = None
     if cand:
         ecx, ecy = (lx + rx) / 2, (ly + ry) / 2
+        # 鼻子必须落在两眼中点附近：小狗 stage3 曾把左脸颊上的暗块当成鼻子（x 偏出 0.8 个眼距）
+        cand = [b for b in cand if abs(b[5] - ecx) < gap * 0.30]
         cand.sort(key=lambda b: (b[5] - ecx) ** 2 + (b[6] - ecy) ** 2)
         mx, my = cand[0][5], cand[0][6]
 
@@ -233,9 +276,19 @@ def make_noeye(path, eyes_px, out_path, grow=1.30):
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser(description='量宠物脸部锚点 + 产出无眼底图')
+    ap.add_argument('--species', default='cat', choices=['cat', 'dog'])
+    args = ap.parse_args()
+    cfg = SPECIES_CFG[args.species]
+    prefix = cfg['prefix']
+    name = cfg['name']
+    out_js = os.path.join(ROOT, 'src', cfg['out_js'])
+    out_png = os.path.join(ROOT, '预览截图', f'{name}_脸部锚点_复核.png')
+
     stages = []
     for i in range(5):
-        p = os.path.join(PETS, f'a-cream-stage{i}-t.webp')
+        p = os.path.join(PETS, f'{prefix}-cream-stage{i}-t.webp')
         if not os.path.exists(p):
             continue
         r = analyse(p)
@@ -245,7 +298,7 @@ def main():
         r['stage'] = i
         stages.append(r)
         # 顺手产出「无眼底图」：表情画在它上面，就不用去盖原来的眼睛了
-        noeye = os.path.join(PETS, 'noeye', f'a-cream-stage{i}-t.webp')
+        noeye = os.path.join(PETS, 'noeye', f'{prefix}-cream-stage{i}-t.webp')
         made = make_noeye(p, r['_px']['eyes'], noeye)
         if made:
             print(f"stage{i} 无眼底图 → {os.path.relpath(made, ROOT)} "
@@ -267,7 +320,7 @@ def main():
     ZW = 300
     crops = []
     for r in stages:
-        im = Image.open(os.path.join(PETS, f"a-cream-stage{r['stage']}-t.webp")).convert('RGBA')
+        im = Image.open(os.path.join(PETS, f"{prefix}-cream-stage{r['stage']}-t.webp")).convert('RGBA')
         bg = Image.new('RGBA', im.size, (250, 248, 242, 255))
         bg.alpha_composite(im)
         im = bg.convert('RGB')
@@ -297,9 +350,9 @@ def main():
     sheet = Image.new('RGB', (ZW * len(crops), H), (250, 248, 242))
     for k, c in enumerate(crops):
         sheet.paste(c, (ZW * k, 16))
-    os.makedirs(os.path.dirname(OUT_PNG), exist_ok=True)
-    sheet.save(OUT_PNG)
-    print('\n复核图 →', OUT_PNG, '（**打开看一眼**: 红/蓝圈要套住两只眼睛，橙框要框住鼻子）')
+    os.makedirs(os.path.dirname(out_png), exist_ok=True)
+    sheet.save(out_png)
+    print('\n复核图 →', out_png, '（**打开看一眼**: 红/蓝圈要套住两只眼睛，橙框要框住鼻子）')
 
     # ---- 无眼底图复核：原图 | 抹掉眼睛后 ----
     rows = len(stages)
@@ -307,8 +360,8 @@ def main():
     sheet2 = Image.new('RGB', (CW * 2, (CH + 18) * rows), (250, 248, 242))
     for k, r in enumerate(stages):
         for j, (src, tag) in enumerate((
-            (os.path.join(PETS, f"a-cream-stage{r['stage']}-t.webp"), '原图'),
-            (os.path.join(PETS, 'noeye', f"a-cream-stage{r['stage']}-t.webp"), '抹掉眼睛'),
+            (os.path.join(PETS, f"{prefix}-cream-stage{r['stage']}-t.webp"), '原图'),
+            (os.path.join(PETS, 'noeye', f"{prefix}-cream-stage{r['stage']}-t.webp"), '抹掉眼睛'),
         )):
             if not os.path.exists(src):
                 continue
@@ -320,7 +373,7 @@ def main():
             d.rectangle([0, 0, CW - 1, CH - 1], outline=(210, 206, 196))
             d.text((5, 3), f"stage{r['stage']} · {tag}", fill=(40, 36, 30))
             sheet2.paste(im, (CW * j, (CH + 18) * k + 18))
-    p2 = os.path.join(ROOT, '预览截图', '软软_无眼底图_复核.png')
+    p2 = os.path.join(ROOT, '预览截图', f'{name}_无眼底图_复核.png')
     sheet2.save(p2)
     print('无眼底图复核 →', p2, '（**必须看**: 眼睛那儿不能有灰团/糊块，要像本来就没画眼睛）')
 
@@ -339,24 +392,23 @@ def main():
 
     # ---- 写 JS 锚点表 ----
     L = [
-        "// 软软的脸部锚点与取色（**自动量出来的，别手改**）",
+        f"// {name}的脸部锚点与取色（**自动量出来的，别手改**）",
         "//",
         "// 图片模式下五官是画死在图里的，要让「表情能变」只能在其上盖一层。",
         "// 五个阶段的头在画面里各不相同，所以坐标逐阶段单独量。",
         "//",
-        "// 生成：/Users/s/.workbuddy/binaries/python/envs/default/bin/python tools/petFace.py",
-        "//       （要 numpy，只有这个解释器装了；同时输出 预览截图/软软_脸部锚点_复核.png",
+        f"// 生成：/Users/s/.workbuddy/binaries/python/envs/default/bin/python tools/petFace.py --species {args.species}",
+        f"//       （要 numpy，只有这个解释器装了；同时输出 预览截图/{name}_脸部锚点_复核.png",
         "//         —— 改了素材务必重跑并人眼复核）",
         "//",
         "// 坐标一律是**相对整张图的 0~1 归一化值**。容器宽高比 220:248 与素材 720:812 几乎一致，",
         "// 且 .pet-photo img 是 object-fit: cover，所以直接乘容器尺寸即可，不需要额外换算。",
         "// tilt = 两眼连线的倾角（度）。侧脸图两只眼睛不在一条水平线上，",
         "// 表情元素要按这个角度跟着转，否则会像贴歪的贴纸。",
-        "// nose = 鼻子的中心（**不是嘴** —— 软软这张脸本来就没有嘴，鼻子下面是水彩纸纹）。",
-        "// 嘴的位置由 PetFace.jsx 从 nose 推算（鼻子下方、跟着 tilt 转）。",
+        "// nose = 鼻子的中心。嘴的位置由 PetFace.jsx 从 nose 推算（鼻子下方、跟着 tilt 转）。",
         "// furL/furR = 各自眼睛周围那一圈的毛色，盖眼睛时用它当底色（左右分开取，别用一个值）。",
         "",
-        "export const FACE_ANCHORS = {",
+        f"export const {cfg['anchors']} = {{",
     ]
     for r in stages:
         m = r['nose']
@@ -368,24 +420,25 @@ def main():
         L.append(f"    gap: {r['gap']:.4f}, tilt: {r['tilt']:.1f},")
         L.append(f"    furL: '{hexs(r['furL'])}', furR: '{hexs(r['furR'])}',")
         L.append("  },")
+    A, IK, EY, FN = cfg['anchors'], cfg['ink'], cfg['eye'], cfg['fn']
     L += [
         "}",
         "",
         "// 从原图里取的平均色（**别改成手写色值**：水彩扫描图的棕不是标准色，差一点就露馅）",
-        f"export const FACE_INK = '{hexs(ink)}'        // 轮廓墨色",
-        f"export const FACE_EYE = '{hexs(eye_ink)}'        // 眼珠色",
+        f"export const {IK} = '{hexs(ink)}'        // 轮廓墨色",
+        f"export const {EY} = '{hexs(eye_ink)}'        // 眼珠色",
         "",
         "/** 取某阶段的锚点；没有该阶段就退到最近的已知阶段 */",
-        "export function faceAnchor(stage = 0) {",
-        "  const keys = Object.keys(FACE_ANCHORS).map(Number)",
-        "  if (keys.includes(stage)) return FACE_ANCHORS[stage]",
-        "  return FACE_ANCHORS[keys.reduce((a, b) => (Math.abs(b - stage) < Math.abs(a - stage) ? b : a), keys[0])]",
+        f"export function {FN}(stage = 0) {{",
+        f"  const keys = Object.keys({A}).map(Number)",
+        f"  if (keys.includes(stage)) return {A}[stage]",
+        f"  return {A}[keys.reduce((a, b) => (Math.abs(b - stage) < Math.abs(a - stage) ? b : a), keys[0])]",
         "}",
         "",
     ]
-    with open(OUT_JS, 'w', encoding='utf-8') as f:
+    with open(out_js, 'w', encoding='utf-8') as f:
         f.write('\n'.join(L))
-    print('锚点 →', OUT_JS, f'（{len(stages)} 个阶段）')
+    print('锚点 →', out_js, f'（{len(stages)} 个阶段）')
 
 
 if __name__ == '__main__':

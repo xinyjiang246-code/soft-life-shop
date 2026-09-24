@@ -128,6 +128,15 @@ async function orderToWait() {
   await js(clickText('/去结账|结算|下单/'))
   await waitFor(`[...document.querySelectorAll('button')].some(x => /确认|下单|提交/.test(x.textContent))`)
   await js(clickText('/确认|下单|提交/'))
+  // 2026-09-22 结算页插了支付面板（模拟）：确认下单后要先「付」才到配送页。
+  // ⚠️ 密码键要一下一下点 —— pressDigit 闭包里的 pin 不含未重渲染的新值，同步连点只记 1 位。
+  await waitFor(`document.querySelector('.pay-confirm')`, 15000)
+  await js(`document.querySelector('.pay-confirm').click()`)
+  await waitFor(`document.querySelectorAll('.pay-key').length > 0`, 15000)
+  for (let i = 0; i < 6; i++) {
+    await js(`(() => { const ks = [...document.querySelectorAll('.pay-key')].filter(k => !k.classList.contains('blank')); ks[0] && ks[0].click() })()`)
+    await js(`new Promise(r => setTimeout(r, 150))`)
+  }
   // 预演那 12 秒里把抬头抄下来 —— 这是待会儿要跟凭证上那个大数字比对的数
   await waitFor(`document.querySelector('.delivery-hero h1')`, 20000)
   let eta = null
@@ -163,6 +172,10 @@ try {
       Math.random = () => 0;                      // 天气与结局定死，断言才有确定的数可比
       const si = window.setInterval;
       window.setInterval = (fn, ms, ...a) => si(fn, ms === 1000 ? 20 : ms, ...a);  // 只加速等待页那每秒
+      // 6 分钟短等待（2026-09-24 等待改真实时长后）：加速 50 倍后约 7 秒等满；
+      // 快进那单花费 6 ≤ 剩余额度（15 - 两单付款扣的几分钟），两条路都走得通。
+      // 凭证上的「预计 X 分钟」仍按店铺+天气显示，与等待页抬头比对不受影响。
+      try { localStorage.setItem('soft-life-wait-override-v1', '360') } catch {}
     })();`,
   })
 
@@ -263,7 +276,9 @@ try {
   await js(`document.querySelector('.donate-actions .primary-button').click()`)
   await new Promise((r) => setTimeout(r, 400))
   const gramNow = await js(`document.querySelector('.wr-row:nth-child(4) dd').innerText.replace(/\\s+/g, '')`)
-  const gramClaim = Number((donate.按钮.match(/([\d,]+)\s*g/) || [])[1]?.replace(/,/g, ''))
+  // ⚠️ ¥1=0.1g（09-22）之后克数带小数（如「记下 1.3g」）—— 正则要认小数，
+  //    老的 [\d,]+ 会把「1.3g」抓成「3」，跟凭证上的 1.3g 对不上（假红）。
+  const gramClaim = Number((donate.按钮.match(/([\d,]+(?:\.\d+)?)\s*g/) || [])[1]?.replace(/,/g, ''))
   ok('凭证上的猫粮', gramNow)
   assert.equal(gramNow, `${gramClaim.toLocaleString()}g`, `凭证上的克数（${gramNow}）跟按下那颗按钮承诺的（${gramClaim}g）不一致`)
   const fineNow = await js(`document.querySelector('.wr-fine').innerText`)

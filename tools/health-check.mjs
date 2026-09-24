@@ -25,7 +25,7 @@ await send('Page.enable'); await send('Runtime.enable')
 await send('Network.enable'); await send('Network.setCacheDisabled', { cacheDisabled: true })
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, deviceScaleFactor: 2, mobile: true })
 
-await nav(1600); await js('localStorage.clear()'); await nav(2400)
+await nav(1600); await js("localStorage.clear(); localStorage.setItem('soft-life-wait-override-v1','8')"); await nav(2400)
 
 // A. 首页完整性（磁贴小画 + 惜食柜入口是否还在对方改过 HomeScreen 之后仍然完好）
 console.log('\nA. 首页（对方 11:35 改过 HomeScreen）')

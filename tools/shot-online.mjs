@@ -90,6 +90,15 @@ if (mode) {
   await clickWhen('.cart-button')
   await clickTextWhen('/去结账|结算|下单/')
   await clickTextWhen('/确认|下单|提交/')
+  // 2026-09-22 结算页插了支付面板（模拟）：确认下单后要先「付」才到配送页。
+  // ⚠️ 密码键要一下一下点 —— pressDigit 闭包里的 pin 不含未重渲染的新值，同步连点只记 1 位。
+  await waitFor(`document.querySelector('.pay-confirm')`, 15000)
+  await js(`document.querySelector('.pay-confirm').click()`)
+  await waitFor(`document.querySelectorAll('.pay-key').length > 0`, 15000)
+  for (let i = 0; i < 6; i++) {
+    await js(`(() => { const ks = [...document.querySelectorAll('.pay-key')].filter(k => !k.classList.contains('blank')); ks[0] && ks[0].click() })()`)
+    await sleep(150)
+  }
   await waitFor(`document.querySelector('.skip-wait-button')`, 30000)
   const idx = { walk: 0, road: 1, offline: 2 }[mode] ?? 1
   await js(`document.querySelectorAll('.wait-mode')[${idx}].click()`)

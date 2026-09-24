@@ -339,6 +339,15 @@ try {
   await evaluate(`[...document.querySelectorAll('button')].find((x) => /去结账|结算|下单/.test(x.textContent)).click()`)
   await waitFor(`[...document.querySelectorAll('button')].some((x) => /确认|下单|提交/.test(x.textContent))`)
   await evaluate(`[...document.querySelectorAll('button')].find((x) => /确认|下单|提交/.test(x.textContent)).click()`)
+  // 2026-09-22 结算页插了支付面板（模拟）：确认下单后要先「付」才到配送页。
+  // ⚠️ 密码键要一下一下点 —— pressDigit 闭包里的 pin 不含未重渲染的新值，同步连点只记 1 位。
+  await waitFor(`document.querySelector('.pay-confirm')`, 15000)
+  await evaluate(`document.querySelector('.pay-confirm').click()`)
+  await waitFor(`document.querySelectorAll('.pay-key').length > 0`, 15000)
+  for (let i = 0; i < 6; i++) {
+    await evaluate(`(() => { const ks = [...document.querySelectorAll('.pay-key')].filter(k => !k.classList.contains('blank')); ks[0] && ks[0].click() })()`)
+    await evaluate(`new Promise(r => setTimeout(r, 150))`)
+  }
   await waitFor(`document.querySelector('.wait-pet-btn')`, 30000)
   // 到等待页时页面停在顶部，猫可能在屏幕外（同 [7] 的坑）——先滚进视口再量坐标
   await evaluate(`(() => { document.querySelector('.wait-pet').scrollIntoView({ block: 'center' }); return true; })()`)

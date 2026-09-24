@@ -66,7 +66,7 @@ await send('Network.enable'); await send('Network.setCacheDisabled', { cacheDisa
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, deviceScaleFactor: 2, mobile: true })
 await send('Page.addScriptToEvaluateOnNewDocument', { source: 'Math.random = () => 0' })
 await send('Page.navigate', { url: 'http://127.0.0.1:8080/' }); await sleep(1400)
-await js(`localStorage.clear()`)
+await js(`localStorage.clear(); localStorage.setItem('soft-life-wait-override-v1','8')`) // 8 秒短等待
 await send('Page.navigate', { url: 'http://127.0.0.1:8080/' }); await sleep(2600)
 await js(`document.fonts.ready.then(() => true)`)
 
@@ -76,6 +76,15 @@ await js(`[...document.querySelectorAll('.spec-add')].forEach(b=>b.click())`) //
 await js(`document.querySelector('.cart-button').click()`); await sleep(900)
 await js(clickText('/去结账|结算|下单/')); await sleep(900)
 await js(clickText('/确认|下单|提交/')); await sleep(1200)
+// 2026-09-22 结算页插了支付面板（模拟）：确认下单后要先「付」才到配送页。
+// ⚠️ 密码键要一下一下点 —— pressDigit 闭包里的 pin 不含未重渲染的新值，同步连点只记 1 位。
+await waitFor(`document.querySelector('.pay-confirm')`, 15000)
+await js(`document.querySelector('.pay-confirm').click()`)
+await waitFor(`document.querySelectorAll('.pay-key').length > 0`, 15000)
+for (let i = 0; i < 6; i++) {
+  await js(`(() => { const ks = [...document.querySelectorAll('.pay-key')].filter(k => !k.classList.contains('blank')); ks[0] && ks[0].click() })()`)
+  await sleep(150)
+}
 for (let t = 0; t < 30000; t += 600) { if (await js(`!!document.querySelector('.skip-wait-button')`)) break; await sleep(600) }
 await sleep(1500)
 
