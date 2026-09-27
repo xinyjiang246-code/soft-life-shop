@@ -23,6 +23,7 @@ import WorldMenuScreen from './screens/WorldMenuScreen.jsx'
 import MineScreen from './screens/MineScreen.jsx'
 import JournalView from './components/JournalView.jsx'
 import TabBar from './components/TabBar.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import AdminScreen from './screens/AdminScreen.jsx'
 import { beat } from './stats.js'
 import CharityScreen from './screens/CharityScreen.jsx'
@@ -598,4 +599,8 @@ function App() {
   )
 }
 
-createRoot(document.getElementById('root')).render(<App />)
+createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+)
