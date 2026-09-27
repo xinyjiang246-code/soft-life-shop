@@ -7527,7 +7527,13 @@ select:focus-visible {
    iOS 的惯性、回弹、吸附都是系统给的，自己实现的那套在纵向滚动的页面里最容易打架。
    ⚠️ `scroll-snap-stop: always` 是有意的：轻轻一划只翻一张（旧版一趟滑过三张会更晕）。 */
 .hc-viewport {
-  height: clamp(260px, 36vh, 352px);
+  /* 封面图是首屏里**唯一能弹性伸缩而不坏**的块（每张都是 object-fit: cover），
+     所以让它吸收视口高度差：矮屏变矮，把心情行和收尾线顶回底栏之上。
+     算式（2026-09-24 立）：可用高 = 视口 − 顶栏 78 − 提示条 --hint-h（由 .hm-cover 传入）
+     − 底栏让位 88；非封面内容固定 382（报头 + 大标题 + 问候 239 + 各段边距 143 + 收尾线 10）；
+     再留 8px 呼吸 ⇒ 高度 = 100dvh − 556 − --hint-h。
+     下限 110px 是「再矮也不塌成一条」的护栏（最吃紧的 736 机型需要 118px）。 */
+  height: clamp(110px, calc(100dvh - 556px - var(--hint-h, 0px)), 352px);
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
@@ -7625,11 +7631,20 @@ select:focus-visible {
    整段高出 70px，量出来直接是 0（2026-09-21 试过，白折腾）。
    78px = .topbar 高；88px = 底部胶囊自身高 58 + 下边距 14 + 再留 16px 呼吸 */
 .home-page .hm-cover {
-  min-height: calc(100dvh - var(--safe-t) - 78px);
+  /* ⚠️ 可用高度 = 视口 − 顶栏 78 − 提示条 --hint-h。
+     提示条 `.hint-bubble`（前 3 次打开都显示）会把封面整体推下 62px
+     （实测：48px 高 + 下边距 14）。不把它算进来的话，内容就硬溢出、
+     收尾线和「空运」chip 被固定底栏吃掉 ——
+     2026-09-24 实测：390×844 上新访客压 24/54px，667 压 158/187px。
+     ⚠️ 62px 依赖「提示条最多两行」（文案池最长 35 字，实测高 48px），
+        守卫 verify-home-collision 会断言它，文案变长就要同步改。 */
+  --hint-h: 0px;
+  min-height: calc(100dvh - var(--safe-t) - 78px - var(--hint-h));
   padding-bottom: 88px;
   display: flex;
   flex-direction: column;
 }
+.home-page:has(.hint-bubble) .hm-cover { --hint-h: 62px; }
 /* 收尾线压在封面底部（内容不够高时自动被推开，够高时退化成普通间距） */
 .home-page .hm-cover .hm-pagehint { margin-top: auto; }
 
@@ -7687,6 +7702,16 @@ select:focus-visible {
 .mood-ritual.is-compact .mood-ritual-line {
   margin: 7px 0 0; font-size: 11px; color: var(--text-sub);
   animation: obFade .3s ease both;
+}
+
+/* 极矮屏兜底（iPhone SE 的 667、以及桌面把窗口拖得很矮时）：
+   上面那套算式在 667 上有提示条时还差 ~45px，这里两处一起挤 ——
+   封面图下限 110 → 86px、心情行上下边距 24/20 → 12/8。
+   🔴 宁可封面窄一点，也不能让「空运」chip 和收尾线掉进固定底栏
+   （2026-09-24 实测：改之前 667 新访客被压 158/187px）。 */
+@media (max-height: 700px) {
+  .home-page .hc-viewport { height: clamp(56px, calc(100dvh - 556px - var(--hint-h, 0px)), 352px); }
+  .home-page .mood-ritual.is-compact { margin: 12px 16px 8px; }
 }
 
 /* ============================================================
