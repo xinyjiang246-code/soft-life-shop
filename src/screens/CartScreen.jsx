@@ -1,13 +1,46 @@
-import { ArrowLeft, Gift, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, Gift, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { RESCUE, cartBreakdown, getCounter, parseCartKey, promoDrops } from '../data.js'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ItemArt from '../components/ItemArt.jsx'
 
 export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
   // 明细与金额统一由 data.js 的 cartBreakdown 算 —— 和结算页共用一份，
   // 免得两个页面各算各的、金额对不上（今天的世界菜单商品换城市后就查不到了，
   // 会在那里被丢掉，不会白屏也不会让角标骗人）
-  const { entries, byCounter, subtotal, discount, total } = useMemo(() => cartBreakdown(cart), [cart])
+  const { entries } = useMemo(() => cartBreakdown(cart), [cart])
+
+  // ===== 勾选购买（2026-09-28「可以选择买什么和不买什么」）=====
+  // 这一单带走哪些由人勾：没勾的原地留在袋子里不动，结算只算勾走的，
+  // 付完也只清勾走的（payOrder 按 snapshot 的键删）。默认全选 ——
+  // 把东西放进篮子的人，多数时候就是想全带走的那次；想留下的那几样，点掉就好。
+  const [selected, setSelected] = useState(() => new Set(Object.keys(cart)))
+  // 袋页内只会加减数量/删行，不会新增键；万一哪天有新行出现（对账换表），默认「带上」
+  useEffect(() => {
+    setSelected((prev) => {
+      const missing = entries.filter((e) => !prev.has(e.key))
+      if (!missing.length) return prev
+      const next = new Set(prev)
+      missing.forEach((e) => next.add(e.key))
+      return next
+    })
+  }, [entries])
+
+  const toggleSel = (key) => setSelected((prev) => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  })
+
+  // 金额、满减、件数都按**勾走的**算 —— 依旧走 cartBreakdown，跟结算页同一份口径，
+  // 勾选变化时「再凑 ¥X 享满减」的进度条也跟着这一单真正要买的走
+  const selCart = useMemo(() => {
+    const out = {}
+    entries.forEach((e) => { if (selected.has(e.key)) out[e.key] = cart[e.key] })
+    return out
+  }, [entries, selected, cart])
+  const { byCounter, subtotal, discount, total } = useMemo(() => cartBreakdown(selCart), [selCart])
+  const selCount = useMemo(() => Object.values(selCart).reduce((s, n) => s + n, 0), [selCart])
 
   // 惜食柜的东西柜上就剩那么几份，袋子里的「+」也不能越过这条线。
   // ⚠️ 份数是**按商品**算的：同一碗饭「少一点」「多一点」各一行，加起来也不能超
@@ -56,8 +89,18 @@ export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
           <section className="cart-list" aria-label="已选商品">
             {entries.map((entry) => {
               const { item, qty, specText, unitPrice } = entry
+              const picked = selected.has(entry.key)
               return (
-              <article key={entry.key} className="cart-row">
+              <article key={entry.key} className={`cart-row${picked ? '' : ' is-skipped'}`}>
+                {/* 勾选 = 这一单带不带走。没勾的不删、不动，就在原地 */}
+                <button
+                  className={`cart-check${picked ? ' is-on' : ''}`}
+                  aria-pressed={picked}
+                  aria-label={picked ? `这一单带上${item.cn}` : `这一单先不带${item.cn}`}
+                  onClick={() => toggleSel(entry.key)}
+                >
+                  {picked && <Check size={14} strokeWidth={2.6} />}
+                </button>
                 <div className="cart-thumb">
                   <ItemArt item={item} size="sm" prefer="real" />
                 </div>
@@ -134,10 +177,15 @@ export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
       {entries.length > 0 && (
         <div className="bottom-bar">
           <div className="bottom-total">
-            <span className="bottom-label">合计</span>
+            <span className="bottom-label">{selCount > 0 ? `${selCount} 件` : '先勾上想带的'}</span>
             <span key={total} className="bottom-price num-bump">¥{total}</span>
           </div>
-          <button className="primary-button" onClick={() => onNavigate('checkout')}>
+          {/* 只把勾走的送进结算页；一个都没勾时按钮先歇着，不催不拦 */}
+          <button
+            className="primary-button"
+            disabled={selCount === 0}
+            onClick={() => onNavigate('checkout', { checkoutCart: selCart })}
+          >
             去结算
           </button>
         </div>

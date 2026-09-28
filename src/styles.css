@@ -716,6 +716,7 @@ img { max-width: 100%; display: block; }
 .cart-list { padding: 0 20px 16px; display: flex; flex-direction: column; gap: 14px; }
 
 .cart-row {
+  position: relative;
   display: grid;
   grid-template-columns: 64px 1fr auto 28px;
   gap: 12px;
@@ -766,6 +767,38 @@ img { max-width: 100%; display: block; }
 .cart-stepper span { min-width: 18px; text-align: center; font-size: 13px; }
 
 .cart-remove { color: var(--text-sub); }
+
+/* ---- 勾选购买（2026-09-28）----
+   每行左缘一颗圆勾（骑沿，邻居猫同款语言）：勾上的这一单带走，
+   点掉的原地留在袋子里。弱化只动观感（灰度+降透明），不删行、不动数量。 */
+.cart-check {
+  position: absolute;
+  left: -11px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface);
+  color: #FCFBF7;
+  display: grid;
+  place-items: center;
+  transition: background .2s ease, border-color .2s ease;
+}
+/* 命中区撑到 44px（和加购按钮同一条规矩：小圆点不难点） */
+.cart-check::before { content: ''; position: absolute; inset: -11px; }
+.cart-check.is-on { background: var(--matcha); border-color: var(--matcha); }
+/* 点掉的那行：图先褪色，字再淡下去 —— 仍看得见、仍可点回来 */
+.cart-row.is-skipped .cart-thumb { filter: grayscale(.65); opacity: .75; }
+.cart-row.is-skipped .cart-info { opacity: .5; }
+.cart-row.is-skipped .cart-stepper,
+.cart-row.is-skipped .cart-remove { opacity: .4; }
+.cart-thumb,
+.cart-info,
+.cart-stepper,
+.cart-remove { transition: opacity .25s ease, filter .25s ease; }
 
 .cart-promo { padding: 0 20px 16px; }
 
@@ -5308,6 +5341,23 @@ footer {
   background: none; border: none; box-shadow: none;
   border-radius: 0; overflow: visible;
   filter: drop-shadow(0 4px 10px rgba(74, 69, 64, .14));
+}
+
+/* ===== 待机微动（2026-09-28「猫狗呆呆站着不动」）=====
+   静态水彩图本身不会动，给 .pet-photo 容器加一段「左右轻晃 + 呼吸」，
+   从脚底（50% 100%）起，慢而克制 —— 像站在地上轻轻晃，不像在蹦迪。
+   ⚠️ 挂在 .pet-photo 上、不是 img：摸脸表情层(.pet-face)/无眼底图(.pet-noeye)
+      都是 inset:0 盖在 img 上的，动容器才能让它们一起晃、不脱节。
+   ⚠️ 兜底 SVG(.softpet) 已有 spBreathe/spEarL/spEarR，不重复加。 */
+.pet-photo { animation: petIdleSway 6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes petIdleSway {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  30%      { transform: rotate(1.4deg) translateY(-1.5px); }
+  55%      { transform: rotate(-1.2deg) translateY(-2.5px); }
+  75%      { transform: rotate(.6deg) translateY(-1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-photo { animation: none; }
 }
 
 /* ===== 结算页的「这一单」明细（2026-09-16） =====

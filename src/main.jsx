@@ -211,14 +211,25 @@ function App() {
   // ===== 这一单的快照（2026-09-28「付完袋子要空」）=====
   // 旧逻辑只靠结局页两个按钮（再来一单/看宠物）才清购物袋 —— 用户付完直接走、
   // 刷新、或从别的路径离开，上一单的东西就一直挂在袋子里（角标也跟着骗人）。
-  // 现在：支付成功那一刻就把 cart 快照进 lastOrder、袋子当场清空（storage 同步清）。
+  // 现在：支付成功那一刻就把「这一单」快照进 lastOrder、袋子当场清掉（storage 同步清）。
   // 结局页读 lastOrder 记手账/惜食/算总额 —— 它本来就该读「这一单」，而不是 live 袋子。
   // 不走 params：DeliveryScreen → Ending 会整包替换 params，快照会丢。
+  //
+  // 勾选购买（同日）：快照/清袋只含**勾走的**那部分 —— 购物袋页没勾的行原地留着，
+  // 属于「还没决定要买」，不该被这一单顺手带走（用户原话「不买的就继续放在
+  // 购物车里面不动，买的就减掉就行」）。
   const [lastOrder, setLastOrder] = useState({})
   const payOrder = useCallback((snapshot) => {
-    setLastOrder(snapshot || {})
-    setCart({})
-    saveCart({})
+    const bought = snapshot || {}
+    setLastOrder(bought)
+    setCart((prev) => {
+      const keys = Object.keys(bought).filter((k) => k in prev)
+      if (!keys.length) return prev
+      const next = { ...prev }
+      keys.forEach((k) => delete next[k])
+      saveCart(next)
+      return next
+    })
   }, [])
 
   // 完成一单 → 喂小饼干 + 掉落贴纸 + 可能升级，返回本次成长结果
@@ -508,7 +519,9 @@ function App() {
       )}
       {screen === 'checkout' && (
         <CheckoutScreen
-          cart={cart}
+          // 勾选购买：购物袋页只把勾走的子集送来（checkoutCart）。
+          // 没带参数的路径（理论上没有）回落到全袋，保持老行为。
+          cart={params.checkoutCart || cart}
           houseName={houseName}
           setHouseName={setHouseName}
           onNavigate={navigate}
