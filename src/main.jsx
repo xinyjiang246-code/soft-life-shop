@@ -208,6 +208,19 @@ function App() {
     saveCart({})
   }, [])
 
+  // ===== 这一单的快照（2026-09-28「付完袋子要空」）=====
+  // 旧逻辑只靠结局页两个按钮（再来一单/看宠物）才清购物袋 —— 用户付完直接走、
+  // 刷新、或从别的路径离开，上一单的东西就一直挂在袋子里（角标也跟着骗人）。
+  // 现在：支付成功那一刻就把 cart 快照进 lastOrder、袋子当场清空（storage 同步清）。
+  // 结局页读 lastOrder 记手账/惜食/算总额 —— 它本来就该读「这一单」，而不是 live 袋子。
+  // 不走 params：DeliveryScreen → Ending 会整包替换 params，快照会丢。
+  const [lastOrder, setLastOrder] = useState({})
+  const payOrder = useCallback((snapshot) => {
+    setLastOrder(snapshot || {})
+    setCart({})
+    saveCart({})
+  }, [])
+
   // 完成一单 → 喂小饼干 + 掉落贴纸 + 可能升级，返回本次成长结果
   // extraSticker：等待页完整等完不跳过时的「路上的纪念」（多掉一枚）
   // 只喂「当前陪伴的那只」—— 猫狗各自成长，别喂错对象。
@@ -500,6 +513,7 @@ function App() {
           setHouseName={setHouseName}
           onNavigate={navigate}
           onBack={goBack}
+          onPaid={payOrder}
         />
       )}
       {screen === 'delivery' && (
@@ -514,7 +528,7 @@ function App() {
         <EndingScreen
           houseName={houseName}
           pet={activePet}
-          cart={cart}
+          cart={lastOrder}
           wait={params}
           onGrow={growPet}
           onDonate={donateCatFood}

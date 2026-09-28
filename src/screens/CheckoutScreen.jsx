@@ -5,7 +5,7 @@ import { DAILY_PATIENCE, ensureAddresses, loadPatience, patienceLeft, saveAddres
 import AddressPicker from '../components/AddressPicker.jsx'
 import PaymentSheet from '../components/PaymentSheet.jsx'
 
-export default function CheckoutScreen({ cart, houseName, setHouseName, onNavigate, onBack }) {
+export default function CheckoutScreen({ cart, houseName, setHouseName, onNavigate, onBack, onPaid }) {
   // 地址卡（2026-09-22）：可编辑、可存多张、可切换 —— 数据与迁移见 storage.js，
   // 老的小屋名会自动变成第一张卡；收件人就是原来的 houseName，结局页「已送达「橘子小屋」」不受影响。
   const [addresses, setAddresses] = useState(() => ensureAddresses(houseName))
@@ -33,6 +33,10 @@ export default function CheckoutScreen({ cart, houseName, setHouseName, onNaviga
     const p = loadPatience()
     savePatience({ ...p, used: Math.min(DAILY_PATIENCE, (p.used || 0) + payCost) })
     setPayOpen(false)
+    // 这一单成立了（2026-09-28）：快照交给 App 记账（结局页的手账/惜食/总额都读它），
+    // 购物袋当场清空 —— 现实里支付完成袋子就是空的，不能等结局页按钮才清，
+    // 否则付完直接走的人，上一单会一直挂在袋子里。
+    onPaid?.(cart)
     // 这一单的预计送达时长：按下单的店（购物袋里第一件的归属）取 —— 等待页的真实倒计时用它
     const baseEta = counters.find((c) => c.id === entries[0]?.item?.counterId)?.deliveryTime || 35
     onNavigate('delivery', { baseEta })

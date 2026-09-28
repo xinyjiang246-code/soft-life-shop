@@ -95,16 +95,16 @@ function MoodRitual({ mood, onPick, worldCity, onGoWorld }) {
 /* ---------- 邻居猫串门：每天换个角落，点它说话 ---------- */
 // 串门的是隔壁那只大猫（不成长，只有一张图）；你自己的猫「软软」在小屋里养。
 
-function PetVisit({ pet, onNavigate }) {
+function PetVisit({ pet, onNavigate, compact = false }) {
   const [open, setOpen] = useState(false)
   const line = useMemo(() => pickNeighborLine(), [])
   const art = neighborArtUrl()
   return (
-    <div className={`pet-visit ${open ? 'is-open' : ''}`}>
+    <div className={`pet-visit ${open ? 'is-open' : ''}${compact ? ' is-compact' : ''}`}>
       <button className="pet-visit-btn" aria-label={`和${NEIGHBOR_NAME}打个招呼`} onClick={() => setOpen((o) => !o)}>
         {art
           ? <img className="neighbor-cat" src={art} alt="" loading="lazy" decoding="async" />
-          : <SoftPet stage={levelForMeals(pet.meals)} mood={moodFromEmoji(line.mood)} colorway={pet.colorway || 'cream'} species={pet.species || 'cat'} size={62} />}
+          : <SoftPet stage={levelForMeals(pet.meals)} mood={moodFromEmoji(line.mood)} colorway={pet.colorway || 'cream'} species={pet.species || 'cat'} size={compact ? 46 : 62} />}
       </button>
       {open && (
         <div className="pet-visit-bubble" role="status">
@@ -307,6 +307,8 @@ export default function HomeScreen({
   const moodCfg = MOODS.find((m) => m.id === mood)
 
   // 邻居猫今天在哪个角落串门（0 hero / 1 店铺列表 / 2 今日特调）
+  // spot 2 的猫骑在「世界菜单」横条沿上（compact）—— 特调卡内部 overflow:hidden
+  // 且没有任何 62×70 空位，放卡内必压「点这一杯」按钮（09-28 用户实拍）。
   const visitSpot = today % 3
 
   // 「封面自成一屏」：把店铺区推到毛玻璃底部导航**以下**，第一屏只有一张完整封面。
@@ -509,11 +511,14 @@ export default function HomeScreen({
           </button>
         </div>
         <p className="special-note">每天 0 点由 AI 更换 · 只有今天有</p>
-        {visitSpot === 2 && <PetVisit pet={pet} onNavigate={onNavigate} />}
       </section>
 
       {/* 世界菜单入口（今天飞哪座城） */}
-      <button className="world-entry" onClick={() => onNavigate('world')}>
+      {/* spot 2 的邻居猫挂在这个 wrapper 上（不能进 button —— button 嵌 button 无效 HTML）。
+          特调卡 overflow:hidden 且卡内满员，猫放哪儿都撞「点这一杯」按钮（2026-09-28 用户截图）；
+          骑在世界条上沿正好落在特调卡与横条之间的空隙里。 */}
+      <div className="world-entry-host">
+        <button className="world-entry" onClick={() => onNavigate('world')}>
         {/* 换成今天那座城市的「空运来信」图（拿不到图时退回原来的小地球） */}
         <span
           className="world-entry-flag"
@@ -529,7 +534,9 @@ export default function HomeScreen({
           <small>{WORLD_KITCHENS.length} 座城市的菜，AI 每天现编一桌，世界上并没有</small>
         </span>
         <Sparkles size={18} strokeWidth={1.35} />
-      </button>
+        </button>
+        {visitSpot === 2 && <PetVisit pet={pet} onNavigate={onNavigate} compact />}
+      </div>
 
       {/* 软软在小铺里溜达：走来走去、偶尔跳一下，点它会蹭你 */}
       <HomeCat pet={pet} />

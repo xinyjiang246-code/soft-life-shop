@@ -4456,6 +4456,16 @@ footer {
 .pet-host { position: relative; }
 .pet-visit { position: absolute; right: 10px; bottom: 8px; z-index: 5; }
 .shop-list-head .pet-visit { top: -6px; bottom: auto; right: 0; }
+/* spot 2：猫蹲在世界菜单横条的上沿（2026-09-28）。
+   原来挂特调卡右下角，正好压住「点这一杯」按钮（卡内 overflow:hidden 又骑不了卡沿，
+   实测卡内没有任何 62×70 的空位 —— desc↔foot 只隔 45px）。
+   挪到条沿后：上半身落在特调卡与横条之间 18px 的空隙 + 特调卡 note 右端的空白
+   （note 文字只到 x≈209，猫在 x≥284），下半身进条顶 padding，都不撞。 */
+.world-entry-host { position: relative; }
+.world-entry-host .pet-visit { top: -26px; bottom: auto; right: 14px; }
+.world-entry-host .pet-visit.is-compact .neighbor-cat { width: 46px; }
+/* 小猫的气泡跟着收窄，别盖到特调卡的「点这一杯」 */
+.world-entry-host .pet-visit.is-compact .pet-visit-bubble { right: -2px; width: 200px; }
 .pet-visit-btn {
   display: block; padding: 0; border: none; background: none; cursor: pointer;
   animation: petVisitBob 3.4s ease-in-out infinite;
