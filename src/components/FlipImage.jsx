@@ -34,15 +34,15 @@ export default function FlipImage({
 }) {
   const [flipped, setFlipped] = useState(false)
 
-  const frontFace = frontNode || (front ? <img src={front} alt={alt} /> : null)
-  const backFace = backNode || (back ? <img src={back} alt="" aria-hidden="true" /> : null)
+  const frontFace = frontNode || (front ? <img src={front} alt={alt} loading="lazy" decoding="async" /> : null)
+  const backFace = backNode || (back ? <img src={back} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null)
 
   // 没有背面（例如用户自己拍的照片、还没配图的世界菜）→ 退化成普通图片
   if (!backFace) {
     return (
       <div className={`flip-frame flip-static ${className}`}>
         {frontNode || (front ? (
-          <img className="flip-solo" src={front} alt={alt} />
+          <img className="flip-solo" src={front} alt={alt} loading="lazy" decoding="async" />
         ) : (
           <span className="flip-emoji" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none"

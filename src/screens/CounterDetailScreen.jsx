@@ -167,7 +167,7 @@ export default function CounterDetailScreen({ counterId, focusItemId, cartCount,
       <section className={`store-hero counter-${counter.color}`} aria-label={counter.name}>
         <div className="store-cover">
           {cover ? (
-            <img src={cover} alt={counter.name} />
+            <img src={cover} alt={counter.name} loading="lazy" decoding="async" />
           ) : (
             <span className="shop-cover-fallback" aria-hidden="true">🏪</span>
           )}

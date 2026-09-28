@@ -177,7 +177,7 @@ export default function MyShopScreen({ customItems, onPublish, onDelete, onNavig
           <div className="myshop-grid">
             {customItems.map((item) => (
               <article key={item.id} className="myshop-card">
-                <div className="myshop-thumb"><img src={item.image} alt={item.cn} /></div>
+                <div className="myshop-thumb"><img src={item.image} alt={item.cn} loading="lazy" decoding="async" /></div>
                 <div className="myshop-info">
                   <p className="myshop-code">{item.code}</p>
                   <h3>{item.cn}</h3>

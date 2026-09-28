@@ -239,7 +239,7 @@ export default function ArchiveScreen({ onBack, initialView }) {
                 // 现在点它就是看大图，上传走下面那颗明确的按钮。
                 // 2026-09-17：大海报缩成一枚小示例条 —— 整屏的大图喧宾夺主，跟米纸页面也不搭。
                 <button className="archive-example" onClick={() => setPreview({ mode: 'example' })}>
-                  <img src={archiveExample} alt="示例：抹茶拿铁" />
+                  <img src={archiveExample} alt="示例：抹茶拿铁" loading="lazy" decoding="async" />
                   <span className="archive-example-txt">
                     <b>先看一眼示例</b>
                     <i>抹茶拿铁 —— 拍下的照片会配一张纸本小记（点开看大图）</i>

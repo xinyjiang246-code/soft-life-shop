@@ -103,7 +103,7 @@ function PetVisit({ pet, onNavigate }) {
     <div className={`pet-visit ${open ? 'is-open' : ''}`}>
       <button className="pet-visit-btn" aria-label={`和${NEIGHBOR_NAME}打个招呼`} onClick={() => setOpen((o) => !o)}>
         {art
-          ? <img className="neighbor-cat" src={art} alt="" />
+          ? <img className="neighbor-cat" src={art} alt="" loading="lazy" decoding="async" />
           : <SoftPet stage={levelForMeals(pet.meals)} mood={moodFromEmoji(line.mood)} colorway={pet.colorway || 'cream'} species={pet.species || 'cat'} size={62} />}
       </button>
       {open && (

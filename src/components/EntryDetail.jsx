@@ -96,9 +96,9 @@ export default function EntryDetail({
   const hasAi = Boolean(entry.aiNote || entry.tags?.length || entry.swatch)
 
   const photo = bigUrl
-    ? <img src={bigUrl} alt={entry.name || '自己拍的一张'} />
+    ? <img src={bigUrl} alt={entry.name || '自己拍的一张'} loading="lazy" decoding="async" />
     : art
-      ? <img src={art} alt={entry.name || ''} />
+      ? <img src={art} alt={entry.name || ''} loading="lazy" decoding="async" />
       : <span className="jh-detail-note"><NoteMark /></span>
 
   /* ------------------ stage 0：先把这张照片看清楚 ------------------ */
