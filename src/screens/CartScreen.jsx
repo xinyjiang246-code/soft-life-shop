@@ -1,5 +1,6 @@
 import { ArrowLeft, Check, Gift, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { RESCUE, cartBreakdown, getCounter, parseCartKey, promoDrops } from '../data.js'
+import { loadCartUnchecked, saveCartUnchecked } from '../storage.js'
 import { useEffect, useMemo, useState } from 'react'
 import ItemArt from '../components/ItemArt.jsx'
 
@@ -13,32 +14,43 @@ export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
   // 这一单带走哪些由人勾：没勾的原地留在袋子里不动，结算只算勾走的，
   // 付完也只清勾走的（payOrder 按 snapshot 的键删）。默认全选 ——
   // 把东西放进篮子的人，多数时候就是想全带走的那次；想留下的那几样，点掉就好。
-  const [selected, setSelected] = useState(() => new Set(Object.keys(cart)))
-  // 袋页内只会加减数量/删行，不会新增键；万一哪天有新行出现（对账换表），默认「带上」
+  //
+  // 勾选状态存进 localStorage（存**没勾**的键集合，默认全选、老访客零迁移）：
+  // 用户在袋里点掉几样、临时返回首页再回来，点掉的不能自己「忘掉」——
+  // 否则就跟「不买的继续放在购物车里面不动」对不上。
+  const [unchecked, setUnchecked] = useState(() => loadCartUnchecked())
+  // 统一入口：既更新 state 又落盘。updater 可能是函数（setUnchecked 的用法）——
+  // 必须先算出结果再存盘，别把函数本身塞进 localStorage。
+  const persistUnchecked = (updater) => {
+    setUnchecked((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      saveCartUnchecked(next)
+      return next
+    })
+  }
+  // 袋页内只会加减数量/删行，不会新增键；万一哪天有新行出现（对账换表），
+  // 它不在「没勾」名单里 → 默认带上，顺带把死键（已不在袋里的）清掉
   useEffect(() => {
-    setSelected((prev) => {
-      const missing = entries.filter((e) => !prev.has(e.key))
-      if (!missing.length) return prev
-      const next = new Set(prev)
-      missing.forEach((e) => next.add(e.key))
+    setUnchecked((prev) => {
+      const live = new Set(entries.map((e) => e.key))
+      const next = prev.filter((k) => live.has(k))
+      if (next.length !== prev.length) saveCartUnchecked(next)
       return next
     })
   }, [entries])
 
-  const toggleSel = (key) => setSelected((prev) => {
-    const next = new Set(prev)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    return next
-  })
+  const toggleSel = (key) => {
+    persistUnchecked((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key])
+  }
 
   // 金额、满减、件数都按**勾走的**算 —— 依旧走 cartBreakdown，跟结算页同一份口径，
   // 勾选变化时「再凑 ¥X 享满减」的进度条也跟着这一单真正要买的走
   const selCart = useMemo(() => {
     const out = {}
-    entries.forEach((e) => { if (selected.has(e.key)) out[e.key] = cart[e.key] })
+    entries.forEach((e) => { if (!unchecked.includes(e.key)) out[e.key] = cart[e.key] })
     return out
-  }, [entries, selected, cart])
+  }, [entries, unchecked, cart])
   const { byCounter, subtotal, discount, total } = useMemo(() => cartBreakdown(selCart), [selCart])
   const selCount = useMemo(() => Object.values(selCart).reduce((s, n) => s + n, 0), [selCart])
 
@@ -89,7 +101,7 @@ export default function CartScreen({ cart, setCart, onNavigate, onBack }) {
           <section className="cart-list" aria-label="已选商品">
             {entries.map((entry) => {
               const { item, qty, specText, unitPrice } = entry
-              const picked = selected.has(entry.key)
+              const picked = !unchecked.includes(entry.key)
               return (
               <article key={entry.key} className={`cart-row${picked ? '' : ' is-skipped'}`}>
                 {/* 勾选 = 这一单带不带走。没勾的不删、不动，就在原地 */}

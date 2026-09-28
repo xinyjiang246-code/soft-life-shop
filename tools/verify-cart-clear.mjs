@@ -79,6 +79,14 @@ check(onCount === rows - 1 && skipped === 1, '点掉第一行后 is-on = ' + onC
 const label = await js("(document.querySelector('.bottom-label') || {textContent:''}).textContent")
 check(/1 件/.test(label), '底栏按勾选显示「1 件」（实际「' + label.trim() + '」）')
 
+// 4.5 勾选状态跨页面持久化：点掉后返回首页再进袋，点掉的不能「忘掉」
+//     （用户原话「不买的继续放在购物车里面不动」—— 临时离开再回来也不该复位全选）
+await js("[...document.querySelectorAll('button')].find(b=>b.getAttribute('aria-label')==='返回').click()"); await sleep(1000)
+await js("document.querySelector('.bag-button').click()"); await sleep(1000)
+onCount = await js("document.querySelectorAll('.cart-check.is-on').length")
+const skipped2 = await js("document.querySelectorAll('.cart-row.is-skipped').length")
+check(onCount === rows - 1 && skipped2 === 1, '返回再进袋勾选不丢（is-on = ' + onCount + '、弱化 = ' + skipped2 + '）')
+
 // 5. 结算 → 支付 → 配送页
 await js("(function(){var b=[...document.querySelectorAll('button')].find(function(x){return /去结账|去结算|结算/.test(x.textContent)}); b&&b.click()})()"); await sleep(1000)
 const inDelivery = await payThrough()

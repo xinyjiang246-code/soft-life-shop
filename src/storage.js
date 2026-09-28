@@ -2,6 +2,11 @@
 import { deletePhoto } from './photoStore.js'
 
 const KEY_CART = 'soft-life-cart-v1'
+// 购物袋勾选购买：存「这一单没勾、要留在袋里的键」。
+// 勾选状态得跨页面活 —— 用户在袋里点掉几样、临时返回首页再回来，点掉的不能自己「忘掉」
+// （否则就跟「不买的继续放在购物车里面不动」对不上）。存的是**未勾**集合，因为默认是全选，
+// 老访客没这个键 = 全选，零迁移。
+const KEY_CART_UNCHECKED = 'soft-life-cart-unchecked-v1'
 const KEY_HOUSE = 'soft-life-house-v1'
 const KEY_ARCHIVES = 'soft-life-archives-v1'
 const KEY_PETS = 'soft-life-pets-v1'
@@ -46,6 +51,22 @@ export function loadCart() {
 export function saveCart(cart) {
   try {
     localStorage.setItem(KEY_CART, JSON.stringify(cart))
+  } catch {}
+}
+
+// 没勾（要留在袋里）的键集合 —— 数组存，读时过滤掉已不在袋里的死键
+export function loadCartUnchecked() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY_CART_UNCHECKED) || '[]')
+    return Array.isArray(raw) ? raw.filter((k) => typeof k === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+export function saveCartUnchecked(keys) {
+  try {
+    localStorage.setItem(KEY_CART_UNCHECKED, JSON.stringify(keys))
   } catch {}
 }
 
