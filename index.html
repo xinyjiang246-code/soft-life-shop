@@ -47,6 +47,18 @@
         document.body.style.margin = '20px';
       }
     </script>
+    <script>
+      // Service Worker 离线缓存（2026-09-29）。
+      // 只在 http(s) 下注册（file: 或本地双击打开时 SW 不可用，静默跳过）。
+      // 相对路径 ./sw.js 跟 base './' 对齐，GitHub Pages 子路径也安全。
+      if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('./sw.js').catch(function () {
+            // 注册失败不打扰用户 —— 离线缓存是加分项，不是硬依赖
+          })
+        })
+      }
+    </script>
     <noscript>请启用浏览器的 JavaScript，并通过本地服务打开慢活小铺。</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
