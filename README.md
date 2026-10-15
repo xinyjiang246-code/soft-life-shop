@@ -12,6 +12,19 @@
 
 ---
 
+## 产品一瞥
+
+<p align="center">
+  <img src="screenshots/home.png" width="24%" alt="首页：今天的封面与心情">
+  <img src="screenshots/cart.png" width="24%" alt="购物袋：可勾选买与不买">
+  <img src="screenshots/checkout.png" width="24%" alt="结算：唯一一次揭晓真相">
+  <img src="screenshots/wait.png" width="24%" alt="等待：陪骑手走一段">
+</p>
+
+从左到右：**首页**（每天一份封面与「今天，也要好好吃饭」）→ **购物袋**（每行可勾选带走哪些，没勾的原地留着）→ **结算**（唯一一次揭晓真相的时刻）→ **等待**（等骑手真的骑过来，可以「帮他看路」，不计分也不会输）。
+
+---
+
 ## 三条不妥协的规矩
 
 这个仓库里最值得看的不是代码，是下面三条 —— 它们决定了它和别的「假装点外卖」的东西不一样：
